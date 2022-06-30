@@ -1,0 +1,8 @@
+.git
+.cache
+.idea/
+.venv/*
+resources/
+log/
+*.key
+.omero_credentials

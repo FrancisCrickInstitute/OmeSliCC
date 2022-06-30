@@ -1,0 +1,1 @@
+docker run --mount type=bind,source="$(pwd)",target=/omeslicc jdefolter/omeslicc:latest
