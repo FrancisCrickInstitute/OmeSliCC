@@ -1,1 +1,1 @@
-docker run --mount type=bind,source="$(pwd)",target=/omeslicc jdefolter/omeslicc:latest
+docker run --mount type=bind,source="$(pwd)",target=/omeslicc location/omeslicc:latest
