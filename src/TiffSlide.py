@@ -187,9 +187,8 @@ class TiffSlide:
         return tile
 
     def decode(self, page, dataoffsets, databytecounts, tile_width, tile_height, nx, out):
-        def process_decoded(decoded, out=out):
+        def process_decoded(decoded, index, out=out):
             segment, indices, shape = decoded
-            index = indices[-2] // shape[-2]
             y = index // nx
             x = index % nx
 
@@ -212,7 +211,7 @@ class TiffSlide:
                 decoded = page.decode(*args, page.jpegtables)
             else:
                 decoded = page.decode(*args)
-            return func(decoded)
+            return func(decoded, args[1])
 
         segments = []
         for index in range(len(dataoffsets)):
