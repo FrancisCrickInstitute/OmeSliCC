@@ -1,3 +1,7 @@
+# * TODO: incorporate this experimental code into main pipeline
+# * TODO: fix Zarr support, extend to Ome.Zarr
+# * TODO: Add JPEGXR support for Zarr
+
 import os
 import numpy as np
 import pandas as pd
@@ -13,7 +17,7 @@ from src.image_util import JPEG2000, tags_to_dict, scale_image
 register_codec(JPEG2000)
 
 
-def convert_slides(csv_file, image_dir, patch_size):
+def convert_slides_to_zarr(csv_file, image_dir, patch_size):
     data = pd.read_csv(csv_file, delimiter='\t').to_dict()
     image_files = list(data['path'].values())
     nslides = len(image_files)
@@ -94,7 +98,7 @@ def convert_slide_to_zarr(image_filename, patch_size):
     return zarr_data
 
 
-def convert_slide_tiff(infilename, outfilename, ome=False, overwrite=False):
+def convert_slide_to_tiff(infilename, outfilename, ome=False, overwrite=False):
     if overwrite or not os.path.exists(outfilename):
         print(f'{infilename} -> {outfilename}')
         try:
