@@ -2,6 +2,8 @@
 # * TODO: fix Zarr support, extend to Ome.Zarr
 # * TODO: Add JPEGXR support for Zarr
 
+
+import logging
 import os
 import numpy as np
 import pandas as pd
@@ -11,10 +13,70 @@ from numcodecs.blosc import Blosc
 from tifffile import tifffile, TiffFile, TiffWriter
 from tqdm import tqdm
 
+from src.BioSlide import BioSlide
+from src.PlainImageSlide import PlainImageSlide
 from src.TiffSlide import TiffSlide
-from src.image_util import JPEG2000, tags_to_dict, scale_image
+from src.image_util import JPEG2000, tags_to_dict, scale_image, get_image_size_info
+from src.parameters import ChannelOperation
 
 register_codec(JPEG2000)
+
+
+def get_image_info(filename):
+    ext = os.path.splitext(filename)[1].lower()
+    if 'tif' in ext or 'svs' in ext:
+        slide = TiffSlide(filename)
+        xyzct = slide.sizes_xyzct[0]
+        type_size_bytes = slide.pixel_types[0].itemsize
+    else:
+        try:
+            slide = PlainImageSlide(filename)
+            xyzct = slide.size_xyzct
+            type_size_bytes = slide.pixel_size
+        except:
+            slide = BioSlide(filename)
+            xyzct = slide.sizes_xyzct[0]
+            type_size_bytes = slide.pixel_types[0].itemsize
+    image_info = os.path.basename(filename) + ' ' + get_image_size_info(xyzct, type_size_bytes)
+    logging.info(image_info)
+    return image_info
+
+
+def extract_thumbnail(filename, output_folder):
+    ext = os.path.splitext(filename)[1].lower()
+    if 'tif' in ext or 'svs' in ext:
+        slide = TiffSlide(filename)
+        size = slide.sizes[0]
+    else:
+        try:
+            slide = PlainImageSlide(filename)
+            size = slide.size
+        except:
+            slide = BioSlide(filename)
+            size = slide.sizes[0]
+    thumbsize = np.int0(np.divide(size, 10))
+    # write thumbnail to file
+    thumb = slide.get_thumbnail(thumbsize)
+    output_filename = os.path.join(output_folder, os.path.splitext(os.path.basename(filename))[0] + '.tiff')
+    save_tiff(output_filename, thumb)
+    return thumb
+
+
+def convert_slide(filename, output_folder, output_format, channel_operation=ChannelOperation.NONE):
+    ext = os.path.splitext(filename)[1].lower()
+    if 'tif' in ext or 'svs' in ext:
+        slide = TiffSlide(filename)
+    else:
+        try:
+            slide = PlainImageSlide(filename)
+        except:
+            slide = BioSlide(filename)
+    if 'zar' in output_format:
+        convert_slide_to_tiff(slide, output_folder)
+    elif 'ome' in output_format:
+        convert_slide_to_ometiff(slide, output_folder)
+    else:
+        convert_slide_to_tiff(slide, output_folder)
 
 
 def convert_slides_to_zarr(csv_file, image_dir, patch_size):

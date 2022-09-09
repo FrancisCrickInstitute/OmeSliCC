@@ -1,6 +1,8 @@
 input:
-  # host - Omero server address
-  host: ssl://omero.server
+  # omero - Omero server address
+  omero: ssl://omero.server
+  # folder - input folder
+  #folder: /folder/
 
   # type - project or image
   type: project
@@ -9,12 +11,14 @@ input:
   # ids - project or image id(s)
   ids: 0
 
-  # gene - required Omero (gene) labels
-  gene: [gene1,gene2]
+  # labels - required Omero metadata labels
+  labels: [label1,label2]
 
 output:
   folder: output/images
   format: ome.tiff
+  channels: combine
+  # channels: split
   tile_size: [256, 256]
   compression: ['JPEGXR_NDPI', 75]
   pyramid_add: 3

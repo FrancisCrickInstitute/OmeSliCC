@@ -27,6 +27,8 @@ class TiffSlide:
         self.arrays = []
         self.source_mags = []
         self.sizes = []
+        self.sizes_xyzct = []
+        self.pixel_types = []
         self.main_page = -1
         self.best_page = -1
         tiff = TiffFile(filename)
@@ -40,6 +42,8 @@ class TiffSlide:
             if mag != 0 and self.main_page < 0:
                 self.main_page = index
             self.sizes.append((page.imagewidth, page.imagelength))
+            self.sizes_xyzct.append((page.imagewidth, page.imagelength, page.imagedepth, 1, 1))
+            self.pixel_types.append(page.dtype)
         if target_mag is not None:
             for page in self.pages:
                 source_mag = self.get_mag(page)
@@ -47,7 +51,8 @@ class TiffSlide:
                     source_mag = self.calc_mag(page)
                 self.source_mags.append(source_mag)
         source_mag, self.best_page = get_best_mag(self.source_mags, target_mag)
-        self.best_factor = source_mag / target_mag
+        if target_mag is not None:
+            self.best_factor = source_mag / target_mag
         if self.best_page < 0:
             self.best_page = 0
             self.best_factor = 1

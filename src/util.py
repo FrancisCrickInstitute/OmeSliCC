@@ -15,11 +15,6 @@ def ensure_list(x):
         return [x]
 
 
-def get_numpy_type(s):
-    types = {'uint8': np.uint8, 'uint16': np.uint16, 'uint32': np.uint32, 'float32': np.float32, 'float64': np.float64}
-    return types[s]
-
-
 def tags_to_dict(tags):
     tag_dict = {}
     for tag in tags.values():

@@ -30,14 +30,14 @@ class OmeroLabelReader:
         else:
             logging.error("Please use project type in params file")
             project_id = -1
-        genes_list = input['gene']
-        image_ids, image_names, image_annotations = self.omero.get_annotation_image_ids(project_id, genes_list)
+        input_labels = input['labels']
+        image_ids, image_names, image_annotations = self.omero.get_annotation_image_ids(project_id, input_labels)
         logging.info(f'Matching images found: {len(image_ids)}')
         df = pd.DataFrame(index=image_ids, data=image_annotations)
         df.index.name = 'omero_id'
-        for gene in genes_list:
-            if gene in df:
-                logging.info(f'Gene {gene}:\n' + df[gene].value_counts().to_string())
+        for input_label in input_labels:
+            if input_label in df:
+                logging.info(f'Label {input_label}:\n' + df[input_label].value_counts().to_string())
         df.insert(0, 'omero_name', image_names)
         df['path'] = [image_name + '.' + output['format'] for image_name in image_names]
         df.to_csv(output['csv'])

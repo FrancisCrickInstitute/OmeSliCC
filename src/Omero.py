@@ -3,7 +3,6 @@ import os
 from uuid import uuid4
 import numpy as np
 import omero
-import yaml
 from ome_types import OME
 from ome_types.model import Image, Pixels, Plane, Channel, Instrument, Objective, StageLabel, Map, MapAnnotation, \
     CommentAnnotation, InstrumentRef, AnnotationRef, TiffData
@@ -13,10 +12,8 @@ from omero.gateway import BlitzGateway
 from tqdm import tqdm
 
 from src.conversion import save_tiff
-from src.image_util import calc_pyramid, show_image
+from src.image_util import calc_pyramid, get_image_size_info, show_image
 from src.omero_credentials import decrypt_credentials
-from src.util import get_numpy_type
-from src.parameters import *
 
 
 class Omero:
@@ -43,7 +40,7 @@ class Omero:
     def connect(self):
         logging.info('Connecting to Omero...')
         usr, pwd = decrypt_credentials(self.private_key_filename, self.credentials_filename)
-        self.conn = BlitzGateway(usr, pwd, host=self.params['input']['host'], secure=True)
+        self.conn = BlitzGateway(usr, pwd, host=self.params['input']['omero'], secure=True)
         if not self.conn.connect():
             self.disconnect()
             logging.error('Connection error')
@@ -70,7 +67,7 @@ class Omero:
         image_object = self.conn.getObject('Image', image_id)
         return image_object
 
-    def get_annotation_image_ids(self, project_id, target_annotations):
+    def get_annotation_image_ids(self, project_id, target_labels):
         image_ids = []
         image_names = []
         image_annotations = []
@@ -80,8 +77,8 @@ class Omero:
                 name = image_object.getName()
                 # filter _label and _macro items
                 if not name.endswith('_label') and not name.endswith('_macro'):
-                    annotations = self.get_image_annotations(image_object, target_annotations)
-                    if len(annotations) == len(target_annotations):
+                    annotations = self.get_image_annotations(image_object, target_labels)
+                    if len(annotations) == len(target_labels):
                         image_ids.append(image_object.getId())
                         image_names.append(image_object.getName())
                         image_annotations.append(annotations)
@@ -97,12 +94,11 @@ class Omero:
 
     def get_image_info(self, image_id):
         image_object = self.get_image_object(image_id)
-        w, h, zs, cs, ts = self.get_size(image_object)
+        xyzct = self.get_size(image_object)
         pixels = image_object.getPrimaryPixels()
         pixel_type = pixels.getPixelsType()
         type_size_bytes = pixel_type.getBitSize() / 8
-        size_gb = (w * h * zs * cs * ts * type_size_bytes) / 1024 / 1024 / 1024
-        image_info = f'{image_id} {image_object.getName()} Size: {w} x {h} x {zs} C: {cs} T: {ts} ({size_gb:.1f} GB)'
+        image_info = f'{image_id} {image_object.getName()} ' + get_image_size_info(xyzct, type_size_bytes)
         logging.info(image_info)
         return image_info
 
@@ -121,13 +117,17 @@ class Omero:
             except Exception as e:
                 logging.error(e)
 
-    def convert_slides_to_tiff(self, image_ids, outpath):
+    def convert_slides(self, image_ids, outpath):
+        # currently only ome-tiff supported
+        self.convert_slides_to_ometiff(image_ids, outpath)
+
+    def convert_slides_to_ometiff(self, image_ids, outpath):
         if not os.path.exists(outpath):
             os.makedirs(outpath)
         for image_id in tqdm(image_ids):
-            self.convert_slide_to_tiff(image_id, outpath)
+            self.convert_slide_to_ometiff(image_id, outpath)
 
-    def convert_slide_to_tiff(self, image_id, outpath):
+    def convert_slide_to_ometiff(self, image_id, outpath):
         output = self.params['output']
         image_object = self.get_image_object(image_id)
         filetitle = image_object.getName() + '.ome.tiff'
@@ -166,12 +166,12 @@ class Omero:
 
     def get_slide_image0(self, image_object, pixels):
         w, h, zs, cs, ts = self.get_size(image_object)
-        pixel_type = pixels.getPixelsType()
         read_size = 10240
         ny = int(np.ceil(h / read_size))
         nx = int(np.ceil(w / read_size))
 
-        slide_image = np.zeros((h, w, cs), dtype=get_numpy_type(pixel_type.getValue()))
+        dtype = np.dtype(pixels.getPixelsType().getValue()).type
+        slide_image = np.zeros((h, w, cs), dtype=dtype)
 
         for y in range(ny):
             for x in range(nx):
@@ -193,7 +193,7 @@ class Omero:
         ny = int(np.ceil(h / read_size))
         nx = int(np.ceil(w / read_size))
 
-        dtype = get_numpy_type(pixels.getPixelsType().getValue())
+        dtype = np.dtype(pixels.getPixelsType().getValue()).type
         slide_image = np.zeros((h, w, cs), dtype=dtype)
 
         try:

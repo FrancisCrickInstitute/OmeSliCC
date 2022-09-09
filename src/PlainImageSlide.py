@@ -3,14 +3,14 @@ import numpy as np
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
-from src.image_util import precise_resize
+from src.image_util import precise_resize, pilmode_to_pixelsize
 
 Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents loading large images)
 
 
 class PlainImageSlide:
-    def __init__(self, filename, source_mag, target_mag, executor=None):
-        if source_mag is None or source_mag == 0:
+    def __init__(self, filename, source_mag=None, target_mag=None, executor=None):
+        if target_mag is not None and source_mag is None:
             raise ValueError(f'Error: Provide source magnification (in parameter file) for images without meta-data')
         if executor is not None:
             self.executor = executor
@@ -22,8 +22,13 @@ class PlainImageSlide:
         self.arrays = []
         self.image = Image.open(filename)
         self.size = (self.image.width, self.image.height)
+        self.size_xyzct = (self.image.width, self.image.height, self.image.n_frames, len(self.image.getbands()), 1)
+        self.pixel_size = pilmode_to_pixelsize(self.image.mode)
         self.source_mag = source_mag
-        self.mag_factor = source_mag / target_mag
+        if source_mag is not None and target_mag is not None:
+            self.mag_factor = source_mag / target_mag
+        else:
+            self.mag_factor = 1
 
     def load(self):
         self.unload()

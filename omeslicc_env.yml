@@ -1,18 +1,19 @@
-name: conda38omero
+name: omeslicc_env
 channels:
  - ome
  - conda-forge
  - bioconda
  - defaults
 dependencies:
- - python=3.8
+ - python=3.10
  - pip
+ - numpy
  - pip:
    - remote-ikernel
    - ipykernel
-   - numpy
    - pandas
    - scikit-image
    - scikit-learn
    - opencv-python
    - omero-py
+   - python-bioformats

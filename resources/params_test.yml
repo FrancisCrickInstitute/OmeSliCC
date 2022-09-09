@@ -1,0 +1,42 @@
+input:
+  # omero - Omero server address
+  #omero: ssl://omero-prod.camp.thecrick.org
+  # folder - input folder
+  folder: E:/Personal/Crick/VP/magc/IRF_200nm
+
+  # type - project or image
+  #type: project
+  type: image
+
+  # ids - project or image id(s)
+  #ids: 355
+
+  # labels - required Omero metadata labels
+  labels: []
+
+output:
+  folder: output/images
+  format: ome.tiff
+  #channels: combine
+  channels: split
+  tile_size: [256, 256]
+  compression: ['JPEGXR_NDPI', 75]
+  pyramid_add: 3
+  pyramid_downsample: 4.0
+  csv: resources/csv/labels.csv
+
+# actions can be: info, thumbnail, convert, labels
+actions: [info, thumbnail, convert]
+
+credentials:
+  # for encoding/decoding (in private space):
+  #private_key: ~/omero.pri.key   # note ~ doesn't work from container
+  #public_key: ~/omero.pub.key   # note ~ doesn't work from container
+  private_key: omero.pri.key   # note ~ doesn't work from container
+  public_key: omero.pub.key   # note ~ doesn't work from container
+  # encoded credentials (in public space):
+  credentials: .omero_credentials
+
+log:
+  filename: log/omeslicc.log
+  log_format: '%(asctime)s %(levelname)s: %(message)s'

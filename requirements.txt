@@ -15,4 +15,5 @@ psutil
 PyYAML
 Pillow
 imageio
+python-bioformats
 matplotlib

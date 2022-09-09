@@ -20,6 +20,21 @@ def show_image_gray(image):
     plt.show()
 
 
+def get_image_size_info(xyzct, type_size_bytes):
+    w, h, zs, cs, ts = xyzct
+    size_gb = (w * h * zs * cs * ts * type_size_bytes) / 1024 / 1024 / 1024
+    image_size_info = f'Size: {w} x {h} x {zs} C: {cs} T: {ts} ({size_gb:.1f} GB)'
+    return image_size_info
+
+
+def pilmode_to_pixelsize(mode):
+    pixelsize = 1
+    mode_types = {'I': 4, 'F': 4}
+    if mode in mode_types:
+        pixelsize = mode_types[mode]
+    return pixelsize
+
+
 def get_best_mag(mags, target_mag):
     # find smallest mag larger/equal to target mag
     best_mag = None
