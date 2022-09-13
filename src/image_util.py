@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+from PIL import Image
 import matplotlib.pyplot as plt
 import tifffile
 from numcodecs.abc import Codec
@@ -20,10 +21,10 @@ def show_image_gray(image):
     plt.show()
 
 
-def get_image_size_info(xyzct, type_size_bytes):
+def get_image_size_info(xyzct, pixel_nbytes):
     w, h, zs, cs, ts = xyzct
-    size_gb = (w * h * zs * cs * ts * type_size_bytes) / 1024 / 1024 / 1024
-    image_size_info = f'Size: {w} x {h} x {zs} C: {cs} T: {ts} ({size_gb:.1f} GB)'
+    size = print_hbytes(w * h * zs * cs * ts * pixel_nbytes)
+    image_size_info = f'Size: {w} x {h} x {zs} C: {cs} T: {ts} ({size})'
     return image_size_info
 
 
@@ -100,6 +101,25 @@ def precise_resize(image, scale):
             value = np.sum(image[y0:y1, x0:x1], axis=(0, 1)) / totn
             new_image[y, x] = value
     return new_image
+
+
+def pil_resize(image, target_size):
+    nchannels = 1
+    if isinstance(image, Image.Image):
+        pil_image = image.copy()
+    else:
+        if len(image.shape) == 3:
+            nchannels = image.shape[-1]
+        if nchannels == 2:
+            pil_image = Image.fromarray(image, mode='LA')
+        else:
+            pil_image = Image.fromarray(image)
+    if pil_image.mode.startswith('I'):
+        resample = Image.NEAREST
+    else:
+        resample = Image.ANTIALIAS
+    pil_image.thumbnail(target_size, resample)
+    return np.asarray(pil_image)
 
 
 def load_tiff(filename, only_tiled=True):

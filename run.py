@@ -49,10 +49,6 @@ def run_actions(params):
                 logging.info(f'Done {action}')
     else:
         input_folder = input['folder']
-        output_format = output['format']
-        channel_operation = input.get('channels')
-        if channel_operation is not None:
-            channel_operation = ChannelOperation[channel_operation]
         filenames = []
         if ids is not None:
             filenames = [os.path.join(input_folder, id) for id in ids]
@@ -70,7 +66,7 @@ def run_actions(params):
                 elif 'thumb' in action:
                     extract_thumbnail(filename, output_folder)
                 elif 'convert' in action:
-                    convert_slide(filename, output_folder, output_format, channel_operation)
+                    convert_slide(filename, output)
             logging.info(f'Done {action}')
 
     logging.info('Done')

@@ -6,13 +6,13 @@ from ome_types.model import Image, Pixels, Plane, Channel, Instrument, Objective
 from ome_types.model.map import M
 from ome_types.model.tiff_data import UUID
 
+from src.util import get_filetitle
+
 
 def create_ome_metadata(file_name0, image_info, channels, stage=None, planes=[], objective=None,
                         map_annotations=[], comment_annotations=[], pyramid_sizes_add=None):
     file_name = os.path.basename(file_name0)
-    file_title = os.path.splitext(file_name)[0]
-    if file_title.endswith('.ome'):
-        file_title = os.path.splitext(file_title)[0]
+    file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
     ome = OME(uuid=uuid)
 

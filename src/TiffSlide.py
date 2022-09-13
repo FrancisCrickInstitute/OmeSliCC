@@ -5,15 +5,15 @@ import os
 import numpy as np
 import tifffile
 from tifffile import TiffFile
-from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
+from src.OmeSlide import OmeSlide
 from src.image_util import find_ome_magnification, get_tiff_pages, get_best_mag, show_image, precise_resize, \
-    get_best_size
+    get_best_size, pil_resize
 from src.util import round_significants
 
 
-class TiffSlide:
+class TiffSlide(OmeSlide):
     def __init__(self, filename, target_mag=None, executor=None):
         self.target_mag = target_mag
         if executor is not None:
@@ -28,7 +28,7 @@ class TiffSlide:
         self.source_mags = []
         self.sizes = []
         self.sizes_xyzct = []
-        self.pixel_types = []
+        self.pixel_nbytes = []
         self.main_page = -1
         self.best_page = -1
         tiff = TiffFile(filename)
@@ -41,9 +41,11 @@ class TiffSlide:
             mag = self.get_mag(page)
             if mag != 0 and self.main_page < 0:
                 self.main_page = index
+                if self.ome_metadata is not None:
+                    self.channels = []
             self.sizes.append((page.imagewidth, page.imagelength))
             self.sizes_xyzct.append((page.imagewidth, page.imagelength, page.imagedepth, 1, 1))
-            self.pixel_types.append(page.dtype)
+            self.pixel_nbytes.append(page.bitspersample // 8)
         if target_mag is not None:
             for page in self.pages:
                 source_mag = self.get_mag(page)
@@ -128,32 +130,7 @@ class TiffSlide:
         elif precise:
             return precise_resize(image, scale)
         else:
-            thumb = Image.fromarray(image)
-            thumb.thumbnail(target_size, Image.ANTIALIAS)
-            return np.asarray(thumb)
-
-    def asarray(self, x0, y0, x1, y1):
-        # ensure fixed patch size
-        w0 = x1 - x0
-        h0 = y1 - y0
-        if self.best_factor != 1:
-            ox0, oy0 = int(round(x0 * self.best_factor)), int(round(y0 * self.best_factor))
-            ox1, oy1 = int(round(x1 * self.best_factor)), int(round(y1 * self.best_factor))
-        else:
-            ox0, oy0, ox1, oy1 = x0, y0, x1, y1
-        image0 = self.asarray_level(self.best_page, ox0, oy0, ox1, oy1)
-        if self.best_factor != 1:
-            w = int(round(image0.shape[1] / self.best_factor))
-            h = int(round(image0.shape[0] / self.best_factor))
-            pil_image = Image.fromarray(image0).resize((w, h))
-            image = np.array(pil_image)
-        else:
-            image = image0
-        w = image.shape[1]
-        h = image.shape[0]
-        if (h, w) != (h0, w0):
-            image = np.pad(image, ((0, h0 - h), (0, w0 - w), (0, 0)), 'edge')
-        return image
+            return pil_resize(image, target_size)
 
     def asarray_level(self, level, x0, y0, x1, y1):
         if self.decompressed:

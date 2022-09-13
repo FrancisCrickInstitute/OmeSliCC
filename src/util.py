@@ -1,5 +1,6 @@
 import imagecodecs
 import numpy as np
+import os
 import tifffile
 
 
@@ -79,3 +80,11 @@ def round_significants(a, significant_digits):
         round_decimals = significant_digits - int(np.floor(np.log10(abs(a)))) - 1
         return round(a, round_decimals)
     return a
+
+
+def get_filetitle(filename, remove_all_ext=False):
+    filebase = os.path.basename(filename)
+    if remove_all_ext:
+        return filebase.split('.')[0]
+    else:
+        return os.path.splitext(filebase)[0]

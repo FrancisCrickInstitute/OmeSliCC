@@ -136,3 +136,4 @@ dmypy.json
 .omero_credentials
 *.key
 .idea/
+output/
