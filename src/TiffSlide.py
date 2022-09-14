@@ -8,8 +8,8 @@ from tifffile import TiffFile
 from concurrent.futures import ThreadPoolExecutor
 
 from src.OmeSlide import OmeSlide
-from src.image_util import find_ome_magnification, get_tiff_pages, get_best_mag, show_image, precise_resize, \
-    get_best_size, pil_resize
+from src.image_util import find_ome_magnification, get_tiff_pages, get_best_mag, show_image
+from src.ome import create_ome_metadata
 from src.util import round_significants
 
 
@@ -33,7 +33,8 @@ class TiffSlide(OmeSlide):
         self.best_page = -1
         tiff = TiffFile(filename)
         if tiff.is_ome and tiff.ome_metadata is not None:
-            self.ome_metadata = tifffile.xml2dict(tiff.ome_metadata)
+            self.xml_metadata = tiff.ome_metadata
+            self.ome_metadata = tifffile.xml2dict(self.xml_metadata)
         else:
             self.ome_metadata = None
         self.pages = get_tiff_pages(tiff, only_tiled=True)
@@ -61,6 +62,17 @@ class TiffSlide(OmeSlide):
             if target_mag is not None:
                 raise ValueError(f'Error: No suitable magnification available ({self.source_mags})')
         self.fh = tiff.filehandle
+
+    def get_metadata(self):
+        return self.ome_metadata
+
+    def get_xml_metadata(self, output_filename):
+        if self.xml_metadata is not None:
+            xml_metadata = self.xml_metadata
+        else:
+            ome_metadata = create_ome_metadata(output_filename, image_info, channels)
+            xml_metadata = ome_metadata.to_xml()
+        return xml_metadata
 
     def load(self, decompress=False):
         self.fh.seek(0)
@@ -120,17 +132,6 @@ class TiffSlide(OmeSlide):
     def get_size(self):
         # size at selected magnification
         return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
-
-    def get_thumbnail(self, target_size, precise=False):
-        size, index = get_best_size(self.sizes, target_size)
-        scale = np.divide(target_size, self.sizes[index])
-        image = self.pages[index].asarray()
-        if np.round(scale, 3)[0] == 1 and np.round(scale, 3)[1] == 1:
-            return image
-        elif precise:
-            return precise_resize(image, scale)
-        else:
-            return pil_resize(image, target_size)
 
     def asarray_level(self, level, x0, y0, x1, y1):
         if self.decompressed:

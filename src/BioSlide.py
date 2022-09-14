@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from src.OmeSlide import OmeSlide
 from src.util import stringdict_to_dict
-from src.image_util import pil_resize, show_image
+from src.image_util import show_image
 
 
 class BioSlide(OmeSlide):
@@ -23,55 +23,33 @@ class BioSlide(OmeSlide):
         open_javabridge()
 
         self.filename = filename
+        self.ome_metadata = bioformats.OMEXML(bioformats.get_omexml_metadata(self.filename))
         self.reader = ImageReader(filename)
 
-        self.meta = self.get_metadata1()
-        #self.meta = self.get_metadata2()
-
         # get magnification
-        mag0 = int(float(self.meta.instrument().Objective.get_NominalMagnification()))
+        mag0 = int(float(self.ome_metadata.instrument().Objective.get_NominalMagnification()))
 
-        for i in range(self.meta.get_image_count()):
-            pmeta = self.meta.image(i).Pixels
+        for i in range(self.ome_metadata.get_image_count()):
+            pmetadata = self.ome_metadata.image(i).Pixels
             if i == 0:
-                pmeta0 = pmeta
-            if pmeta.PhysicalSizeX is not None:
+                pmetadata0 = pmetadata
+            if pmetadata.PhysicalSizeX is not None:
                 self.indexes.append(i)
-                self.sizes.append((pmeta.SizeX, pmeta.SizeY))
-                self.sizes_xyzct.append((pmeta.SizeX, pmeta.SizeY, pmeta.SizeZ, pmeta.SizeC, pmeta.SizeT))
-                self.pixel_nbytes.append(np.dtype(pmeta.PixelType).itemsize)
+                self.sizes.append((pmetadata.SizeX, pmetadata.SizeY))
+                self.sizes_xyzct.append((pmetadata.SizeX, pmetadata.SizeY, pmetadata.SizeZ, pmetadata.SizeC, pmetadata.SizeT))
+                self.pixel_nbytes.append(np.dtype(pmetadata.PixelType).itemsize)
                 if i == 0:
                     mag = mag0
                     self.channels = []
                 else:
-                    mag = mag0 * (np.mean([pmeta.SizeX, pmeta.SizeY]) / np.mean([pmeta0.SizeX, pmeta0.SizeY]))
+                    mag = mag0 * (np.mean([pmetadata.SizeX, pmetadata.SizeY]) / np.mean([pmetadata0.SizeX, pmetadata0.SizeY]))
                 self.mags.append(mag)
 
-    def get_metadata1(self):
-        xml = bioformats.get_omexml_metadata(self.filename)
-        return bioformats.OMEXML(xml)
+    def get_metadata(self):
+        return self.ome_metadata
 
-    def get_metadata2(self):
-        format_reader = self.reader.rdr
-        meta = stringdict_to_dict(jdictionary_to_string_dictionary(format_reader.getGlobalMetadata()))
-        series_meta = []
-        nseries = format_reader.getSeriesCount()
-        temp_series = format_reader.getSeries()
-        for i in range(nseries):
-            format_reader.setSeries(i)
-            series_data = stringdict_to_dict(jdictionary_to_string_dictionary(format_reader.getSeriesMetadata()))
-            series_meta.append(series_data)
-        format_reader.setSeries(temp_series)
-        return meta, series_meta
-
-    def get_size(self):
-        # size at selected magnification
-        return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
-
-    def get_thumbnail(self, target_size):
-        size0 = self.sizes[-1]
-        image = self.asarray_level(-1, 0, 0, size0[0], size0[1])
-        return pil_resize(image, target_size)
+    def get_xml_metadata(self, output_filename):
+        return self.ome_metadata.to_xml()
 
     def asarray_level(self, level, x0, y0, x1, y1):
         xywh = (x0, y0, x1 - x0, y1 - y0)

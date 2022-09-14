@@ -1,8 +1,8 @@
 import numpy as np
 import cv2 as cv
-from PIL import Image
 import matplotlib.pyplot as plt
 import tifffile
+from PIL.ExifTags import TAGS
 from numcodecs.abc import Codec
 from numcodecs.compat import ensure_ndarray
 from imagecodecs import jpeg2k_encode, jpeg2k_decode
@@ -50,18 +50,6 @@ def get_best_mag(mags, target_mag):
     return best_mag, best_index
 
 
-def get_best_size(sizes, target_size):
-    # find largest scale but smaller to 1
-    best_index = -1
-    best_scale = 0
-    for index, size in enumerate(sizes):
-        scale = np.mean(np.divide(target_size, size))
-        if 1 >= scale > best_scale:
-            best_index = index
-            best_scale = scale
-    return sizes[best_index], best_index
-
-
 def calc_pyramid(size, pyramid_add=0, pyramid_downsample=4.0):
     width, height = size
     sizes_add = []
@@ -103,23 +91,11 @@ def precise_resize(image, scale):
     return new_image
 
 
-def pil_resize(image, target_size):
-    nchannels = 1
-    if isinstance(image, Image.Image):
-        pil_image = image.copy()
-    else:
-        if len(image.shape) == 3:
-            nchannels = image.shape[-1]
-        if nchannels == 2:
-            pil_image = Image.fromarray(image, mode='LA')
-        else:
-            pil_image = Image.fromarray(image)
-    if pil_image.mode.startswith('I'):
-        resample = Image.NEAREST
-    else:
-        resample = Image.ANTIALIAS
-    pil_image.thumbnail(target_size, resample)
-    return np.asarray(pil_image)
+def resize(image, target_size):
+    if not isinstance(image, np.ndarray):
+        image = image.asarray()
+    resized_image = cv.resize(image, tuple(target_size), interpolation=cv.INTER_AREA)
+    return np.asarray(resized_image)
 
 
 def load_tiff(filename, only_tiled=True):
@@ -212,6 +188,20 @@ def tiff_info_short(filename):
         nom_size += page.size
     s += f' Image size:{nom_size} File size:{real_size} Overall compression: 1:{nom_size / real_size:.1f}'
     return s
+
+
+def get_image_metadata(image):
+    metadata = {}
+    exifdata = image.getexif()
+    for tag_id in exifdata:
+        tag = TAGS.get(tag_id, tag_id)
+        data = exifdata.get(tag_id)
+        if isinstance(data, bytes):
+            data = data.decode()
+        metadata[tag] = data
+    if metadata == {}:
+        metadata = image.info
+    return metadata
 
 
 class JPEG2000(Codec):

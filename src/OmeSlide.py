@@ -1,6 +1,8 @@
 import numpy as np
 from PIL import Image
 
+from src.image_util import precise_resize, resize
+
 
 class OmeSlide:
     def asarray(self, x0=0, y0=0, x1=-1, y1=-1):
@@ -28,3 +30,30 @@ class OmeSlide:
         if (h, w) != (h0, w0):
             image = np.pad(image, ((0, h0 - h), (0, w0 - w), (0, 0)), 'edge')
         return image
+
+    def get_size(self):
+        # size at selected magnification
+        return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
+
+    def get_thumbnail(self, target_size, precise=False):
+        size, index = get_best_size(self.sizes, target_size)
+        scale = np.divide(target_size, self.sizes[index])
+        image = self.asarray_level(index, 0, 0, size[0], size[1])
+        if np.round(scale, 3)[0] == 1 and np.round(scale, 3)[1] == 1:
+            return image
+        elif precise:
+            return precise_resize(image, scale)
+        else:
+            return resize(image, target_size)
+
+
+def get_best_size(sizes, target_size):
+    # find largest scale but smaller to 1
+    best_index = -1
+    best_scale = 0
+    for index, size in enumerate(sizes):
+        scale = np.mean(np.divide(target_size, size))
+        if 1 >= scale > best_scale:
+            best_index = index
+            best_scale = scale
+    return sizes[best_index], best_index

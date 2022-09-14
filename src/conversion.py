@@ -6,16 +6,15 @@ import logging
 import os
 import numpy as np
 import zarr
-from PIL import Image
+import cv2 as cv
 from numcodecs import register_codec
 from numcodecs.blosc import Blosc
-from tifffile import tifffile, TiffWriter
+from tifffile import TiffWriter
 
 from src.BioSlide import BioSlide
 from src.PlainImageSlide import PlainImageSlide
 from src.TiffSlide import TiffSlide
-from src.image_util import JPEG2000, tags_to_dict, scale_image, get_image_size_info
-from src.parameters import ChannelOperation
+from src.image_util import JPEG2000, scale_image, get_image_size_info
 from src.util import get_filetitle
 
 register_codec(JPEG2000)
@@ -48,9 +47,14 @@ def extract_thumbnail(filename, output_folder):
     thumbsize = np.int0(np.divide(size, 10))
     # write thumbnail to file
     thumb = slide.get_thumbnail(thumbsize)
-    output_filename = os.path.join(output_folder, get_filetitle(filename) + '_thumb.tiff')
-    Image.fromarray(thumb).save(output_filename)
-    #save_tiff(output_filename, thumb)
+    nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
+    if nchannels == 2:
+        for channeli in range(nchannels):
+            output_filename = os.path.join(output_folder, f'{get_filetitle(filename)}_channel{channeli}_thumb.tiff')
+            cv.imwrite(output_filename, thumb[..., channeli])
+    else:
+        output_filename = os.path.join(output_folder, get_filetitle(filename) + '_thumb.tiff')
+        cv.imwrite(output_filename, thumb)
     return thumb
 
 
@@ -138,18 +142,18 @@ def convert_slide_to_zarr(slide, output_filename, output_params):
 
 
 def convert_slide_to_tiff(slide, output_filename, output_params, ome=False):
-    image = slide.asarray
+    image = slide.asarray()
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     pyramid_add = output_params.get('pyramid_add')
     pyramid_downsample = output_params.get('pyramid_downsample')
     if ome:
         metadata = None
-        ome_metadata = slide.get_ome_metadata()
+        xml_metadata = slide.get_xml_metadata(output_filename)
     else:
         metadata = slide.get_metadata()
-        ome_metadata = None
-    save_tiff(output_filename, image, metadata=metadata, xml_metadata=ome_metadata, tile_size=tile_size, compression=compression,
+        xml_metadata = None
+    save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
               pyramid_add=pyramid_add, pyramid_downsample=pyramid_downsample)
 
 

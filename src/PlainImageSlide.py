@@ -4,7 +4,8 @@ from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
 from src.OmeSlide import OmeSlide
-from src.image_util import precise_resize, pilmode_to_pixelsize, pil_resize
+from src.image_util import pilmode_to_pixelsize, get_image_metadata, show_image
+from src.ome import create_ome_metadata
 
 Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents loading large images)
 
@@ -22,6 +23,7 @@ class PlainImageSlide(OmeSlide):
         self.data = None
         self.arrays = []
         self.image = Image.open(filename)
+        self.metadata = get_image_metadata(self.image)
         self.size = (self.image.width, self.image.height)
         self.sizes = [self.size]
         self.size_xyzct = (self.image.width, self.image.height, self.image.n_frames, len(self.image.getbands()), 1)
@@ -32,6 +34,15 @@ class PlainImageSlide(OmeSlide):
             self.mag_factor = source_mag / target_mag
         else:
             self.mag_factor = 1
+        self.best_page = 0
+        self.best_factor = self.mag_factor
+
+    def get_metadata(self):
+        return self.metadata
+
+    def get_xml_metadata(self, output_filename):
+        ome_metadata = create_ome_metadata(output_filename, image_info, channels)
+        return ome_metadata.to_xml()
 
     def load(self):
         self.unload()
@@ -43,18 +54,6 @@ class PlainImageSlide(OmeSlide):
             del array
         self.arrays = []
         self.loaded = False
-
-    def get_size(self):
-        # size at selected magnification
-        return np.divide(self.size, self.mag_factor).astype(int)
-
-    def get_thumbnail(self, target_size, precise=False):
-        if precise:
-            scale = target_size / self.size
-            return precise_resize(np.array(self.image), scale)
-        else:
-            return pil_resize(self.image, target_size)
-
 
     def asarray_level(self, level, x0, y0, x1, y1):
         if self.loaded:
