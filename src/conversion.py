@@ -14,7 +14,7 @@ from tifffile import TiffWriter
 from src.BioSlide import BioSlide
 from src.PlainImageSlide import PlainImageSlide
 from src.TiffSlide import TiffSlide
-from src.image_util import JPEG2000, scale_image, get_image_size_info
+from src.image_util import JPEG2000, image_resize, get_image_size_info
 from src.util import get_filetitle
 
 register_codec(JPEG2000)
@@ -126,12 +126,8 @@ def convert_slide_to_zarr0(input_filename, output_folder, patch_size=(256, 256))
 
 
 def convert_slide_to_zarr(slide, output_filename, output_params):
-    size = slide.sizes_xyzct[0]
-    shape = (size[0], size[1], size[2] * size[3])
-    if slide.pixel_nbytes[0] == 2:
-        dtype = 'uint16'
-    else:
-        dtype = 'uint8'
+    shape = slide.get_shape()
+    dtype = slide.pixel_types[0]
     tile_size = output_params['tile_size']
     compression = output_params.get('compression')
 
@@ -142,7 +138,11 @@ def convert_slide_to_zarr(slide, output_filename, output_params):
 
 
 def convert_slide_to_tiff(slide, output_filename, output_params, ome=False):
-    image = slide.asarray()
+    image = slide.clone_empty()
+    chunk_size = (10240, 10240)
+    for x0, y0, x1, y1, chunk in slide.produce_chunks(chunk_size):
+        image[y0:y1, x0:x1] = chunk
+
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     pyramid_add = output_params.get('pyramid_add')
@@ -177,6 +177,6 @@ def save_tiff(filename, image, metadata=None, xml_metadata=None, tile_size=None,
             else:
                 scale /= pyramid_downsample
                 new_width, new_height = int(round(width * scale)), int(round(height * scale))
-            new_image = scale_image(image, (new_width, new_height))
+            new_image = image_resize(image, (new_width, new_height))
             writer.write(new_image, subfiletype=1,
                          tile=tile_size, compression=compression)

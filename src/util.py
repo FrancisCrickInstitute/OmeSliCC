@@ -1,12 +1,5 @@
-import imagecodecs
-import numpy as np
 import os
-import tifffile
-
-
-def check_versions():
-    print(f'tifffile {tifffile.__version__}')
-    print(imagecodecs.version())
+import numpy as np
 
 
 def ensure_list(x):
@@ -40,28 +33,6 @@ def print_dict(d, compact=False, indent=0):
             s += str(value)
         s += ' ' if compact else '\n'
     return s
-
-
-def stringdict_to_dict(string_dict):
-    metadata = {}
-    if isinstance(string_dict, dict):
-        dict_list = string_dict.items()
-    else:
-        dict_list = string_dict
-    for key, value in dict_list:
-        keys = key.split('|')
-        add_dict_tree(metadata, keys, value)
-    return metadata
-
-
-def add_dict_tree( metadata, keys, value):
-    key = keys[0]
-    if len(keys) > 1:
-        if key not in metadata:
-            metadata[key] = {}
-        add_dict_tree(metadata[key], keys[1:], value)
-    else:
-        metadata[key] = value
 
 
 def print_hbytes(bytes):

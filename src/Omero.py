@@ -134,12 +134,11 @@ class Omero:
         outfilename = os.path.join(outpath, filetitle)
         if not os.path.exists(outfilename):
             # do not overwrite existing files
-            w, h, zs, cs, ts = self.get_size(image_object)
+            xyzct = self.get_size(image_object)
+            w, h, zs, cs, ts = xyzct
             pixels = image_object.getPrimaryPixels()
-            pixel_type = pixels.getPixelsType()
-            type_size_bytes = pixel_type.getBitSize() / 8
-            size_gb = (w * h * zs * cs * ts * type_size_bytes) / 1024 / 1024 / 1024
-            logging.info(f'{image_id} {image_object.getName()} Size: {w} x {h} x {zs} C: {cs} T: {ts} ({size_gb:.1f} GB)')
+            pixel_nbytes = pixels.getPixelsType().getBitSize() / 8
+            logging.info(f'{image_id} {image_object.getName()} {get_image_size_info(xyzct, pixel_nbytes)}')
 
             #tiff_content = image_object.exportOmeTiff()    # not working (~image too large)
             #with open(outfilename, 'wb') as writer:

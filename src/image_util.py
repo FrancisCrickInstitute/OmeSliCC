@@ -5,10 +5,16 @@ import tifffile
 from PIL.ExifTags import TAGS
 from numcodecs.abc import Codec
 from numcodecs.compat import ensure_ndarray
+import imagecodecs
 from imagecodecs import jpeg2k_encode, jpeg2k_decode
 from tifffile import TiffFile, TiffPage
 
 from src.util import tags_to_dict, print_dict, print_hbytes
+
+
+def check_versions():
+    print(f'tifffile {tifffile.__version__}')
+    print(imagecodecs.version())
 
 
 def show_image(image):
@@ -28,26 +34,12 @@ def get_image_size_info(xyzct, pixel_nbytes):
     return image_size_info
 
 
-def pilmode_to_pixelsize(mode):
-    pixelsize = 1
-    mode_types = {'I': 4, 'F': 4}
+def pilmode_to_pixelinfo(mode):
+    pixelinfo = (np.uint8, 1)
+    mode_types = {'I': (np.uint32, 4), 'F': (np.float32, 4)}
     if mode in mode_types:
-        pixelsize = mode_types[mode]
-    return pixelsize
-
-
-def get_best_mag(mags, target_mag):
-    # find smallest mag larger/equal to target mag
-    best_mag = None
-    best_index = -1
-    best_scale = 0
-    for index, mag in enumerate(mags):
-        scale = target_mag / mag
-        if 1 >= scale > best_scale:
-            best_index = index
-            best_mag = mag
-            best_scale = scale
-    return best_mag, best_index
+        pixelinfo = mode_types[mode]
+    return pixelinfo
 
 
 def calc_pyramid(size, pyramid_add=0, pyramid_downsample=4.0):
@@ -60,21 +52,15 @@ def calc_pyramid(size, pyramid_add=0, pyramid_downsample=4.0):
     return sizes_add
 
 
-def find_ome_magnification(metadata0):
-    mag = 0
-    if 'OME' in metadata0:
-        metadata = metadata0['OME']
-    else:
-        metadata = metadata0
-    try:
-        mag = metadata['Instrument']['Objective']['NominalMagnification']
-    except:
-        pass
-    return mag
+def image_resize_fast(image, target_size):
+    return cv.resize(image, target_size, interpolation=cv.INTER_AREA)
 
 
-def scale_image(image, new_size):
-    return cv.resize(image, new_size)
+def image_resize(image, target_size):
+    if not isinstance(image, np.ndarray):
+        image = image.asarray()
+    new_image = cv.resize(image, tuple(target_size), interpolation=cv.INTER_AREA)
+    return new_image
 
 
 def precise_resize(image, scale):
@@ -89,13 +75,6 @@ def precise_resize(image, scale):
             value = np.sum(image[y0:y1, x0:x1], axis=(0, 1)) / totn
             new_image[y, x] = value
     return new_image
-
-
-def resize(image, target_size):
-    if not isinstance(image, np.ndarray):
-        image = image.asarray()
-    resized_image = cv.resize(image, tuple(target_size), interpolation=cv.INTER_AREA)
-    return np.asarray(resized_image)
 
 
 def load_tiff(filename, only_tiled=True):
@@ -190,7 +169,7 @@ def tiff_info_short(filename):
     return s
 
 
-def get_image_metadata(image):
+def get_pil_metadata(image):
     metadata = {}
     exifdata = image.getexif()
     for tag_id in exifdata:

@@ -1,67 +1,100 @@
 # https://pypi.org/project/tifffile/
-
-
+import ast
 import os
+import re
 import numpy as np
 import tifffile
 from tifffile import TiffFile
 from concurrent.futures import ThreadPoolExecutor
 
 from src.OmeSlide import OmeSlide
-from src.image_util import find_ome_magnification, get_tiff_pages, get_best_mag, show_image
+from src.image_util import get_tiff_pages
 from src.ome import create_ome_metadata
-from src.util import round_significants
+from src.util import get_filetitle, tags_to_dict
 
 
 class TiffSlide(OmeSlide):
-    def __init__(self, filename, target_mag=None, executor=None):
+    def __init__(self, filename, source_mag=None, target_mag=None, executor=None):
+        self.filename = filename
         self.target_mag = target_mag
+        self.loaded = False
+        self.decompressed = False
+        self.data = None
+        self.arrays = []
+        self.sizes = []
+        self.sizes_xyzct = []
+        self.pixel_types = []
+        self.pixel_nbytes = []
+
         if executor is not None:
             self.executor = executor
         else:
             max_workers = (os.cpu_count() or 1) + 4
             self.executor = ThreadPoolExecutor(max_workers)
-        self.loaded = False
-        self.decompressed = False
-        self.data = None
-        self.arrays = []
-        self.source_mags = []
-        self.sizes = []
-        self.sizes_xyzct = []
-        self.pixel_nbytes = []
-        self.main_page = -1
-        self.best_page = -1
+
         tiff = TiffFile(filename)
         if tiff.is_ome and tiff.ome_metadata is not None:
             self.xml_metadata = tiff.ome_metadata
             self.ome_metadata = tifffile.xml2dict(self.xml_metadata)
         else:
+            self.xml_metadata = None
             self.ome_metadata = None
         self.pages = get_tiff_pages(tiff, only_tiled=True)
-        for index, page in enumerate(self.pages):
-            mag = self.get_mag(page)
-            if mag != 0 and self.main_page < 0:
-                self.main_page = index
-                if self.ome_metadata is not None:
-                    self.channels = []
+        if len(self.pages) == 0:
+            self.pages = get_tiff_pages(tiff, only_tiled=False)
+        for page in self.pages:
             self.sizes.append((page.imagewidth, page.imagelength))
-            self.sizes_xyzct.append((page.imagewidth, page.imagelength, page.imagedepth, 1, 1))
+            nchannels = 1
+            if len(page.shape) > 2:
+                nchannels = page.shape[2]
+            self.sizes_xyzct.append((page.imagewidth, page.imagelength, nchannels, page.imagedepth, 1))
+            self.pixel_types.append(page.dtype)
             self.pixel_nbytes.append(page.bitspersample // 8)
-        if target_mag is not None:
-            for page in self.pages:
-                source_mag = self.get_mag(page)
-                if source_mag == 0:
-                    source_mag = self.calc_mag(page)
-                self.source_mags.append(source_mag)
-        source_mag, self.best_page = get_best_mag(self.source_mags, target_mag)
-        if target_mag is not None:
-            self.best_factor = source_mag / target_mag
-        if self.best_page < 0:
-            self.best_page = 0
-            self.best_factor = 1
-            if target_mag is not None:
-                raise ValueError(f'Error: No suitable magnification available ({self.source_mags})')
         self.fh = tiff.filehandle
+        self.mag0 = self.find_metadata_magnification(filename)
+        if self.mag0 == 0 and source_mag is not None:
+            self.mag0 = source_mag
+        self.init_mags(filename)
+
+    def find_metadata_magnification(self, filename):
+        mag = 0
+        page = self.pages[0]
+        # from OME metadata
+        if page.is_ome:
+            if 'OME' in self.ome_metadata:
+                metadata = self.ome_metadata['OME']
+            else:
+                metadata = self.ome_metadata
+            try:
+                mag = metadata['Instrument']['Objective']['NominalMagnification']
+            except:
+                pass
+        if mag == 0:
+            # from tiff description
+            try:
+                desc = page.description
+                if desc.startswith('{'):
+                    metadata = ast.literal_eval(desc)
+                elif '|' in desc:
+                    metadata = {item.split('=')[0].strip(): item.split('=')[1].strip() for item in page.description.split('|')}
+                if 'AppMag' in metadata:
+                    mag = float(metadata['AppMag'])
+            except:
+                pass
+        if mag == 0:
+            # from imageJ metadata
+            if page.is_imagej:
+                metadata = page.imagej_metadata
+        if mag == 0:
+            # from TAGS
+            metadata = tags_to_dict(page.tags)
+        if mag == 0:
+            # from filename
+            title = get_filetitle(filename, remove_all_ext=True)
+            matches = re.findall(r'(\d+)x', title)
+            if len(matches) > 0:
+                mag = float(matches[-1])
+        return mag
 
     def get_metadata(self):
         return self.ome_metadata
@@ -70,7 +103,16 @@ class TiffSlide(OmeSlide):
         if self.xml_metadata is not None:
             xml_metadata = self.xml_metadata
         else:
-            ome_metadata = create_ome_metadata(output_filename, image_info, channels)
+            size = self.get_size()
+            xyzct = self.sizes_xyzct[0]
+            physical_size = size / self.metadata['dpi']
+            physical_size_z = 1
+            image_info = {'size_x': size[0], 'size_y': size[1], 'size_z': xyzct[2], 'size_c': xyzct[3],
+                          'size_t': xyzct[4],
+                          'physical_size_x': physical_size[0], 'physical_size_y': physical_size[1],
+                          'physical_size_z': physical_size_z,
+                          'dimension_order': 'XYZCT', 'type': self.pixel_types[0].__name__}
+            ome_metadata = create_ome_metadata(output_filename, image_info, [])
             xml_metadata = ome_metadata.to_xml()
         return xml_metadata
 
@@ -211,28 +253,4 @@ class TiffSlide(OmeSlide):
                 segment = bytearray()
             segments.append((segment, index))
             #yield decode((segment, index))
-        yield from self.executor.map(decode, segments, timeout=1)
-
-    def get_mag(self, page):
-        mag = 0
-        if page.is_ome and self.ome_metadata is not None:
-            mag = find_ome_magnification(self.ome_metadata)
-        if mag == 0:
-            try:
-                tags = {item.split('=')[0].strip(): item.split('=')[1].strip() for item in page.description.split('|')}
-                if 'AppMag' in tags:
-                    mag = float(tags['AppMag'])
-            except:
-                pass
-        return mag
-
-    def calc_mag(self, page):
-        main_page = self.pages[self.main_page]
-        mag0 = self.get_mag(main_page)
-        size = (page.imagewidth, page.imagelength)
-        main_size = (main_page.imagewidth, main_page.imagelength)
-        mag = round_significants(np.mean(np.divide(size, main_size)) * mag0, 3)
-        return mag
-
-    def get_max_mag(self):
-        return np.max(self.source_mags)
+        yield from self.executor.map(decode, segments, timeout=10)

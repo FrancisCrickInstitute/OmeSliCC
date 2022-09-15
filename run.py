@@ -3,11 +3,13 @@ import glob
 import logging
 import os
 import yaml
+from tqdm import tqdm
 
 from src.Omero import Omero
 from src.OmeroLabelReader import OmeroLabelReader
 from src.conversion import get_image_info, extract_thumbnail, convert_slide
-from src.util import ensure_list, check_versions
+from src.image_util import check_versions
+from src.util import ensure_list
 from src.parameters import *
 
 
@@ -54,20 +56,26 @@ def run_actions(params):
             filenames = [os.path.join(input_folder, id) for id in ids]
         if len(filenames) == 0:
             input_path = input_folder
-            if os.path.exists(input_path):
+            if os.path.isdir(input_path):
                 input_path = os.path.join(input_path, '*')
             filenames = [file for file in glob.glob(input_path) if os.path.isfile(file)]
-        for action0 in actions:
-            action = action0.lower()
-            logging.info(f'Starting {action}')
-            for filename in filenames:
-                if 'info' in action:
-                    get_image_info(filename)
-                elif 'thumb' in action:
-                    extract_thumbnail(filename, output_folder)
-                elif 'convert' in action:
-                    convert_slide(filename, output)
-            logging.info(f'Done {action}')
+        if len(filenames) > 0:
+            for action0 in actions:
+                action = action0.lower()
+                logging.info(f'Starting {action}')
+                for filename in tqdm(filenames):
+                    try:
+                        if 'info' in action:
+                            get_image_info(filename)
+                        elif 'thumb' in action:
+                            extract_thumbnail(filename, output_folder)
+                        elif 'convert' in action:
+                            convert_slide(filename, output)
+                    except Exception as e:
+                        logging.exception(e)
+                logging.info(f'Done {action}')
+        else:
+            logging.warning('No files to process')
 
     logging.info('Done')
 
