@@ -5,6 +5,7 @@
 ©2022, The Francis Crick Institute
 All files in this distribution are part of OmeSliCC.
 OmeSliCC  is available here: https://github.com/FrancisCrickInstitute/OmeSliCC
+
 OmeSliCC is distributed under the terms of the GNU GENERAL PUBLIC LICENSE Version 3
  
 If you use this software for research purposes, you should cite this repository.
