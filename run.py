@@ -8,7 +8,6 @@ from tqdm import tqdm
 from src.Omero import Omero
 from src.OmeroLabelReader import OmeroLabelReader
 from src.conversion import get_image_info, extract_thumbnail, convert_slide
-from src.image_util import check_versions
 from src.util import ensure_list
 from src.parameters import *
 
@@ -28,7 +27,7 @@ def run_actions(params):
                 input_labels = input['labels']
                 image_ids = []
                 for proj_id in ensure_list(ids):
-                    image_ids.extend(omero.get_annotation_image_ids(proj_id, input_labels)[0])
+                    image_ids.extend(omero.get_annotation_image_ids(proj_id, input_labels, filter_label_macro=True)[0])
             elif 'image' in type:
                 image_ids = ensure_list(ids)
             else:
@@ -85,8 +84,6 @@ if __name__ == '__main__':
     parser.add_argument('--params',
                         help='The location of the parameters file',
                         default=PARAMETER_FILE)
-
-    #check_versions()
 
     args = parser.parse_args()
     with open(args.params, 'r') as file:

@@ -21,7 +21,7 @@ output:
   # channels: split
   tile_size: [256, 256]
   compression: ['JPEGXR_NDPI', 75]
-  pyramid_add: 3
+  npyramid_add: 3
   pyramid_downsample: 4.0
   csv: resources/csv/labels.csv
 

@@ -42,11 +42,11 @@ def pilmode_to_pixelinfo(mode):
     return pixelinfo
 
 
-def calc_pyramid(size, pyramid_add=0, pyramid_downsample=4.0):
+def calc_pyramid(size, npyramid_add=0, pyramid_downsample=4.0):
     width, height = size
     sizes_add = []
     scale = 1
-    for _ in range(pyramid_add):
+    for _ in range(npyramid_add):
         scale /= pyramid_downsample
         sizes_add.append((int(round(width * scale)), int(round(height * scale))))
     return sizes_add

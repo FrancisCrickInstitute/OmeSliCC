@@ -67,6 +67,3 @@ class PlainImageSlide(OmeSlide):
         else:
             array = np.array(self.image)
         return array[y0:y1, x0:x1]
-
-    def get_max_mag(self):
-        return self.source_mag

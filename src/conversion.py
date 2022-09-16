@@ -7,9 +7,11 @@ import os
 import numpy as np
 import zarr
 import cv2 as cv
+from PIL import Image
 from numcodecs import register_codec
 from numcodecs.blosc import Blosc
 from tifffile import TiffWriter
+from tqdm import tqdm
 
 from src.BioSlide import BioSlide
 from src.PlainImageSlide import PlainImageSlide
@@ -24,11 +26,10 @@ def load_slide(filename):
     ext = os.path.splitext(filename)[1].lower()
     if 'tif' in ext or 'svs' in ext:
         slide = TiffSlide(filename)
+    elif ext in Image.registered_extensions().keys():
+        slide = PlainImageSlide(filename)
     else:
-        try:
-            slide = PlainImageSlide(filename)
-        except:
-            slide = BioSlide(filename)
+        slide = BioSlide(filename)
     return slide
 
 
@@ -140,12 +141,14 @@ def convert_slide_to_zarr(slide, output_filename, output_params):
 def convert_slide_to_tiff(slide, output_filename, output_params, ome=False):
     image = slide.clone_empty()
     chunk_size = (10240, 10240)
-    for x0, y0, x1, y1, chunk in slide.produce_chunks(chunk_size):
+    # TODO: remove tqdm
+    total = np.prod(np.ceil(slide.get_size() / chunk_size))
+    for x0, y0, x1, y1, chunk in tqdm(slide.produce_chunks(chunk_size), total=total):
         image[y0:y1, x0:x1] = chunk
 
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
-    pyramid_add = output_params.get('pyramid_add')
+    npyramid_add = output_params.get('npyramid_add')
     pyramid_downsample = output_params.get('pyramid_downsample')
     if ome:
         metadata = None
@@ -154,29 +157,31 @@ def convert_slide_to_tiff(slide, output_filename, output_params, ome=False):
         metadata = slide.get_metadata()
         xml_metadata = None
     save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
-              pyramid_add=pyramid_add, pyramid_downsample=pyramid_downsample)
+              npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
 
 
 def save_tiff(filename, image, metadata=None, xml_metadata=None, tile_size=None, compression=None,
-              pyramid_add=0, pyramid_downsample=4.0, pyramid_sizes_add=None):
+              npyramid_add=0, pyramid_downsample=4.0, pyramid_sizes_add=None):
     if xml_metadata is not None:
         xml_metadata_bytes = xml_metadata.encode()
     else:
         xml_metadata_bytes = None
     width, height = image.shape[1], image.shape[0]
-    scale = 1
     with TiffWriter(filename, bigtiff=True) as writer:
         if pyramid_sizes_add is not None:
-            pyramid_add = len(pyramid_sizes_add)
-        writer.write(image, subifds=pyramid_add,
+            npyramid_add = len(pyramid_sizes_add)
+            scale = 1
+            resized_image = image
+
+        writer.write(image, subifds=npyramid_add,
                      tile=tile_size, compression=compression, metadata=metadata, description=xml_metadata_bytes)
 
-        for i in range(pyramid_add):
+        for i in range(npyramid_add):
             if pyramid_sizes_add is not None:
                 new_width, new_height = pyramid_sizes_add[i]
             else:
                 scale /= pyramid_downsample
                 new_width, new_height = int(round(width * scale)), int(round(height * scale))
-            new_image = image_resize(image, (new_width, new_height))
-            writer.write(new_image, subfiletype=1,
+            resized_image = image_resize(resized_image, (new_width, new_height))
+            writer.write(resized_image, subfiletype=1,
                          tile=tile_size, compression=compression)

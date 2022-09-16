@@ -12,7 +12,7 @@ from omero.gateway import BlitzGateway
 from tqdm import tqdm
 
 from src.conversion import save_tiff
-from src.image_util import calc_pyramid, get_image_size_info, show_image
+from src.image_util import calc_pyramid, get_image_size_info
 from src.omero_credentials import decrypt_credentials
 
 
@@ -47,7 +47,6 @@ class Omero:
             raise ConnectionError
         self.conn.c.enableKeepAlive(60)
         self.connected = True
-        #mds = self.conn.getMetadataService()
         logging.info(f'Connected as {self.conn.getUser().getName()}')
 
     def disconnect(self):
@@ -67,7 +66,7 @@ class Omero:
         image_object = self.conn.getObject('Image', image_id)
         return image_object
 
-    def get_annotation_image_ids(self, project_id, target_labels):
+    def get_annotation_image_ids(self, project_id, target_labels, filter_label_macro=False):
         image_ids = []
         image_names = []
         image_annotations = []
@@ -76,7 +75,7 @@ class Omero:
             for image_object in dataset.listChildren():
                 name = image_object.getName()
                 # filter _label and _macro items
-                if not name.endswith('_label') and not name.endswith('_macro'):
+                if not filter_label_macro or (not name.endswith('_label') and not name.endswith('_macro')):
                     annotations = self.get_image_annotations(image_object, target_labels)
                     if len(annotations) == len(target_labels):
                         image_ids.append(image_object.getId())
@@ -140,21 +139,11 @@ class Omero:
             pixel_nbytes = pixels.getPixelsType().getBitSize() / 8
             logging.info(f'{image_id} {image_object.getName()} {get_image_size_info(xyzct, pixel_nbytes)}')
 
-            #tiff_content = image_object.exportOmeTiff()    # not working (~image too large)
-            #with open(outfilename, 'wb') as writer:
-            #    writer.write(tiff_content)
-
-            # slide_image = pixels.getPlane()   # not working (~image too large)
-
-            pyramid_add = output['pyramid_add']
+            npyramid_add = output['npyramid_add']
             pyramid_downsample = output['pyramid_downsample']
-            pyramid_sizes_add = calc_pyramid((w, h), pyramid_add, pyramid_downsample)
+            pyramid_sizes_add = calc_pyramid((w, h), npyramid_add, pyramid_downsample)
             metadata = self.get_metadata(image_object, filetitle, pyramid_sizes_add)
             xml_metadata = metadata.to_xml()
-
-            # test saving blank image
-            #slide_image = np.zeros((h, w, cs), dtype=np.uint8)
-            #save_tiff(outfilename, slide_image, xml_metadata=xml_metadata, tile_size=output['tile_size'], compression=output['compression'], pyramid_sizes_add=pyramid_sizes_add)
 
             slide_image = self.get_slide_image(image_object, pixels)
             if slide_image is not None:
@@ -369,10 +358,6 @@ class Omero:
 
 
 def print_omero_object(object, indent=0):
-    """
-    Helper method to display info about OMERO objects.
-    Not all objects will have a "name" or owner field.
-    """
     logging.info("""%s%s:%s  Name:"%s" (owner=%s)""" % (
         " " * indent,
         object.OMERO_CLASS,

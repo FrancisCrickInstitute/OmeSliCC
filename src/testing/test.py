@@ -143,7 +143,7 @@ def test_create_slide(infilename, outfilename):
 
     channels = [{'samples_per_channel': c}]
 
-    pyramid_sizes_add = calc_pyramid((x, y), pyramid_add=3, pyramid_downsample=4.0)
+    pyramid_sizes_add = calc_pyramid((x, y), npyramid_add=3, pyramid_downsample=4.0)
 
     metadata = create_ome_metadata(outfilename, image_info, channels=channels, pyramid_sizes_add=pyramid_sizes_add)
     xml_metadata = metadata.to_xml()
