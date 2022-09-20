@@ -57,7 +57,8 @@ def run_actions(params):
             input_path = input_folder
             if os.path.isdir(input_path):
                 input_path = os.path.join(input_path, '*')
-            filenames = [file for file in glob.glob(input_path) if os.path.isfile(file)]
+            filenames = [file for file in glob.glob(input_path)
+                         if os.path.isfile(file) or os.path.exists(os.path.join(file, '.zgroup'))]
         if len(filenames) > 0:
             for action0 in actions:
                 action = action0.lower()

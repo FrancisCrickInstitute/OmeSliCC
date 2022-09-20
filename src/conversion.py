@@ -16,6 +16,7 @@ from tqdm import tqdm
 from src.BioSlide import BioSlide
 from src.PlainImageSlide import PlainImageSlide
 from src.TiffSlide import TiffSlide
+from src.ZarrSlide import ZarrSlide
 from src.image_util import JPEG2000, image_resize, get_image_size_info
 from src.util import get_filetitle
 
@@ -24,7 +25,9 @@ register_codec(JPEG2000)
 
 def load_slide(filename):
     ext = os.path.splitext(filename)[1].lower()
-    if 'tif' in ext or 'svs' in ext:
+    if 'zgroup' in ext or (os.path.isdir(filename) and os.path.exists(os.path.join(filename, '.zgroup'))):
+        slide = ZarrSlide(filename)
+    elif 'tif' in ext or 'svs' in ext:
         slide = TiffSlide(filename)
     elif ext in Image.registered_extensions().keys():
         slide = PlainImageSlide(filename)
