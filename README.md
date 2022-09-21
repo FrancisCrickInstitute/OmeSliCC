@@ -13,6 +13,7 @@ For support and discussion, please use the [Image.sc forum](https://forum.image.
 - Export images: Ome.tiff, Zarr*, Ome Zarr*, thumbnails
 - Export meta-data: Ome.tiff, csv
 - Omero credentials helper
+
 \*Zarr currently partially implemented
 
 ## Running OmeSliCC
@@ -29,9 +30,9 @@ To start the conversion pipeline:
 python run.py --params path/to/params.yml
 ```
 
-See [params.yml](resouces/params.yml) for an example parameter file.
+See [params.yml](resources/params.yml) for an example parameter file.
 The main sections are:
-- input: providing either path or Omero URL
+- input: providing either a file/folder path, or Omero URL
 - output: specifying the location and desired format of the output
 - actions: which actions to perform:
     - info: show input file information
