@@ -116,17 +116,17 @@ class Omero:
             except Exception as e:
                 logging.error(e)
 
-    def convert_slides(self, image_ids, outpath):
+    def convert_images(self, image_ids, outpath):
         # currently only ome-tiff supported
-        self.convert_slides_to_ometiff(image_ids, outpath)
+        self.convert_images_to_ometiff(image_ids, outpath)
 
-    def convert_slides_to_ometiff(self, image_ids, outpath):
+    def convert_images_to_ometiff(self, image_ids, outpath):
         if not os.path.exists(outpath):
             os.makedirs(outpath)
         for image_id in tqdm(image_ids):
-            self.convert_slide_to_ometiff(image_id, outpath)
+            self.convert_image_to_ometiff(image_id, outpath)
 
-    def convert_slide_to_ometiff(self, image_id, outpath):
+    def convert_image_to_ometiff(self, image_id, outpath):
         output = self.params['output']
         image_object = self.get_image_object(image_id)
         filetitle = image_object.getName() + '.ome.tiff'
@@ -145,21 +145,21 @@ class Omero:
             metadata = self.get_metadata(image_object, filetitle, pyramid_sizes_add)
             xml_metadata = metadata.to_xml()
 
-            slide_image = self.get_slide_image(image_object, pixels)
-            if slide_image is not None:
-                save_tiff(outfilename, slide_image, xml_metadata=xml_metadata,
+            image = self.get_omero_image(image_object, pixels)
+            if image is not None:
+                save_tiff(outfilename, image, xml_metadata=xml_metadata,
                           tile_size=output['tile_size'],
                           compression=output['compression'],
                           pyramid_sizes_add=pyramid_sizes_add)
 
-    def get_slide_image0(self, image_object, pixels):
+    def get_omero_image0(self, image_object, pixels):
         w, h, zs, cs, ts = self.get_size(image_object)
         read_size = 10240
         ny = int(np.ceil(h / read_size))
         nx = int(np.ceil(w / read_size))
 
         dtype = np.dtype(pixels.getPixelsType().getValue()).type
-        slide_image = np.zeros((h, w, cs), dtype=dtype)
+        image = np.zeros((h, w, cs), dtype=dtype)
 
         for y in range(ny):
             for x in range(nx):
@@ -171,18 +171,18 @@ class Omero:
                     th = h - sy
                 xywh = (sx, sy, tw, th)
                 tile_coords = [(0, c, 0, xywh) for c in range(cs)]
-                image_gen = pixels.getTiles(tile_coords)
-                for c, image in enumerate(image_gen):
-                    slide_image[sy:sy + th, sx:sx + tw, c] = image
+                tile_gen = pixels.getTiles(tile_coords)
+                for c, tile in enumerate(tile_gen):
+                    image[sy:sy + th, sx:sx + tw, c] = tile
 
-    def get_slide_image(self, image_object, pixels):
+    def get_omero_image(self, image_object, pixels):
         w, h, zs, cs, ts = self.get_size(image_object)
         read_size = 10240
         ny = int(np.ceil(h / read_size))
         nx = int(np.ceil(w / read_size))
 
         dtype = np.dtype(pixels.getPixelsType().getValue()).type
-        slide_image = np.zeros((h, w, cs), dtype=dtype)
+        image = np.zeros((h, w, cs), dtype=dtype)
 
         try:
             pixels_store = self.conn.createRawPixelsStore()
@@ -200,13 +200,13 @@ class Omero:
                         tile0 = pixels_store.getTile(0, c, 0, sx, sy, tw, th)
                         tile = np.frombuffer(tile0, dtype=dtype)
                         tile.resize(th, tw)
-                        slide_image[sy:sy + th, sx:sx + tw, c] = tile
+                        image[sy:sy + th, sx:sx + tw, c] = tile
         except Exception as e:
             logging.error(e)
-            slide_image = None
+            image = None
         finally:
             pixels_store.close()
-        return slide_image
+        return image
 
     def get_size(self, image_object):
         xs, ys = image_object.getSizeX(), image_object.getSizeY()
@@ -340,7 +340,7 @@ class Omero:
 
         return ome
 
-    def get_original_slide_files(self, image_object):
+    def get_original_files(self, image_object):
         return image_object.getFileset().listFiles()
 
     def get_magnification(self, image_object):

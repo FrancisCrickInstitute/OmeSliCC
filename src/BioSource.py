@@ -3,18 +3,18 @@ import bioformats
 import javabridge
 from bioformats.formatreader import ImageReader
 
-from src.OmeSlide import OmeSlide
+from src.OmeSource import OmeSource
 
 
-class BioSlide(OmeSlide):
-    def __init__(self, filename, target_mag=None):
+class BioSource(OmeSource):
+    def __init__(self, filename, target_mag=None, source_mag_required=False):
         self.filename = filename
         self.target_mag = target_mag
         self.indexes = []
         self.sizes = []
         self.sizes_xyzct = []
         self.pixel_types = []
-        self.pixel_nbytes = []
+        self.pixel_nbits = []
 
         open_javabridge()
 
@@ -29,9 +29,16 @@ class BioSlide(OmeSlide):
                 self.sizes.append((pmetadata.SizeX, pmetadata.SizeY))
                 self.sizes_xyzct.append((pmetadata.SizeX, pmetadata.SizeY, pmetadata.SizeZ, pmetadata.SizeC, pmetadata.SizeT))
                 self.pixel_types.append(dtype)
-                self.pixel_nbytes.append(dtype.itemsize)
-        self.mag0 = int(float(self.ome_metadata.instrument().Objective.get_NominalMagnification()))
-        self.init_mags(filename)
+                self.pixel_nbits.append(dtype.itemsize * 8)
+        self.init_res_mag(filename, source_mag_required=source_mag_required)
+
+    def find_metadata_res_mag(self):
+        pixel_info = self.ome_metadata.image().Pixels
+        pixel_size = [(pixel_info.PhysicalSizeX, pixel_info.PhysicalSizeXUnit),
+                      (pixel_info.PhysicalSizeY, pixel_info.PhysicalSizeYUnit),
+                      (pixel_info.PhysicalSizeZ, pixel_info.PhysicalSizeZUnit)]
+        mag = int(float(self.ome_metadata.instrument().Objective.get_NominalMagnification()))
+        return pixel_size, mag
 
     def get_metadata(self):
         return self.ome_metadata

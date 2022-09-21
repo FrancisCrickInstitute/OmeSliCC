@@ -3,15 +3,15 @@ import numpy as np
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
-from src.OmeSlide import OmeSlide
+from src.OmeSource import OmeSource
 from src.image_util import pilmode_to_pixelinfo, get_pil_metadata
 from src.ome import create_ome_metadata
 
 Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents loading large images)
 
 
-class PlainImageSlide(OmeSlide):
-    def __init__(self, filename, source_mag=None, target_mag=None, executor=None):
+class PlainImageSource(OmeSource):
+    def __init__(self, filename, source_mag=None, target_mag=None, source_mag_required=False, executor=None):
         self.filename = filename
         self.mag0 = source_mag
         self.target_mag = target_mag
@@ -33,8 +33,8 @@ class PlainImageSlide(OmeSlide):
         self.sizes_xyzct = [size_xyzct]
         pixelinfo = pilmode_to_pixelinfo(self.image.mode)
         self.pixel_types = [pixelinfo[0]]
-        self.pixel_nbytes = [pixelinfo[1]]
-        self.init_mags(filename)
+        self.pixel_nbits = [pixelinfo[1]]
+        self.init_res_mag(filename, source_mag_required=source_mag_required)
 
     def get_metadata(self):
         return self.metadata

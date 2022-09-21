@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from src.Omero import Omero
 from src.OmeroLabelReader import OmeroLabelReader
-from src.conversion import get_image_info, extract_thumbnail, convert_slide
+from src.conversion import get_image_info, extract_thumbnail, convert
 from src.util import ensure_list
 from src.parameters import *
 
@@ -43,7 +43,7 @@ def run_actions(params):
                     for id in image_ids:
                         omero.extract_thumbnail(id, output_folder)
                 elif 'convert' in action:
-                    omero.convert_slides(image_ids, output_folder)
+                    omero.convert_images(image_ids, output_folder)
                 elif 'label' in action:
                     with OmeroLabelReader(params, omero=omero) as label_reader:
                         label_reader.create_label_csv()
@@ -70,7 +70,7 @@ def run_actions(params):
                         elif 'thumb' in action:
                             extract_thumbnail(filename, output_folder)
                         elif 'convert' in action:
-                            convert_slide(filename, output)
+                            convert(filename, output)
                     except Exception as e:
                         logging.exception(e)
                 logging.info(f'Done {action}')

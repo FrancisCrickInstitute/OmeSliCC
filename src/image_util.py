@@ -36,7 +36,7 @@ def get_image_size_info(xyzct, pixel_nbytes):
 
 def pilmode_to_pixelinfo(mode):
     pixelinfo = (np.uint8, 1)
-    mode_types = {'I': (np.uint32, 4), 'F': (np.float32, 4)}
+    mode_types = {'I': (np.uint32, 32), 'F': (np.float32, 32)}
     if mode in mode_types:
         pixelinfo = mode_types[mode]
     return pixelinfo

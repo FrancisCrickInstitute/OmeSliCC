@@ -9,7 +9,7 @@ from ome_types.model.pixels import DimensionOrder
 from tqdm import tqdm
 from timeit import default_timer as timer
 
-from src.TiffSlide import TiffSlide
+from src.TiffSource import TiffSource
 from src.conversion import save_tiff
 from src.image_util import show_image, compare_image, tiff_info, compare_image_dist, load_tiff, calc_pyramid, \
     calc_fraction_used
@@ -17,20 +17,20 @@ from src.ome import create_ome_metadata
 
 
 def test_load(filename, magnification, position=None, size=None):
-    slide = TiffSlide(filename, magnification)
+    source = TiffSource(filename, magnification)
     if position is None:
         position = (0, 0)
     if size is None:
-        size = slide.get_size()
-    image = slide.asarray(position[0], position[1], position[0] + size[0], position[1] + size[1])
+        size = source.get_size()
+    image = source.asarray(position[0], position[1], position[0] + size[0], position[1] + size[1])
     return image
 
 
 def compare_image_tiles(filename1, filename2, bits_per_channel=8, tile_size=(512, 512)):
-    slide1 = TiffSlide(filename1)
-    slide2 = TiffSlide(filename2)
+    source1 = TiffSource(filename1)
+    source2 = TiffSource(filename2)
 
-    w, h = slide1.get_size()
+    w, h = source1.get_size()
     tw, th = tile_size
     nx = int(np.ceil(w / tw))
     ny = int(np.ceil(h / th))
@@ -45,8 +45,8 @@ def compare_image_tiles(filename1, filename2, bits_per_channel=8, tile_size=(512
             ry = y * th
             rx2 = min(rx + tw, w)
             ry2 = min(ry + th, h)
-            patch1 = slide1.asarray(rx, ry, rx2, ry2)
-            patch2 = slide2.asarray(rx, ry, rx2, ry2)
+            patch1 = source1.asarray(rx, ry, rx2, ry2)
+            patch2 = source2.asarray(rx, ry, rx2, ry2)
             dif, dif_max, dif_mean, _ = compare_image_dist(patch1, patch2)
             mse = np.mean(dif.astype(float) ** 2)
             difs_max.append(dif_max)
@@ -61,20 +61,20 @@ def compare_image_tiles(filename1, filename2, bits_per_channel=8, tile_size=(512
     return dif_max, dif_mean, psnr
 
 
-def test_read_slide(image_filename, n=1000):
-    print('Test read slide')
+def test_read_source(image_filename, n=1000):
+    print('Test read source')
     print(tiff_info(image_filename))
-    slide = TiffSlide(image_filename, 40)
-    size = slide.get_size()
+    source = TiffSource(image_filename, 40)
+    size = source.get_size()
     width = size[0]
     height = size[1]
     nx = int(np.ceil(width / patch_size[0]))
     ny = int(np.ceil(height / patch_size[1]))
 
-    slide.load()
+    source.load()
 
     start = timer()
-    thumb = slide.get_thumbnail((nx, ny))
+    thumb = source.get_thumbnail((nx, ny))
     elapsed = timer() - start
     print(f'thumbnail time : {elapsed:.3f}')
     show_image(thumb)
@@ -85,7 +85,7 @@ def test_read_slide(image_filename, n=1000):
         yi = random.randrange(ny)
         x = xi * patch_size[0]
         y = yi * patch_size[1]
-        image = slide.asarray(x, y, x + patch_size[0], y + patch_size[1])
+        image = source.asarray(x, y, x + patch_size[0], y + patch_size[1])
         image.shape
         #show_image(image)
     elapsed = timer() - start
@@ -129,7 +129,7 @@ def test_read_zarr(image_filename, n=1000):
         tile = zarr_data[ys:ye, xs:xe]
 
 
-def test_create_slide(infilename, outfilename):
+def test_create_ometiff(infilename, outfilename):
     image, metadata = load_tiff(infilename)
     y, x, c = image.shape
     tile_size = (256, 256)

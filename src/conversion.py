@@ -13,44 +13,48 @@ from numcodecs.blosc import Blosc
 from tifffile import TiffWriter
 from tqdm import tqdm
 
-from src.BioSlide import BioSlide
-from src.PlainImageSlide import PlainImageSlide
-from src.TiffSlide import TiffSlide
-from src.ZarrSlide import ZarrSlide
+from src.BioSource import BioSource
+from src.PlainImageSource import PlainImageSource
+from src.TiffSource import TiffSource
+from src.ZarrSource import ZarrSource
 from src.image_util import JPEG2000, image_resize, get_image_size_info
 from src.util import get_filetitle
 
 register_codec(JPEG2000)
 
 
-def load_slide(filename):
+def load_source(filename):
     ext = os.path.splitext(filename)[1].lower()
     if 'zgroup' in ext or (os.path.isdir(filename) and os.path.exists(os.path.join(filename, '.zgroup'))):
-        slide = ZarrSlide(filename)
+        source = ZarrSource(filename)
     elif 'tif' in ext or 'svs' in ext:
-        slide = TiffSlide(filename)
+        source = TiffSource(filename)
     elif ext in Image.registered_extensions().keys():
-        slide = PlainImageSlide(filename)
+        source = PlainImageSource(filename)
     else:
-        slide = BioSlide(filename)
-    return slide
+        source = BioSource(filename)
+    return source
 
 
 def get_image_info(filename):
-    slide = load_slide(filename)
-    xyzct = slide.sizes_xyzct[0]
-    pixel_nbytes = slide.pixel_nbytes[0]
-    image_info = os.path.basename(filename) + ' ' + get_image_size_info(xyzct, pixel_nbytes)
+    source = load_source(filename)
+    xyzct = source.get_size_xyzct()
+    pixel_nbytes = source.get_pixel_nbytes()
+    actual_size = source.get_actual_size()
+    image_info = os.path.basename(filename)
+    image_info += ' ' + get_image_size_info(xyzct, pixel_nbytes)
+    if actual_size is not None:
+        image_info += f' Actual size: {" ".join(map(str, actual_size))}'
     logging.info(image_info)
     return image_info
 
 
 def extract_thumbnail(filename, output_folder):
-    slide = load_slide(filename)
-    size = slide.sizes[0]
+    source = load_source(filename)
+    size = source.sizes[0]
     thumbsize = np.int0(np.divide(size, 10))
     # write thumbnail to file
-    thumb = slide.get_thumbnail(thumbsize)
+    thumb = source.get_thumbnail(thumbsize)
     nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
     if nchannels == 2:
         for channeli in range(nchannels):
@@ -62,22 +66,22 @@ def extract_thumbnail(filename, output_folder):
     return thumb
 
 
-def convert_slide(filename, output_params):
+def convert(filename, output_params):
     output_folder = output_params['folder']
     output_format = output_params['format']
     output_filename = os.path.join(output_folder, get_filetitle(filename, remove_all_ext=True) + '.' + output_format)
-    slide = load_slide(filename)
+    source = load_source(filename)
     if 'zar' in output_format:
-        convert_slide_to_zarr(slide, output_filename, output_params)
+        convert_to_zarr(source, output_filename, output_params)
     elif 'ome' in output_format:
-        convert_slide_to_tiff(slide, output_filename, output_params, ome=True)
+        convert_to_tiff(source, output_filename, output_params, ome=True)
     else:
-        convert_slide_to_tiff(slide, output_filename, output_params)
+        convert_to_tiff(source, output_filename, output_params)
 
 
-def convert_slide_to_zarr0(input_filename, output_folder, patch_size=(256, 256)):
-    slide = TiffSlide(input_filename)
-    size = slide.sizes[0]
+def convert_to_zarr0(input_filename, output_folder, patch_size=(256, 256)):
+    source = TiffSource(input_filename)
+    size = source.sizes[0]
     width = size[0]
     height = size[1]
     compressor = Blosc(cname='zstd', clevel=3, shuffle=Blosc.BITSHUFFLE)    # clevel=9
@@ -92,7 +96,7 @@ def convert_slide_to_zarr0(input_filename, output_folder, patch_size=(256, 256))
     level = 1
     label = str(level)
     if label not in root.array_keys():
-        thumb = np.asarray(slide.get_thumbnail((nx, ny)))
+        thumb = np.asarray(source.get_thumbnail((nx, ny)))
         # ensure correct size in case thumb scaled using aspect ratio
         if thumb.shape[1] < nx or thumb.shape[0] < ny:
             if thumb.shape[1] < nx:
@@ -108,7 +112,7 @@ def convert_slide_to_zarr0(input_filename, output_folder, patch_size=(256, 256))
         root.create_dataset(label, data=thumb,
                             compressor=compressor)
 
-    # slide
+    # image
     level = 0
     label = str(level)
     if label not in root.array_keys():
@@ -125,13 +129,13 @@ def convert_slide_to_zarr0(input_filename, output_folder, patch_size=(256, 256))
                 w = patch_size[0]
                 if xs + w > width:
                     w = width - xs
-                tile = slide.asarray(xs, ys, xs + w, ys + h)
+                tile = source.asarray(xs, ys, xs + w, ys + h)
                 data[ys:ys+h, xs:xs+w] = tile
 
 
-def convert_slide_to_zarr(slide, output_filename, output_params):
-    shape = slide.get_shape()
-    dtype = slide.pixel_types[0]
+def convert_to_zarr(source, output_filename, output_params):
+    shape = source.get_shape()
+    dtype = source.pixel_types[0]
     tile_size = output_params['tile_size']
     compression = output_params.get('compression')
 
@@ -141,12 +145,12 @@ def convert_slide_to_zarr(slide, output_filename, output_params):
     return zarr_data
 
 
-def convert_slide_to_tiff(slide, output_filename, output_params, ome=False):
-    image = slide.clone_empty()
+def convert_to_tiff(source, output_filename, output_params, ome=False):
+    image = source.clone_empty()
     chunk_size = (10240, 10240)
     # TODO: remove tqdm
-    total = np.prod(np.ceil(slide.get_size() / chunk_size))
-    for x0, y0, x1, y1, chunk in tqdm(slide.produce_chunks(chunk_size), total=total):
+    total = np.prod(np.ceil(source.get_size() / chunk_size))
+    for x0, y0, x1, y1, chunk in tqdm(source.produce_chunks(chunk_size), total=total):
         image[y0:y1, x0:x1] = chunk
 
     tile_size = output_params.get('tile_size')
@@ -155,9 +159,9 @@ def convert_slide_to_tiff(slide, output_filename, output_params, ome=False):
     pyramid_downsample = output_params.get('pyramid_downsample')
     if ome:
         metadata = None
-        xml_metadata = slide.get_xml_metadata(output_filename)
+        xml_metadata = source.get_xml_metadata(output_filename)
     else:
-        metadata = slide.get_metadata()
+        metadata = source.get_metadata()
         xml_metadata = None
     save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
               npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)

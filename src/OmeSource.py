@@ -1,25 +1,38 @@
+import logging
 import numpy as np
 
 from src.image_util import image_resize_fast, image_resize, precise_resize
-from src.util import round_significants
+from src.util import check_round_significants
 
 
-class OmeSlide:
-    def init_mags(self, filename):
+class OmeSource:
+    def init_res_mag(self, filename, source_mag=None, source_mag_required=False):
+        self.pixel_size, self.mag0 = self.find_metadata_res_mag()
+        if self.mag0 == 0 and source_mag is not None:
+            self.mag0 = source_mag
         if self.mag0 == 0:
-            raise ValueError(f'{filename}: No source magnification in metadata or provided')
+            msg = f'{filename}: No source magnification in metadata or provided'
+            if source_mag_required:
+                raise ValueError(msg)
+            else:
+                logging.warning(msg)
+        self.fix_res()
         self.set_mags()
         self.set_best_mag()
+
+    def fix_res(self):
+        res = []
+        for res0 in self.pixel_size:
+            res1 = check_round_significants(res0[0], 3)
+            res.append((res1, res0[1]))
+        self.res = res
 
     def set_mags(self):
         self.source_mags = [self.mag0]
         for i, size in enumerate(self.sizes):
             if i > 0:
                 mag = self.mag0 * np.mean(np.divide(size, self.sizes[0]))
-                mag_rounded = round_significants(mag, 3)
-                if abs(mag_rounded - mag) < 0.0001:
-                    mag = mag_rounded
-                self.source_mags.append(mag)
+                self.source_mags.append(check_round_significants(mag, 3))
 
     def set_best_mag(self):
         if self.target_mag is not None:
@@ -31,6 +44,31 @@ class OmeSlide:
 
     def get_max_mag(self):
         return np.max(self.source_mags)
+
+    def get_actual_size(self):
+        actual_size = []
+        for size, pixel_size in zip(self.get_size_xyzct(), self.pixel_size):
+            actual_size.append((np.multiply(size, pixel_size[0]), pixel_size[1]))
+        return actual_size
+
+    def getpixel_type(self, level=0):
+        return self.pixel_types[level]
+
+    def get_pixel_nbits(self, level=0):
+        return self.pixel_nbits[level]
+
+    def get_pixel_nbytes(self, level=0):
+        return self.pixel_nbits[level] // 8
+
+    def get_size_xyzct(self):
+        xyzct = list(self.sizes_xyzct[0])
+        n_same_size = len([size for size in self.sizes_xyzct[1:] if size == self.sizes_xyzct[0]]) + 1
+        if n_same_size > 1:
+            if xyzct[2] == 1:
+                xyzct[2] = n_same_size
+            else:
+                xyzct[-1] = n_same_size
+        return tuple(xyzct)
 
     def get_size(self):
         # size at selected magnification
