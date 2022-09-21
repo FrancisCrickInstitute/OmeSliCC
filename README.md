@@ -9,11 +9,11 @@ For support and discussion, please use the [Image.sc forum](https://forum.image.
 
 ## Main features
 
-- Import WSI files: Omero, Ome.tiff, Tiff, basic image formats, Zarr*
-- Export images: Ome.tiff, Zarr*, thumbnails
+- Import WSI files: Omero, Ome.tiff, Tiff, basic image formats, Zarr*, Ome Zarr*
+- Export images: Ome.tiff, Zarr*, Ome Zarr*, thumbnails
 - Export meta-data: Ome.tiff, csv
 - Omero credentials helper
-- \*Zarr currently partially implemented
+\*Zarr currently partially implemented
 
 ## Running OmeSliCC
 
@@ -21,6 +21,23 @@ OmeSliCC is 100% Python and can be run as follows:
 - On a local environment using requirements.txt
 - With conda environment using the conda yaml file
 - As Docker container
+
+## Quickstart
+
+To start the conversion pipeline:
+```
+python run.py --params path/to/params.yml
+```
+
+See [params.yml](resouces/params.yml) for an example parameter file.
+The main sections are:
+- input: providing either path or Omero URL
+- output: specifying the location and desired format of the output
+- actions: which actions to perform:
+    - info: show input file information
+	- thumbnail: extract image thumbnail
+	- convert: convert to desired image output
+	- labels: extract Omero metadata
 
 ## Acknowledgements
 
