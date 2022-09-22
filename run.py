@@ -66,7 +66,7 @@ def run_actions(params):
                 for filename in tqdm(filenames):
                     try:
                         if 'info' in action:
-                            get_image_info(filename)
+                            logging.info(get_image_info(filename))
                         elif 'thumb' in action:
                             extract_thumbnail(filename, output_folder)
                         elif 'convert' in action:

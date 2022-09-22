@@ -34,7 +34,21 @@ class PlainImageSource(OmeSource):
         pixelinfo = pilmode_to_pixelinfo(self.image.mode)
         self.pixel_types = [pixelinfo[0]]
         self.pixel_nbits = [pixelinfo[1]]
-        self.init_res_mag(filename, source_mag_required=source_mag_required)
+        self.init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
+
+    def find_metadata(self):
+        self.pixel_size = []
+        pixel_size_unit = self.metadata.get('unit', '')
+        res0 = self.metadata.get('XResolution', 1)
+        if isinstance(res0, tuple):
+            res0 = res0[0] / res0[1]
+        self.pixel_size.append((1 / res0, pixel_size_unit))
+        res0 = self.metadata.get('YResolution', 1)
+        if isinstance(res0, tuple):
+            res0 = res0[0] / res0[1]
+        self.pixel_size.append((1 / res0, pixel_size_unit))
+        self.channel_info = []
+        self.mag0 = self.metadata.get('Mag', 0)
 
     def get_metadata(self):
         return self.metadata

@@ -245,19 +245,19 @@ class Omero:
                     delta_t=plane.getDeltaT(),
                     exposure_time=plane.getExposureTime(),
                     position_x=stage.getPositionX().getValue(),
-                    position_x_unit=stage.getPositionX().getSymbol(),
                     position_y=stage.getPositionY().getValue(),
-                    position_y_unit=stage.getPositionY().getSymbol(),
                     position_z=stage.getPositionZ().getValue(),
+                    position_x_unit=stage.getPositionX().getSymbol(),
+                    position_y_unit=stage.getPositionY().getSymbol(),
                     position_z_unit=stage.getPositionZ().getSymbol(),
                 ))
             stage_label = StageLabel(
                 name=stage.getName(),
                 x=stage.getPositionX().getValue(),
-                x_unit=stage.getPositionX().getSymbol(),
                 y=stage.getPositionY().getValue(),
-                y_unit=stage.getPositionY().getSymbol(),
                 z=stage.getPositionZ().getValue(),
+                x_unit=stage.getPositionX().getSymbol(),
+                y_unit=stage.getPositionY().getSymbol(),
                 z_unit=stage.getPositionZ().getSymbol()
             )
 
@@ -272,9 +272,12 @@ class Omero:
                 size_x=image_object.getSizeX(),
                 size_y=image_object.getSizeY(),
                 size_z=image_object.getSizeZ(),
-                physical_size_x=image_object.getPixelSizeX(),
-                physical_size_y=image_object.getPixelSizeY(),
-                physical_size_z=image_object.getPixelSizeZ(),
+                physical_size_x=image_object.getPixelSizeX(),   # get size in default unit (micron)
+                physical_size_y=image_object.getPixelSizeY(),   # get size in default unit (micron)
+                physical_size_z=image_object.getPixelSizeZ(),   # get size in default unit (micron)
+                physical_size_x_unit='micron',
+                physical_size_y_unit='micron',
+                physical_size_z_unit='micron',
                 type=image_object.getPixelsType(),
                 dimension_order=pixels.getDimensionOrder().getValue(),
                 channels=channels,

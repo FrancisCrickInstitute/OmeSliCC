@@ -3,6 +3,10 @@ import os
 import numpy as np
 
 
+def get_default(x, default):
+    return default if x is None else x
+
+
 def ensure_list(x):
     if isinstance(x, list):
         return x

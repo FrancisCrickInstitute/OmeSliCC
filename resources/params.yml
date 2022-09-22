@@ -28,10 +28,11 @@ output:
 # actions can be: info, thumbnail, convert, labels
 actions: [convert, labels]
 
+# Omero credentials
 credentials:
-  # for encoding/decoding (in private space):
-  private_key: ~/omero.pri.key   # note ~ doesn't work from container
-  public_key: ~/omero.pub.key   # note ~ doesn't work from container
+  # keys for encoding/decoding (in private space) note home ('~') doesn't work inside container:
+  private_key: ~/omero.pri.key
+  public_key: ~/omero.pub.key
   # encoded credentials (in public space):
   credentials: .omero_credentials
 

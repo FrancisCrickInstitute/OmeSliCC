@@ -6,8 +6,8 @@ from src.util import check_round_significants
 
 
 class OmeSource:
-    def init_res_mag(self, filename, source_mag=None, source_mag_required=False):
-        self.pixel_size, self.mag0 = self.find_metadata_res_mag()
+    def init_metadata(self, filename, source_mag=None, source_mag_required=False):
+        self.find_metadata()
         if self.mag0 == 0 and source_mag is not None:
             self.mag0 = source_mag
         if self.mag0 == 0:
@@ -16,16 +16,16 @@ class OmeSource:
                 raise ValueError(msg)
             else:
                 logging.warning(msg)
-        self.fix_res()
+        self.fix_pixelsize()
         self.set_mags()
         self.set_best_mag()
 
-    def fix_res(self):
-        res = []
-        for res0 in self.pixel_size:
-            res1 = check_round_significants(res0[0], 3)
-            res.append((res1, res0[1]))
-        self.res = res
+    def fix_pixelsize(self):
+        pixel_size = []
+        for pixel_size0 in self.pixel_size:
+            pixel_size1 = check_round_significants(pixel_size0[0], 6)
+            pixel_size.append((pixel_size1, pixel_size0[1]))
+        self.pixel_size = pixel_size
 
     def set_mags(self):
         self.source_mags = [self.mag0]
@@ -51,7 +51,7 @@ class OmeSource:
             actual_size.append((np.multiply(size, pixel_size[0]), pixel_size[1]))
         return actual_size
 
-    def getpixel_type(self, level=0):
+    def get_pixel_type(self, level=0):
         return self.pixel_types[level]
 
     def get_pixel_nbits(self, level=0):
@@ -59,6 +59,9 @@ class OmeSource:
 
     def get_pixel_nbytes(self, level=0):
         return self.pixel_nbits[level] // 8
+
+    def get_channel_info(self):
+        return self.channel_info
 
     def get_size_xyzct(self):
         xyzct = list(self.sizes_xyzct[0])

@@ -27,15 +27,21 @@ def show_image_gray(image):
     plt.show()
 
 
-def get_image_size_info(xyzct, pixel_nbytes):
+def get_image_size_info(xyzct, pixel_nbytes, pixel_type, channel_info):
     w, h, zs, cs, ts = xyzct
     size = print_hbytes(w * h * zs * cs * ts * pixel_nbytes)
-    image_size_info = f'Size: {w} x {h} x {zs} C: {cs} T: {ts} ({size})'
+    if (len(channel_info) == 1 and channel_info[0][1] == 3) or len(channel_info) == 3:
+        channel_infos = 'rgb'
+    else:
+        channel_infos = ','.join([channel[0] for channel in channel_info])
+    image_size_info = f'Size: {w} x {h} x {zs} C: {cs} T: {ts}\nUncompressed: {size} Pixel type: {pixel_type}'
+    if channel_infos != '':
+        image_size_info += f' Channels: {channel_infos}'
     return image_size_info
 
 
 def pilmode_to_pixelinfo(mode):
-    pixelinfo = (np.uint8, 1)
+    pixelinfo = (np.uint8, 8)
     mode_types = {'I': (np.uint32, 32), 'F': (np.float32, 32)}
     if mode in mode_types:
         pixelinfo = mode_types[mode]
@@ -59,6 +65,8 @@ def image_resize_fast(image, target_size):
 def image_resize(image, target_size):
     if not isinstance(image, np.ndarray):
         image = image.asarray()
+    if image.dtype == np.int8:
+        image = image.astype(np.uint8)
     new_image = cv.resize(image, tuple(target_size), interpolation=cv.INTER_AREA)
     return new_image
 

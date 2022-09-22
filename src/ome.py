@@ -40,19 +40,19 @@ def create_ome_metadata(file_name0, image_info, channels, stage=None, planes=[],
                 delta_t=plane.get('delta_t'),
                 exposure_time=plane.get('exposure_time'),
                 position_x=stage.get('position_x'),
-                position_x_unit=stage.get('position_x_unit'),
                 position_y=stage.get('position_y'),
-                position_y_unit=stage.get('position_y_unit'),
                 position_z=stage.get('position_z'),
+                position_x_unit=stage.get('position_x_unit'),
+                position_y_unit=stage.get('position_y_unit'),
                 position_z_unit=stage.get('position_z_unit')
             ))
         stage_label = StageLabel(
             name=stage.get('name'),
             x=stage.get('x'),
-            x_unit=stage.get('x_unit'),
             y=stage.get('y'),
-            y_unit=stage.get('y_unit'),
             z=stage.get('z'),
+            x_unit=stage.get('x_unit'),
+            y_unit=stage.get('y_unit'),
             z_unit=stage.get('z_unit')
         )
 
@@ -71,6 +71,9 @@ def create_ome_metadata(file_name0, image_info, channels, stage=None, planes=[],
             physical_size_x=image_info.get('physical_size_x'),
             physical_size_y=image_info.get('physical_size_y'),
             physical_size_z=image_info.get('physical_size_z'),
+            physical_size_x_unit=image_info.get('physical_size_x_unit'),
+            physical_size_y_unit=image_info.get('physical_size_y_unit'),
+            physical_size_z_unit=image_info.get('physical_size_z_unit'),
             type=image_info.get('type'),
             dimension_order=image_info.get('dimension_order'),
             channels=ome_channels,

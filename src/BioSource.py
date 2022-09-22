@@ -4,6 +4,7 @@ import javabridge
 from bioformats.formatreader import ImageReader
 
 from src.OmeSource import OmeSource
+from src.util import get_default
 
 
 class BioSource(OmeSource):
@@ -30,15 +31,21 @@ class BioSource(OmeSource):
                 self.sizes_xyzct.append((pmetadata.SizeX, pmetadata.SizeY, pmetadata.SizeZ, pmetadata.SizeC, pmetadata.SizeT))
                 self.pixel_types.append(dtype)
                 self.pixel_nbits.append(dtype.itemsize * 8)
-        self.init_res_mag(filename, source_mag_required=source_mag_required)
+        self.init_metadata(filename, source_mag_required=source_mag_required)
 
-    def find_metadata_res_mag(self):
+    def find_metadata(self):
         pixel_info = self.ome_metadata.image().Pixels
-        pixel_size = [(pixel_info.PhysicalSizeX, pixel_info.PhysicalSizeXUnit),
-                      (pixel_info.PhysicalSizeY, pixel_info.PhysicalSizeYUnit),
-                      (pixel_info.PhysicalSizeZ, pixel_info.PhysicalSizeZUnit)]
+        pixel_size = [(get_default(pixel_info.get_PhysicalSizeX(), 1), get_default(pixel_info.get_PhysicalSizeXUnit(), '')),
+                      (get_default(pixel_info.get_PhysicalSizeY(), 1), get_default(pixel_info.get_PhysicalSizeYUnit(), '')),
+                      (get_default(pixel_info.get_PhysicalSizeZ(), 1), get_default(pixel_info.get_PhysicalSizeZUnit(), ''))]
         mag = int(float(self.ome_metadata.instrument().Objective.get_NominalMagnification()))
-        return pixel_size, mag
+        channel_info = []
+        for c in range(pixel_info.get_channel_count()):
+            channel = pixel_info.Channel(c)
+            channel_info.append((channel.get_Name(), channel.get_SamplesPerPixel()))
+        self.pixel_size = pixel_size
+        self.channel_info = channel_info
+        self.mag0 = mag
 
     def get_metadata(self):
         return self.ome_metadata

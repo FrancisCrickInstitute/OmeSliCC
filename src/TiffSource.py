@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from src.OmeSource import OmeSource
 from src.image_util import get_tiff_pages
 from src.ome import create_ome_metadata
-from src.util import get_filetitle, tags_to_dict, desc_to_dict
+from src.util import get_filetitle, tags_to_dict, desc_to_dict, ensure_list
 
 
 class TiffSource(OmeSource):
@@ -59,11 +59,12 @@ class TiffSource(OmeSource):
             self.pixel_nbits.append(page.bitspersample)
 
         self.fh = tiff.filehandle
-        self.init_res_mag(filename, source_mag=source_mag, source_mag_required=source_mag_required)
+        self.init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
 
-    def find_metadata_res_mag(self):
+    def find_metadata(self):
         pixel_size = []
         pixel_size_unit = ''
+        channel_info = []
         mag = 0
         page = self.pages[0]
         # from OME metadata
@@ -76,6 +77,8 @@ class TiffSource(OmeSource):
             pixel_size = [(pixel_info.get('PhysicalSizeX', 1), pixel_info.get('PhysicalSizeXUnit', 'micron')),
                           (pixel_info.get('PhysicalSizeY', 1), pixel_info.get('PhysicalSizeYUnit', 'micron')),
                           (pixel_info.get('PhysicalSizeZ', 1), pixel_info.get('PhysicalSizeZUnit', 'micron'))]
+            for channel in ensure_list(pixel_info.get('Channel', {})):
+                channel_info.append((channel.get('Name', ''), channel.get('SamplesPerPixel', 1)))
             mag = metadata.get('Instrument', {}).get('Objective', {}).get('NominalMagnification', 0)
         # from imageJ metadata
         if len(pixel_size) == 0 and self.metadata is not None:
@@ -84,8 +87,8 @@ class TiffSource(OmeSource):
         if mag == 0 and self.metadata is not None:
             mag = self.metadata.get('Mag', 0)
         # from page TAGS
+        metadata = tags_to_dict(page.tags)
         if len(pixel_size) < 2:
-            metadata = tags_to_dict(page.tags)
             res0 = metadata.get('XResolution', 1)
             if isinstance(res0, tuple):
                 res0 = res0[0] / res0[1]
@@ -94,8 +97,10 @@ class TiffSource(OmeSource):
             if isinstance(res0, tuple):
                 res0 = res0[0] / res0[1]
             pixel_size.insert(1, (1 / res0, pixel_size_unit))
+        if len(channel_info) == 0:
+            channel_info = [(str(metadata.get('PhotometricInterpretation', '')).lower().split('.')[-1],
+                            metadata.get('SamplesPerPixel', 1))]
         if mag == 0:
-            metadata = tags_to_dict(page.tags)
             mag = metadata.get('Mag', 0)
         # from description
         if not page.is_ome and mag == 0:
@@ -103,7 +108,9 @@ class TiffSource(OmeSource):
             mag = metadata.get('Mag', 0)
             if mag == 0:
                 mag = metadata.get('AppMag', 0)
-        return pixel_size, mag
+        self.pixel_size = pixel_size
+        self.channel_info = channel_info
+        self.mag0 = mag
 
     def get_metadata(self):
         return self.ome_metadata
@@ -194,7 +201,10 @@ class TiffSource(OmeSource):
         dh = y1 - y0
         page = self.pages[level]
 
-        tile_width, tile_height = page.tilewidth, page.tilelength
+        if page.is_tiled:
+            tile_width, tile_height = page.tilewidth, page.tilelength
+        else:
+            tile_width, tile_height = dw, dh
         tile_y0, tile_x0 = y0 // tile_height, x0 // tile_width
         tile_y1, tile_x1 = np.ceil([y1 / tile_height, x1 / tile_width]).astype(int)
         nx = tile_x1 - tile_x0

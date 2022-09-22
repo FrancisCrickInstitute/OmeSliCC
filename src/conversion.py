@@ -2,7 +2,6 @@
 # * TODO: Add JPEGXR support for Zarr
 
 
-import logging
 import os
 import numpy as np
 import zarr
@@ -40,21 +39,34 @@ def get_image_info(filename):
     source = load_source(filename)
     xyzct = source.get_size_xyzct()
     pixel_nbytes = source.get_pixel_nbytes()
-    actual_size = source.get_actual_size()
-    image_info = os.path.basename(filename)
-    image_info += ' ' + get_image_size_info(xyzct, pixel_nbytes)
-    if actual_size is not None:
-        image_info += f' Actual size: {" ".join(map(str, actual_size))}'
-    logging.info(image_info)
+    pixel_type = source.get_pixel_type()
+    channel_info = source.get_channel_info()
+    image_info = os.path.basename(filename) + '\n'
+    image_info += get_image_size_info(xyzct, pixel_nbytes, pixel_type, channel_info)
+    sizes = source.get_actual_size()
+    if len(sizes) > 0:
+        image_info += '\nActual size:'
+        infos = []
+        for size in sizes:
+            infos.append(f' {size[0]:.3f} {size[1]}')
+        image_info += ' x'.join(infos)
     return image_info
 
 
 def extract_thumbnail(filename, output_folder):
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
     source = load_source(filename)
     size = source.sizes[0]
-    thumbsize = np.int0(np.divide(size, 10))
+
+    #thumbsize = np.int0(np.divide(size, 10))    # use arbitrary factor 10
+    factor = np.max(np.divide(size, 1000))
+    thumbsize = np.round(np.divide(size, factor)).astype(int)
+
     # write thumbnail to file
     thumb = source.get_thumbnail(thumbsize)
+    if thumb.dtype == np.uint16:
+        thumb = (thumb / 256).astype('uint8')
     nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
     if nchannels == 2:
         for channeli in range(nchannels):
@@ -69,6 +81,8 @@ def extract_thumbnail(filename, output_folder):
 def convert(filename, output_params):
     output_folder = output_params['folder']
     output_format = output_params['format']
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
     output_filename = os.path.join(output_folder, get_filetitle(filename, remove_all_ext=True) + '.' + output_format)
     source = load_source(filename)
     if 'zar' in output_format:
