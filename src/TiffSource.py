@@ -2,7 +2,6 @@
 
 
 import os
-import re
 import numpy as np
 import tifffile
 from tifffile import TiffFile
@@ -11,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from src.OmeSource import OmeSource
 from src.image_util import get_tiff_pages
 from src.ome import create_ome_metadata
-from src.util import get_filetitle, tags_to_dict, desc_to_dict, ensure_list
+from src.util import tags_to_dict, desc_to_dict, ensure_list
 
 
 class TiffSource(OmeSource):

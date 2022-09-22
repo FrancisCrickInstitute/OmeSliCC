@@ -1,5 +1,6 @@
 import ast
 import os
+import re
 import numpy as np
 
 
@@ -23,39 +24,31 @@ def tags_to_dict(tags):
 
 def desc_to_dict(desc):
     desc_dict = {}
-    sep = ''
     if desc.startswith('{'):
         try:
             metadata = ast.literal_eval(desc)
             return metadata
         except:
             pass
-    if '\n' in desc:
-        sep = '\n'
-    elif '\t' in desc:
-        sep = '\t'
-    elif '|' in desc:
-        sep = '|'
-    elif ',' in desc:
-        sep = ','
-    for item in desc.split(sep):
+    for item in re.split(r'[\r\n\t|]', desc):
         item_sep = '='
         if ':' in item:
             item_sep = ':'
-        items = item.split(item_sep)
-        key = items[0]
-        value = items[1]
-        try:
-            if '.' in value:
-                value = float(value)
-            else:
-                value = int(value)
-        except:
+        if item_sep in item:
+            items = item.split(item_sep)
+            key = items[0]
+            value = items[1]
             try:
-                value = bool(value)
+                if '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
             except:
-                pass
-        desc_dict[key] = value
+                try:
+                    value = bool(value)
+                except:
+                    pass
+            desc_dict[key] = value
     return desc_dict
 
 
