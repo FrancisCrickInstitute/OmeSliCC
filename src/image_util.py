@@ -67,7 +67,7 @@ def image_resize(image, target_size):
         image = image.asarray()
     if image.dtype == np.int8:
         image = image.astype(np.uint8)
-    new_image = cv.resize(image, tuple(target_size), interpolation=cv.INTER_AREA)
+    new_image = cv.resize(image, tuple(np.int0(np.round(target_size))), interpolation=cv.INTER_AREA)
     return new_image
 
 
