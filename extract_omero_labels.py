@@ -10,7 +10,7 @@ from src.parameters import *
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Omero label reader')
     parser.add_argument('--params',
-                        help='The location of the parameters file',
+                        help='The parameters file',
                         default=PARAMETER_FILE)
     args = parser.parse_args()
     with open(args.params) as file:

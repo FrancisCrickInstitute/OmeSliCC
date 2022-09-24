@@ -8,7 +8,7 @@ from src.parameters import PARAMETER_FILE
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Encode Omero credentials')
     parser.add_argument('--params',
-                        help='The location of the parameters file',
+                        help='The parameters file',
                         default=PARAMETER_FILE)
     with open(PARAMETER_FILE, 'r') as file:
         params = yaml.safe_load(file)

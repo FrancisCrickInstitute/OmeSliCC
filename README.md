@@ -40,6 +40,16 @@ The main sections are:
 	- convert: convert to desired image output
 	- labels: extract Omero metadata
 
+To encode credentials for Omero access:
+```
+python encode_omero_credentials.py --params path/to/params.yml
+```
+
+To extract Omero label metadata to text file:
+```
+python extract_omero_labels.py --params path/to/params.yml
+```
+
 ## Acknowledgements
 
 The [Open Microscopy Environment (OME)](https://www.openmicroscopy.org/) project
