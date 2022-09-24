@@ -81,9 +81,9 @@ def run_actions(params):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='OmeSliCC')
+    parser = argparse.ArgumentParser(description='OmeSliCC ' + VERSION)
     parser.add_argument('--params',
-                        help='The location of the parameters file',
+                        help='The parameters file',
                         default=PARAMETER_FILE)
 
     args = parser.parse_args()
