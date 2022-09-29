@@ -219,10 +219,11 @@ class TiffSource(OmeSource):
                     if count > 0:
                         dataoffsets.append(offset)
                         databytecounts.append(count)
+                        target_y = (y - tile_y0) * tile_height
+                        target_x = (x - tile_x0) * tile_width
                         tile_locations.append(
-                            (slice(y * tile_height, (y + 1) * tile_height),
-                             slice(x * tile_width, (x + 1) * tile_width),
-                             slice(None, None)))
+                            (slice(target_y, target_y + tile_height),
+                             slice(target_x, target_x + tile_width)))
 
         out = np.zeros((h, w, nchannels), page.dtype)
 

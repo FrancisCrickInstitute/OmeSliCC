@@ -10,6 +10,7 @@ from src.OmeroLabelReader import OmeroLabelReader
 from src.conversion import get_image_info, extract_thumbnail, convert
 from src.util import ensure_list
 from src.parameters import *
+from src.version import __version__
 
 
 def run_actions(params):
@@ -81,7 +82,7 @@ def run_actions(params):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='OmeSliCC ' + VERSION)
+    parser = argparse.ArgumentParser(description='OmeSliCC ' + __version__)
     parser.add_argument('--params',
                         help='The parameters file',
                         default=PARAMETER_FILE)
