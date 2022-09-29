@@ -9,13 +9,10 @@ from src.util import get_default
 
 class BioSource(OmeSource):
     def __init__(self, filename, target_mag=None, source_mag_required=False):
+        super().__init__()
         self.filename = filename
         self.target_mag = target_mag
         self.indexes = []
-        self.sizes = []
-        self.sizes_xyzct = []
-        self.pixel_types = []
-        self.pixel_nbits = []
 
         open_javabridge()
 

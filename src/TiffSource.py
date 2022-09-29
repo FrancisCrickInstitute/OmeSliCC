@@ -15,16 +15,13 @@ from src.util import tags_to_dict, desc_to_dict, ensure_list
 
 class TiffSource(OmeSource):
     def __init__(self, filename, source_mag=None, target_mag=None, source_mag_required=False, executor=None):
+        super().__init__()
         self.filename = filename
         self.target_mag = target_mag
         self.loaded = False
         self.decompressed = False
         self.data = None
         self.arrays = []
-        self.sizes = []
-        self.sizes_xyzct = []
-        self.pixel_types = []
-        self.pixel_nbits = []
 
         if executor is not None:
             self.executor = executor
@@ -53,7 +50,7 @@ class TiffSource(OmeSource):
             nchannels = 1
             if len(page.shape) > 2:
                 nchannels = page.shape[2]
-            self.sizes_xyzct.append((page.imagewidth, page.imagelength, nchannels, page.imagedepth, 1))
+            self.sizes_xyzct.append((page.imagewidth, page.imagelength, page.imagedepth, nchannels, 1))
             self.pixel_types.append(page.dtype)
             self.pixel_nbits.append(page.bitspersample)
 
@@ -126,7 +123,7 @@ class TiffSource(OmeSource):
                           'size_t': xyzct[4],
                           'physical_size_x': physical_size[0], 'physical_size_y': physical_size[1],
                           'physical_size_z': physical_size_z,
-                          'dimension_order': 'XYZCT', 'type': self.pixel_types[0].__name__}
+                          'dimension_order': 'XYZCT', 'type': self.get_pixel_type().__name__}
             ome_metadata = create_ome_metadata(output_filename, image_info, [])
             xml_metadata = ome_metadata.to_xml()
         return xml_metadata
@@ -191,14 +188,15 @@ class TiffSource(OmeSource):
         return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
 
     def asarray_level(self, level, x0, y0, x1, y1):
+        # based on tiffile asarray
         if self.decompressed:
             array = self.arrays[level]
             return array[y0:y1, x0:x1]
 
-        # based on tiffile asarray
         dw = x1 - x0
         dh = y1 - y0
         page = self.pages[level]
+        nchannels = self.sizes_xyzct[level][3]
 
         if page.is_tiled:
             tile_width, tile_height = page.tilewidth, page.tilelength
@@ -206,38 +204,41 @@ class TiffSource(OmeSource):
             tile_width, tile_height = dw, dh
         tile_y0, tile_x0 = y0 // tile_height, x0 // tile_width
         tile_y1, tile_x1 = np.ceil([y1 / tile_height, x1 / tile_width]).astype(int)
-        nx = tile_x1 - tile_x0
-        ny = tile_y1 - tile_y0
         w = (tile_x1 - tile_x0) * tile_width
         h = (tile_y1 - tile_y0) * tile_height
         tile_per_line = int(np.ceil(page.imagewidth / tile_width))
         dataoffsets = []
         databytecounts = []
+        tile_locations = []
         for y in range(tile_y0, tile_y1):
             for x in range(tile_x0, tile_x1):
                 index = int(y * tile_per_line + x)
                 if index < len(page.databytecounts):
-                    dataoffsets.append(page.dataoffsets[index])
-                    databytecounts.append(page.databytecounts[index])
+                    offset = page.dataoffsets[index]
+                    count = page.databytecounts[index]
+                    if count > 0:
+                        dataoffsets.append(offset)
+                        databytecounts.append(count)
+                        tile_locations.append(
+                            (slice(y * tile_height, (y + 1) * tile_height),
+                             slice(x * tile_width, (x + 1) * tile_width),
+                             slice(None, None)))
 
-        out = np.zeros((h, w, 3), page.dtype)
+        out = np.zeros((h, w, nchannels), page.dtype)
 
-        self.decode(page, dataoffsets, databytecounts, tile_width, tile_height, nx, out)
+        self.decode(page, dataoffsets, databytecounts, tile_locations, out)
 
-        im_y0 = y0 - tile_y0 * tile_height
-        im_x0 = x0 - tile_x0 * tile_width
-        tile = out[im_y0: im_y0 + dh, im_x0: im_x0 + dw, :]
-        return tile
+        target_y0 = y0 - tile_y0 * tile_height
+        target_x0 = x0 - tile_x0 * tile_width
+        image = out[target_y0: target_y0 + dh, target_x0: target_x0 + dw, :]
+        return image
 
-    def decode(self, page, dataoffsets, databytecounts, tile_width, tile_height, nx, out):
+    def decode(self, page, dataoffsets, databytecounts, tile_locations, out):
         def process_decoded(decoded, index, out=out):
             segment, indices, shape = decoded
-            y = index // nx
-            x = index % nx
-
-            im_y = y * tile_height
-            im_x = x * tile_width
-            out[im_y: im_y + tile_height, im_x: im_x + tile_width, :] = segment[0]  # numpy is not thread-safe!
+            tile_location = tile_locations[index]
+            # Note: numpy is not thread-safe
+            out[tile_location] = segment[0]
 
         for _ in self.segments(
                 func=process_decoded,
@@ -250,25 +251,18 @@ class TiffSource(OmeSource):
     def segments(self, func, page, dataoffsets, databytecounts):
         # based on tiffile segments
         def decode(args, page=page, func=func):
-            if page.jpegtables is not None:
-                decoded = page.decode(*args, page.jpegtables)
-            else:
-                decoded = page.decode(*args)
+            decoded = page.decode(*args, jpegtables=page.jpegtables)
             return func(decoded, args[1])
 
-        segments = []
+        tile_segments = []
         for index in range(len(dataoffsets)):
             offset = dataoffsets[index]
             bytecount = databytecounts[index]
-            if bytecount > 0:
-                if self.loaded:
-                    segment = self.data[offset:offset + bytecount]
-                else:
-                    fh = page.parent.filehandle
-                    fh.seek(offset)
-                    segment = fh.read(bytecount)
+            if self.loaded:
+                segment = self.data[offset:offset + bytecount]
             else:
-                segment = bytearray()
-            segments.append((segment, index))
-            #yield decode((segment, index))
-        yield from self.executor.map(decode, segments, timeout=10)
+                fh = page.parent.filehandle
+                fh.seek(offset)
+                segment = fh.read(bytecount)
+            tile_segments.append((segment, index))
+        yield from self.executor.map(decode, tile_segments, timeout=10)

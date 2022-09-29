@@ -45,6 +45,7 @@ def pilmode_to_pixelinfo(mode):
     mode_types = {'I': (np.uint32, 32), 'F': (np.float32, 32)}
     if mode in mode_types:
         pixelinfo = mode_types[mode]
+    pixelinfo = (np.dtype(pixelinfo[0]), pixelinfo[1])
     return pixelinfo
 
 

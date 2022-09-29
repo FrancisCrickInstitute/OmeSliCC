@@ -6,6 +6,16 @@ from src.util import check_round_significants
 
 
 class OmeSource:
+    def __init__(self):
+        self.mag0 = None
+        self.target_mag = None
+        self.sizes = []
+        self.sizes_xyzct = []
+        self.pixel_types = []
+        self.pixel_nbits = []
+        self.pixel_size = []
+        self.channel_info = []
+
     def init_metadata(self, filename, source_mag=None, source_mag_required=False):
         self.find_metadata()
         if self.mag0 == 0 and source_mag is not None:
@@ -84,7 +94,7 @@ class OmeSource:
         return shape
 
     def clone_empty(self):
-        return np.zeros(self.get_shape(), dtype=self.pixel_types[0])
+        return np.zeros(self.get_shape(), dtype=self.get_pixel_type())
 
     def get_thumbnail(self, target_size, precise=False):
         size, index = get_best_size(self.sizes, target_size)
@@ -132,6 +142,18 @@ class OmeSource:
                 x0, y0 = chunkx * chunk_size[0], chunky * chunk_size[1]
                 x1, y1 = min((chunkx + 1) * chunk_size[0], w), min((chunky + 1) * chunk_size[1], h)
                 yield x0, y0, x1, y1, self.asarray(x0, y0, x1, y1)
+
+    def find_metadata(self):
+        raise NotImplementedError('Implement method in subclass')
+
+    def get_metadata(self):
+        raise NotImplementedError('Implement method in subclass')
+
+    def get_xml_metadata(self, output_filename):
+        raise NotImplementedError('Implement method in subclass')
+
+    def asarray_level(self, level, x0, y0, x1, y1):
+        raise NotImplementedError('Implement method in subclass')
 
 
 def get_best_mag(mags, target_mag):

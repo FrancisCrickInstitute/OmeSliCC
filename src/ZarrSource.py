@@ -7,13 +7,10 @@ from src.OmeSource import OmeSource
 
 class ZarrSource(OmeSource):
     def __init__(self, filename, source_mag=None, target_mag=None, source_mag_required=False):
+        super().__init__()
         self.mag0 = source_mag
         self.target_mag = target_mag
         self.levels = []
-        self.sizes = []
-        self.sizes_xyzct = []
-        self.pixel_types = []
-        self.pixel_nbits = []
 
         try:
             root = zarr.open_group(filename, mode='r')

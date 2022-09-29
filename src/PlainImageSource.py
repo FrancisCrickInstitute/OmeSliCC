@@ -12,6 +12,7 @@ Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents l
 
 class PlainImageSource(OmeSource):
     def __init__(self, filename, source_mag=None, target_mag=None, source_mag_required=False, executor=None):
+        super().__init__()
         self.filename = filename
         self.mag0 = source_mag
         self.target_mag = target_mag

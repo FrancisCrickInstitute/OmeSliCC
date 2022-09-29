@@ -65,8 +65,6 @@ def extract_thumbnail(filename, output_folder):
 
     # write thumbnail to file
     thumb = source.get_thumbnail(thumbsize)
-    if thumb.dtype == np.uint16:
-        thumb = (thumb / 256).astype('uint8')
     nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
     if nchannels == 2:
         for channeli in range(nchannels):
@@ -149,7 +147,7 @@ def convert_to_zarr0(input_filename, output_folder, patch_size=(256, 256)):
 
 def convert_to_zarr(source, output_filename, output_params):
     shape = source.get_shape()
-    dtype = source.pixel_types[0]
+    dtype = source.get_pixel_type()
     tile_size = output_params['tile_size']
     compression = output_params.get('compression')
 
