@@ -10,7 +10,7 @@ from src.OmeroLabelReader import OmeroLabelReader
 from src.conversion import get_image_info, extract_thumbnail, convert
 from src.util import ensure_list
 from src.parameters import *
-from src.version import __version__
+from version import __version__
 
 
 def run_actions(params):
