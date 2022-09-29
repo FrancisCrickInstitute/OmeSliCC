@@ -55,5 +55,5 @@ python extract_omero_labels.py --params path/to/params.yml
 The [Open Microscopy Environment (OME)](https://www.openmicroscopy.org/) project
 
 The Francis Crick Institute
-- The [Software Engineering and Artificial Intelligence](https://intranet.crick.ac.uk/our-crick/software-engineering-and-ai-stp) team
+- The [Software Engineering and Artificial Intelligence](https://www.crick.ac.uk/research/platforms-and-facilities/software-engineering-and-artificial-intelligence) team
 - The [Turajlic](https://www.crick.ac.uk/research/labs/samra-turajlic) lab
