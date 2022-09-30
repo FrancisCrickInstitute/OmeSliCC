@@ -1,3 +1,4 @@
+# https://pyquestions.com/how-to-save-a-very-large-numpy-array-as-an-image-loading-as-little-as-possible-into-memory
 # * TODO: fix Zarr support, extend to Ome.Zarr
 # * TODO: Add JPEGXR support for Zarr
 
@@ -24,7 +25,7 @@ register_codec(JPEG2000)
 
 def load_source(filename):
     ext = os.path.splitext(filename)[1].lower()
-    if 'zgroup' in ext or (os.path.isdir(filename) and os.path.exists(os.path.join(filename, '.zgroup'))):
+    if 'zarr' in ext:
         source = ZarrSource(filename)
     elif 'tif' in ext or 'svs' in ext:
         source = TiffSource(filename)
@@ -158,43 +159,54 @@ def convert_to_zarr(source, output_filename, output_params):
 
 
 def convert_to_tiff(source, output_filename, output_params, ome=False):
-    image = source.clone_empty()
-    chunk_size = (10240, 10240)
-    # TODO: remove tqdm
-    total = np.prod(np.ceil(source.get_size() / chunk_size))
-    for x0, y0, x1, y1, chunk in tqdm(source.produce_chunks(chunk_size), total=total):
-        image[y0:y1, x0:x1] = chunk
-
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     npyramid_add = output_params.get('npyramid_add')
     pyramid_downsample = output_params.get('pyramid_downsample')
+    channel_operation = output_params.get('channel_operation')
+    output_format = output_params['format']
+
+    image = source.clone_empty()
+    chunk_size = (10240, 10240)
+    for x0, y0, x1, y1, chunk in source.produce_chunks(chunk_size):
+        image[y0:y1, x0:x1] = chunk
+
     if ome:
         metadata = None
         xml_metadata = source.get_xml_metadata(output_filename)
     else:
         metadata = source.get_metadata()
         xml_metadata = None
-    save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
-              npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
+
+    if channel_operation == 'split' and len(image.shape) > 2 and image.shape[2] > 1:
+        for channeli in range(image.shape[2]):
+            image0 = image[..., channeli]
+            output_filename0 = output_filename.replace(output_format, '') + f'_channel{channeli}.' + output_format
+            save_tiff(output_filename0, image0, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
+                      npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
+    else:
+        save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
+                  npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
 
 
-def save_tiff(filename, image, metadata=None, xml_metadata=None, tile_size=None, compression=None,
+def save_tiff(filename, data, metadata=None, xml_metadata=None, tile_size=None, compression=None,
               npyramid_add=0, pyramid_downsample=4.0, pyramid_sizes_add=None):
+    # Use tiled(/slower?) writing:
+    # writer.write(tile_iterator, shape=shape_size_at_desired_mag_pyramid_scale, tile=tile_size)
     if xml_metadata is not None:
         xml_metadata_bytes = xml_metadata.encode()
     else:
         xml_metadata_bytes = None
-    width, height = image.shape[1], image.shape[0]
+    width, height = data.shape[1], data.shape[0]
     with TiffWriter(filename, bigtiff=True) as writer:
         if pyramid_sizes_add is not None:
             npyramid_add = len(pyramid_sizes_add)
-            scale = 1
-            resized_image = image
 
-        writer.write(image, subifds=npyramid_add,
+        writer.write(data, subifds=npyramid_add,
                      tile=tile_size, compression=compression, metadata=metadata, description=xml_metadata_bytes)
 
+        scale = 1
+        resized_image = data
         for i in range(npyramid_add):
             if pyramid_sizes_add is not None:
                 new_width, new_height = pyramid_sizes_add[i]

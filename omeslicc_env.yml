@@ -15,5 +15,7 @@ dependencies:
    - scikit-image
    - scikit-learn
    - opencv-python
+   - zarr
+   - aiohttp
    - omero-py
    - python-bioformats

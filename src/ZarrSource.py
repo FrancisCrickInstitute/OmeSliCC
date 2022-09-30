@@ -15,8 +15,17 @@ class ZarrSource(OmeSource):
         try:
             root = zarr.open_group(filename, mode='r')
             self.metadata = root.attrs.asdict()
-            for level in root.array_keys():
-                data = root.get(str(level))
+
+            keys = []
+            if 'multiscales' in self.metadata:
+                for scale in self.metadata.get('multiscales', []):
+                    for index, dataset in enumerate(scale.get('datasets', [])):
+                        keys.append(dataset.get('path', index))
+            else:
+                keys = root.array_keys()
+
+            for key in keys:
+                data = root.get(str(key))
                 self.levels.append(data)
                 xyzct = np.flip(data.shape)
                 self.sizes_xyzct.append(xyzct)
@@ -28,7 +37,9 @@ class ZarrSource(OmeSource):
         self.init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
 
     def find_metadata(self):
-        # TODO: implement once NGFF Ome Zarr test images are available
+        if 'multiscales' in self.metadata:
+            for scale in self.metadata.get('multiscales', []):
+                axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
         self.pixel_size = []
         self.channel_info = []
         self.mag0 = 1

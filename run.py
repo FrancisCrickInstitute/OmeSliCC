@@ -2,6 +2,7 @@ import argparse
 import glob
 import logging
 import os
+import validators
 import yaml
 from tqdm import tqdm
 
@@ -11,7 +12,6 @@ from src.conversion import get_image_info, extract_thumbnail, convert
 from src.util import ensure_list
 from src.parameters import *
 from version import __version__
-
 
 def run_actions(params):
     input = params['input']
@@ -50,28 +50,30 @@ def run_actions(params):
                         label_reader.create_label_csv()
                 logging.info(f'Done {action}')
     else:
-        input_folder = input['folder']
-        filenames = []
+        input_source = input['source']
+        sources = []
         if ids is not None:
-            filenames = [os.path.join(input_folder, id) for id in ids]
-        if len(filenames) == 0:
-            input_path = input_folder
-            if os.path.isdir(input_path):
-                input_path = os.path.join(input_path, '*')
-            filenames = [file for file in glob.glob(input_path)
-                         if os.path.isfile(file) or os.path.exists(os.path.join(file, '.zgroup'))]
-        if len(filenames) > 0:
+            sources = [os.path.join(input_source, id) for id in ids]
+        if len(sources) == 0:
+            if validators.url(input_source):
+                sources = [input_source]
+            else:
+                input_path = input_source
+                if os.path.isdir(input_path) and not input_path.lower().endswith('zarr'):
+                    input_path = os.path.join(input_path, '*')
+                sources = [file for file in glob.glob(input_path) if os.path.isfile(file) or file.lower().endswith('zarr')]
+        if len(sources) > 0:
             for action0 in actions:
                 action = action0.lower()
                 logging.info(f'Starting {action}')
-                for filename in tqdm(filenames):
+                for source in tqdm(sources):
                     try:
                         if 'info' in action:
-                            logging.info(get_image_info(filename))
+                            logging.info(get_image_info(source))
                         elif 'thumb' in action:
-                            extract_thumbnail(filename, output_folder)
+                            extract_thumbnail(source, output_folder)
                         elif 'convert' in action:
-                            convert(filename, output)
+                            convert(source, output)
                     except Exception as e:
                         logging.exception(e)
                 logging.info(f'Done {action}')
