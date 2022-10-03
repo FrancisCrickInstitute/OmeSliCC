@@ -161,7 +161,7 @@ def convert_to_zarr(source, output_filename, output_params):
 def convert_to_tiff(source, output_filename, output_params, ome=False):
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
-    npyramid_add = output_params.get('npyramid_add')
+    npyramid_add = output_params.get('npyramid_add', 0)
     pyramid_downsample = output_params.get('pyramid_downsample')
     channel_operation = output_params.get('channel_operation')
     output_format = output_params['format']
@@ -181,7 +181,7 @@ def convert_to_tiff(source, output_filename, output_params, ome=False):
     if channel_operation == 'split' and len(image.shape) > 2 and image.shape[2] > 1:
         for channeli in range(image.shape[2]):
             image0 = image[..., channeli]
-            output_filename0 = output_filename.replace(output_format, '') + f'_channel{channeli}.' + output_format
+            output_filename0 = output_filename.replace(output_format, '').rstrip('.') + f'_channel{channeli}.' + output_format
             save_tiff(output_filename0, image0, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
                       npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
     else:

@@ -32,10 +32,10 @@ class TiffSource(OmeSource):
         tiff = TiffFile(filename)
         if tiff.is_ome and tiff.ome_metadata is not None:
             self.xml_metadata = tiff.ome_metadata
-            self.ome_metadata = tifffile.xml2dict(self.xml_metadata)
+            self.metadata = tifffile.xml2dict(self.xml_metadata)
         else:
             self.xml_metadata = None
-            self.ome_metadata = None
+            self.metadata = None
 
         if tiff.is_imagej:
             self.metadata = tiff.imagej_metadata
@@ -65,10 +65,10 @@ class TiffSource(OmeSource):
         page = self.pages[0]
         # from OME metadata
         if page.is_ome:
-            if 'OME' in self.ome_metadata:
-                metadata = self.ome_metadata['OME']
+            if 'OME' in self.metadata:
+                metadata = self.metadata['OME']
             else:
-                metadata = self.ome_metadata
+                metadata = self.metadata
             pixel_info = metadata.get('Image', {}).get('Pixels', {})
             pixel_size = [(pixel_info.get('PhysicalSizeX', 1), pixel_info.get('PhysicalSizeXUnit', 'micron')),
                           (pixel_info.get('PhysicalSizeY', 1), pixel_info.get('PhysicalSizeYUnit', 'micron')),
@@ -109,7 +109,7 @@ class TiffSource(OmeSource):
         self.mag0 = mag
 
     def get_metadata(self):
-        return self.ome_metadata
+        return self.metadata
 
     def get_xml_metadata(self, output_filename):
         if self.xml_metadata is not None:

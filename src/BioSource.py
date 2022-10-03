@@ -2,6 +2,7 @@ import numpy as np
 import bioformats
 import javabridge
 from bioformats.formatreader import ImageReader
+import tifffile
 
 from src.OmeSource import OmeSource
 from src.util import get_default
@@ -16,7 +17,9 @@ class BioSource(OmeSource):
 
         open_javabridge()
 
-        self.ome_metadata = bioformats.OMEXML(bioformats.get_omexml_metadata(filename))
+        xml_metadata = bioformats.get_omexml_metadata(filename)
+        self.ome_metadata = bioformats.OMEXML(xml_metadata)
+        self.metadata = tifffile.xml2dict(xml_metadata)
         self.reader = ImageReader(filename)
 
         for i in range(self.ome_metadata.get_image_count()):
@@ -45,14 +48,14 @@ class BioSource(OmeSource):
         self.mag0 = mag
 
     def get_metadata(self):
-        return self.ome_metadata
+        return self.metadata
 
     def get_xml_metadata(self, output_filename):
-        return self.get_metadata().to_xml()
+        return self.ome_metadata.to_xml()
 
     def asarray_level(self, level, x0, y0, x1, y1):
         xywh = (x0, y0, x1 - x0, y1 - y0)
-        image = self.reader.read(series=self.indexes[level], XYWH=xywh)
+        image = self.reader.read(series=self.indexes[level], XYWH=xywh, rescale=False)      # don't 'rescale' to 0-1!
         return image
 
     def close(self):
