@@ -3,6 +3,7 @@ import bioformats
 import javabridge
 from bioformats.formatreader import ImageReader
 import tifffile
+from ome_types import OME
 
 from src.OmeSource import OmeSource
 from src.util import get_default
@@ -18,12 +19,15 @@ class BioSource(OmeSource):
         open_javabridge()
 
         xml_metadata = bioformats.get_omexml_metadata(filename)
-        self.ome_metadata = bioformats.OMEXML(xml_metadata)
+        self.bio_ome_metadata = bioformats.OMEXML(xml_metadata)
+        self.ome_metadata = OME.from_xml(xml_metadata)
         self.metadata = tifffile.xml2dict(xml_metadata)
+        if 'OME' in self.metadata:
+            self.metadata = self.metadata['OME']
         self.reader = ImageReader(filename)
 
-        for i in range(self.ome_metadata.get_image_count()):
-            pmetadata = self.ome_metadata.image(i).Pixels
+        for i in range(self.bio_ome_metadata.get_image_count()):
+            pmetadata = self.bio_ome_metadata.image(i).Pixels
             if pmetadata.PhysicalSizeX is not None:
                 dtype = np.dtype(pmetadata.PixelType)
                 self.indexes.append(i)
@@ -34,11 +38,12 @@ class BioSource(OmeSource):
         self.init_metadata(filename, source_mag_required=source_mag_required)
 
     def find_metadata(self):
-        pixel_info = self.ome_metadata.image().Pixels
-        pixel_size = [(get_default(pixel_info.get_PhysicalSizeX(), 1), get_default(pixel_info.get_PhysicalSizeXUnit(), '')),
-                      (get_default(pixel_info.get_PhysicalSizeY(), 1), get_default(pixel_info.get_PhysicalSizeYUnit(), '')),
-                      (get_default(pixel_info.get_PhysicalSizeZ(), 1), get_default(pixel_info.get_PhysicalSizeZUnit(), ''))]
-        mag = int(float(self.ome_metadata.instrument().Objective.get_NominalMagnification()))
+        pixel_info = self.bio_ome_metadata.image().Pixels
+        xyzct = self.sizes_xyzct[0]
+        pixel_size = [(get_default(pixel_info.get_PhysicalSizeX(), 1) / xyzct[0], get_default(pixel_info.get_PhysicalSizeXUnit(), '')),
+                      (get_default(pixel_info.get_PhysicalSizeY(), 1) / xyzct[1], get_default(pixel_info.get_PhysicalSizeYUnit(), '')),
+                      (get_default(pixel_info.get_PhysicalSizeZ(), 1) / xyzct[2], get_default(pixel_info.get_PhysicalSizeZUnit(), ''))]
+        mag = int(float(self.bio_ome_metadata.instrument().Objective.get_NominalMagnification()))
         channel_info = []
         for c in range(pixel_info.get_channel_count()):
             channel = pixel_info.Channel(c)
@@ -46,12 +51,6 @@ class BioSource(OmeSource):
         self.pixel_size = pixel_size
         self.channel_info = channel_info
         self.mag0 = mag
-
-    def get_metadata(self):
-        return self.metadata
-
-    def get_xml_metadata(self, output_filename):
-        return self.ome_metadata.to_xml()
 
     def asarray_level(self, level, x0, y0, x1, y1):
         xywh = (x0, y0, x1 - x0, y1 - y0)

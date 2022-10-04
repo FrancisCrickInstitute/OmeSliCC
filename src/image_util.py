@@ -63,12 +63,13 @@ def image_resize_fast(image, target_size):
     return cv.resize(image, target_size, interpolation=cv.INTER_AREA)
 
 
-def image_resize(image, target_size):
+def image_resize(image, target_size0):
     if not isinstance(image, np.ndarray):
         image = image.asarray()
     if image.dtype == np.int8:
         image = image.astype(np.uint8)
-    new_image = cv.resize(image, tuple(np.int0(np.round(target_size))), interpolation=cv.INTER_AREA)
+    target_size = np.clip(np.int0(np.round(target_size0)), 1, None)
+    new_image = cv.resize(image, tuple(target_size), interpolation=cv.INTER_AREA)
     return new_image
 
 

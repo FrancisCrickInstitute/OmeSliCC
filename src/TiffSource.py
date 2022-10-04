@@ -4,12 +4,12 @@
 import os
 import numpy as np
 import tifffile
+from ome_types import OME
 from tifffile import TiffFile
 from concurrent.futures import ThreadPoolExecutor
 
 from src.OmeSource import OmeSource
 from src.image_util import get_tiff_pages
-from src.ome import create_ome_metadata
 from src.util import tags_to_dict, desc_to_dict, ensure_list
 
 
@@ -31,13 +31,12 @@ class TiffSource(OmeSource):
 
         tiff = TiffFile(filename)
         if tiff.is_ome and tiff.ome_metadata is not None:
-            self.xml_metadata = tiff.ome_metadata
-            self.metadata = tifffile.xml2dict(self.xml_metadata)
-        else:
-            self.xml_metadata = None
-            self.metadata = None
-
-        if tiff.is_imagej:
+            xml_metadata = tiff.ome_metadata
+            self.ome_metadata = OME.from_xml(xml_metadata)
+            self.metadata = tifffile.xml2dict(xml_metadata)
+            if 'OME' in self.metadata:
+                self.metadata = self.metadata['OME']
+        elif tiff.is_imagej:
             self.metadata = tiff.imagej_metadata
         else:
             self.metadata = None
@@ -63,18 +62,17 @@ class TiffSource(OmeSource):
         channel_info = []
         mag = 0
         page = self.pages[0]
+        xyzct = self.sizes_xyzct[0]
         # from OME metadata
         if page.is_ome:
-            if 'OME' in self.metadata:
-                metadata = self.metadata['OME']
-            else:
-                metadata = self.metadata
-            pixel_info = metadata.get('Image', {}).get('Pixels', {})
-            pixel_size = [(pixel_info.get('PhysicalSizeX', 1), pixel_info.get('PhysicalSizeXUnit', 'micron')),
-                          (pixel_info.get('PhysicalSizeY', 1), pixel_info.get('PhysicalSizeYUnit', 'micron')),
-                          (pixel_info.get('PhysicalSizeZ', 1), pixel_info.get('PhysicalSizeZUnit', 'micron'))]
-            for channel in ensure_list(pixel_info.get('Channel', {})):
-                channel_info.append((channel.get('Name', ''), channel.get('SamplesPerPixel', 1)))
+            metadata = self.metadata
+            for imetadata in ensure_list(metadata.get('Image', {})):
+                pmetadata = imetadata.get('Pixels', {})
+                pixel_size = [(pmetadata.get('PhysicalSizeX', 1) / xyzct[0], pmetadata.get('PhysicalSizeXUnit', 'µm')),
+                              (pmetadata.get('PhysicalSizeY', 1) / xyzct[1], pmetadata.get('PhysicalSizeYUnit', 'µm')),
+                              (pmetadata.get('PhysicalSizeZ', 1) / xyzct[2], pmetadata.get('PhysicalSizeZUnit', 'µm'))]
+                for channel in ensure_list(pmetadata.get('Channel', {})):
+                    channel_info.append((channel.get('Name', ''), channel.get('SamplesPerPixel', 1)))
             mag = metadata.get('Instrument', {}).get('Objective', {}).get('NominalMagnification', 0)
         # from imageJ metadata
         if len(pixel_size) == 0 and self.metadata is not None:
@@ -107,26 +105,6 @@ class TiffSource(OmeSource):
         self.pixel_size = pixel_size
         self.channel_info = channel_info
         self.mag0 = mag
-
-    def get_metadata(self):
-        return self.metadata
-
-    def get_xml_metadata(self, output_filename):
-        if self.xml_metadata is not None:
-            xml_metadata = self.xml_metadata
-        else:
-            size = self.get_size()
-            xyzct = self.sizes_xyzct[0]
-            physical_size = size / self.metadata['dpi']
-            physical_size_z = 1
-            image_info = {'size_x': size[0], 'size_y': size[1], 'size_z': xyzct[2], 'size_c': xyzct[3],
-                          'size_t': xyzct[4],
-                          'physical_size_x': physical_size[0], 'physical_size_y': physical_size[1],
-                          'physical_size_z': physical_size_z,
-                          'dimension_order': 'XYZCT', 'type': self.get_pixel_type().__name__}
-            ome_metadata = create_ome_metadata(output_filename, image_info, [])
-            xml_metadata = ome_metadata.to_xml()
-        return xml_metadata
 
     def load(self, decompress=False):
         self.fh.seek(0)

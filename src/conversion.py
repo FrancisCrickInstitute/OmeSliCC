@@ -11,13 +11,12 @@ from PIL import Image
 from numcodecs import register_codec
 from numcodecs.blosc import Blosc
 from tifffile import TiffWriter
-from tqdm import tqdm
 
 from src.BioSource import BioSource
 from src.PlainImageSource import PlainImageSource
 from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
-from src.image_util import JPEG2000, image_resize, get_image_size_info
+from src.image_util import JPEG2000, image_resize, get_image_size_info, calc_pyramid
 from src.util import get_filetitle
 
 register_codec(JPEG2000)
@@ -161,10 +160,15 @@ def convert_to_zarr(source, output_filename, output_params):
 def convert_to_tiff(source, output_filename, output_params, ome=False):
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
-    npyramid_add = output_params.get('npyramid_add', 0)
-    pyramid_downsample = output_params.get('pyramid_downsample')
     channel_operation = output_params.get('channel_operation')
     output_format = output_params['format']
+
+    npyramid_add = output_params.get('npyramid_add', 0)
+    pyramid_downsample = output_params.get('pyramid_downsample')
+    if npyramid_add > 0:
+        pyramid_sizes_add = calc_pyramid(source.get_size(), npyramid_add, pyramid_downsample)
+    else:
+        pyramid_sizes_add = None
 
     image = source.clone_empty()
     chunk_size = (10240, 10240)
@@ -173,7 +177,7 @@ def convert_to_tiff(source, output_filename, output_params, ome=False):
 
     if ome:
         metadata = None
-        xml_metadata = source.get_xml_metadata(output_filename)
+        xml_metadata = source.get_xml_metadata(output_filename, pyramid_sizes_add=pyramid_sizes_add)
     else:
         metadata = source.get_metadata()
         xml_metadata = None
@@ -212,7 +216,7 @@ def save_tiff(filename, data, metadata=None, xml_metadata=None, tile_size=None, 
                 new_width, new_height = pyramid_sizes_add[i]
             else:
                 scale /= pyramid_downsample
-                new_width, new_height = int(round(width * scale)), int(round(height * scale))
+                new_width, new_height = np.int0(np.round(np.array([width, height]) * scale))
             resized_image = image_resize(resized_image, (new_width, new_height))
             writer.write(resized_image, subfiletype=1,
                          tile=tile_size, compression=compression)

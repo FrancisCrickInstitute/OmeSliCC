@@ -2,11 +2,14 @@ import logging
 import numpy as np
 
 from src.image_util import image_resize_fast, image_resize, precise_resize
+from src.ome import create_ome_metadata
 from src.util import check_round_significants
 
 
 class OmeSource:
     def __init__(self):
+        self.metadata = {}
+        self.ome_metadata = None
         self.mag0 = None
         self.target_mag = None
         self.sizes = []
@@ -31,10 +34,15 @@ class OmeSource:
         self.set_best_mag()
 
     def fix_pixelsize(self):
+        standard_units = {'micro': 'µm', 'nano': 'nm'}
         pixel_size = []
         for pixel_size0 in self.pixel_size:
             pixel_size1 = check_round_significants(pixel_size0[0], 6)
-            pixel_size.append((pixel_size1, pixel_size0[1]))
+            unit1 = pixel_size0[1]
+            for standard_unit in standard_units:
+                if unit1.lower().startswith(standard_unit):
+                    unit1 = standard_units[standard_unit]
+            pixel_size.append((pixel_size1, unit1))
         self.pixel_size = pixel_size
 
     def set_mags(self):
@@ -143,13 +151,13 @@ class OmeSource:
                 x1, y1 = min((chunkx + 1) * chunk_size[0], w), min((chunky + 1) * chunk_size[1], h)
                 yield x0, y0, x1, y1, self.asarray(x0, y0, x1, y1)
 
-    def find_metadata(self):
-        raise NotImplementedError('Implement method in subclass')
-
     def get_metadata(self):
-        raise NotImplementedError('Implement method in subclass')
+        return self.metadata
 
-    def get_xml_metadata(self, output_filename):
+    def get_xml_metadata(self, output_filename, pyramid_sizes_add=None):
+        return create_ome_metadata(self, output_filename, pyramid_sizes_add=pyramid_sizes_add).to_xml()
+
+    def find_metadata(self):
         raise NotImplementedError('Implement method in subclass')
 
     def asarray_level(self, level, x0, y0, x1, y1):

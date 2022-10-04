@@ -5,7 +5,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 from src.OmeSource import OmeSource
 from src.image_util import pilmode_to_pixelinfo, get_pil_metadata
-from src.ome import create_ome_metadata
 
 Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents loading large images)
 
@@ -50,20 +49,6 @@ class PlainImageSource(OmeSource):
         self.pixel_size.append((1 / res0, pixel_size_unit))
         self.channel_info = []
         self.mag0 = self.metadata.get('Mag', 0)
-
-    def get_metadata(self):
-        return self.metadata
-
-    def get_xml_metadata(self, output_filename):
-        size = self.get_size()
-        xyzct = self.sizes_xyzct[0]
-        physical_size = size / self.metadata['dpi']
-        physical_size_z = 1
-        image_info = {'size_x': size[0], 'size_y': size[1], 'size_z': xyzct[2], 'size_c': xyzct[3], 'size_t': xyzct[4],
-                      'physical_size_x': physical_size[0], 'physical_size_y': physical_size[1], 'physical_size_z': physical_size_z,
-                      'dimension_order': 'XYZCT', 'type': self.pixel_types[0].__name__}
-        ome_metadata = create_ome_metadata(output_filename, image_info, [])
-        return ome_metadata.to_xml()
 
     def load(self):
         self.unload()
