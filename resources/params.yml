@@ -8,6 +8,9 @@ input:
   type: project
   #type: image
 
+  # mag - source magnification (if not in metadata)
+  #mag: 20
+
   # ids - project or image id(s)
   ids: 0
 
@@ -15,10 +18,16 @@ input:
   labels: [label1,label2]
 
 output:
+  # mag - output magnification
+  mag: 20
+
   folder: output/images
   format: ome.tiff
+
+  # channel_operation - optional channel operation
   # channel_operation: combine
   # channel_operation: split
+
   tile_size: [256, 256]
   compression: ['JPEGXR_NDPI', 75]
   npyramid_add: 3

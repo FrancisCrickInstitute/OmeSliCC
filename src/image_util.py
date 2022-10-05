@@ -7,7 +7,7 @@ from numcodecs.abc import Codec
 from numcodecs.compat import ensure_ndarray
 import imagecodecs
 from imagecodecs import jpeg2k_encode, jpeg2k_decode
-from tifffile import TiffFile, TiffPage
+from tifffile import TiffFile, TiffPage, TiffFrame
 
 from src.util import tags_to_dict, print_dict, print_hbytes
 
@@ -106,26 +106,22 @@ def load_tiff(filename, only_tiled=True):
 def get_tiff_pages(tiff, only_tiled=False):
     pages = []
     for page in tiff.pages:
-        if isinstance(page, TiffPage):
-            page_added = False
+        if isinstance(page, TiffPage) or isinstance(page, TiffFrame):
             for serie in tiff.series:
                 # has series
-                serie_added = False
                 for level in serie.levels:
                     # has levels
-                    pages.append(level.keyframe)
-                    serie_added = True
-                    page_added = True
-                if not serie_added:
+                    if not level.keyframe in pages:
+                        pages.append(level.keyframe)
+                if not serie.keyframe in pages:
                     pages.append(serie.keyframe)
-                    page_added = True
-            if not page_added:
+            if not page in pages:
                 pages.append(page)
 
     if only_tiled:
         tiled_pages = []
         for page in pages:
-            if page.is_tiled:
+            if isinstance(page, TiffPage) and page.is_tiled:
                 tiled_pages.append(page)
         pages = tiled_pages
 

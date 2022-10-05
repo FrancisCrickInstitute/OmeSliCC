@@ -5,7 +5,7 @@ import os
 import numpy as np
 import tifffile
 from ome_types import OME
-from tifffile import TiffFile
+from tifffile import TiffFile, TiffPage
 from concurrent.futures import ThreadPoolExecutor
 
 from src.OmeSource import OmeSource
@@ -45,13 +45,24 @@ class TiffSource(OmeSource):
         if len(self.pages) == 0:
             self.pages = get_tiff_pages(tiff, only_tiled=False)
         for page in self.pages:
-            self.sizes.append((page.imagewidth, page.imagelength))
+            shape = page.shape
+            if isinstance(page, TiffPage):
+                width = page.imagewidth
+                height = page.imagelength
+                depth = page.imagedepth
+                bitspersample = page.bitspersample
+            else:
+                width = shape[1]
+                height = shape[0]
+                depth = 1
+                bitspersample = page.dtype.itemsize * 8
             nchannels = 1
-            if len(page.shape) > 2:
-                nchannels = page.shape[2]
-            self.sizes_xyzct.append((page.imagewidth, page.imagelength, page.imagedepth, nchannels, 1))
+            if len(shape) > 2:
+                nchannels = shape[2]
+            self.sizes.append((width, height))
+            self.sizes_xyzct.append((width, height, depth, nchannels, 1))
             self.pixel_types.append(page.dtype)
-            self.pixel_nbits.append(page.bitspersample)
+            self.pixel_nbits.append(bitspersample)
 
         self.fh = tiff.filehandle
         self.init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
@@ -68,9 +79,9 @@ class TiffSource(OmeSource):
             metadata = self.metadata
             for imetadata in ensure_list(metadata.get('Image', {})):
                 pmetadata = imetadata.get('Pixels', {})
-                pixel_size = [(pmetadata.get('PhysicalSizeX', 1) / xyzct[0], pmetadata.get('PhysicalSizeXUnit', 'µm')),
-                              (pmetadata.get('PhysicalSizeY', 1) / xyzct[1], pmetadata.get('PhysicalSizeYUnit', 'µm')),
-                              (pmetadata.get('PhysicalSizeZ', 1) / xyzct[2], pmetadata.get('PhysicalSizeZUnit', 'µm'))]
+                pixel_size = [(pmetadata.get('PhysicalSizeX', 0) / xyzct[0], pmetadata.get('PhysicalSizeXUnit', 'µm')),
+                              (pmetadata.get('PhysicalSizeY', 0) / xyzct[1], pmetadata.get('PhysicalSizeYUnit', 'µm')),
+                              (pmetadata.get('PhysicalSizeZ', 0) / xyzct[2], pmetadata.get('PhysicalSizeZUnit', 'µm'))]
                 for channel in ensure_list(pmetadata.get('Channel', {})):
                     channel_info.append((channel.get('Name', ''), channel.get('SamplesPerPixel', 1)))
             mag = metadata.get('Instrument', {}).get('Objective', {}).get('NominalMagnification', 0)
@@ -162,7 +173,7 @@ class TiffSource(OmeSource):
         return array
 
     def get_size(self):
-        # size at selected magnification
+        # size at target magnification
         return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
 
     def asarray_level(self, level, x0, y0, x1, y1):
@@ -178,6 +189,8 @@ class TiffSource(OmeSource):
 
         if page.is_tiled:
             tile_width, tile_height = page.tilewidth, page.tilelength
+        elif page.chunks is not None and page.chunks != (1, 1):
+            tile_height, tile_width = page.chunks
         else:
             tile_width, tile_height = dw, dh
         tile_y0, tile_x0 = y0 // tile_height, x0 // tile_width

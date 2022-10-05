@@ -10,7 +10,7 @@ import cv2 as cv
 from PIL import Image
 from numcodecs import register_codec
 from numcodecs.blosc import Blosc
-from tifffile import TiffWriter
+from tifffile import TIFF, TiffWriter
 
 from src.BioSource import BioSource
 from src.PlainImageSource import PlainImageSource
@@ -22,21 +22,23 @@ from src.util import get_filetitle
 register_codec(JPEG2000)
 
 
-def load_source(filename):
+def load_source(filename, params):
+    source_mag = params['input'].get('mag')
+    target_mag = params['output'].get('mag')
     ext = os.path.splitext(filename)[1].lower()
     if 'zarr' in ext:
-        source = ZarrSource(filename)
-    elif 'tif' in ext or 'svs' in ext:
-        source = TiffSource(filename)
+        source = ZarrSource(filename, source_mag=source_mag, target_mag=target_mag)
+    elif ext.lstrip('.') in TIFF.FILE_EXTENSIONS:
+        source = TiffSource(filename, source_mag=source_mag, target_mag=target_mag)
     elif ext in Image.registered_extensions().keys():
-        source = PlainImageSource(filename)
+        source = PlainImageSource(filename, source_mag=source_mag, target_mag=target_mag)
     else:
-        source = BioSource(filename)
+        source = BioSource(filename, target_mag=target_mag)
     return source
 
 
-def get_image_info(filename):
-    source = load_source(filename)
+def get_image_info(filename, params):
+    source = load_source(filename, params)
     xyzct = source.get_size_xyzct()
     pixel_nbytes = source.get_pixel_nbytes()
     pixel_type = source.get_pixel_type()
@@ -53,10 +55,11 @@ def get_image_info(filename):
     return image_info
 
 
-def extract_thumbnail(filename, output_folder):
+def extract_thumbnail(filename, params):
+    output_folder = params['output']['folder']
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    source = load_source(filename)
+    source = load_source(filename, params)
     size = source.sizes[0]
 
     #thumbsize = np.int0(np.divide(size, 10))    # use arbitrary factor 10
@@ -76,13 +79,14 @@ def extract_thumbnail(filename, output_folder):
     return thumb
 
 
-def convert(filename, output_params):
+def convert(filename, params):
+    output_params = params['output']
     output_folder = output_params['folder']
     output_format = output_params['format']
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     output_filename = os.path.join(output_folder, get_filetitle(filename, remove_all_ext=True) + '.' + output_format)
-    source = load_source(filename)
+    source = load_source(filename, params)
     if 'zar' in output_format:
         convert_to_zarr(source, output_filename, output_params)
     elif 'ome' in output_format:

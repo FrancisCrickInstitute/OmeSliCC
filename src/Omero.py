@@ -1,18 +1,13 @@
 import logging
 import os
-from uuid import uuid4
 import numpy as np
 import omero
-from ome_types import OME
-from ome_types.model import Image, Pixels, Plane, Channel, Instrument, Objective, StageLabel, Map, MapAnnotation, \
-    CommentAnnotation, InstrumentRef, AnnotationRef, TiffData
-from ome_types.model.map import M
-from ome_types.model.tiff_data import UUID
 from omero.gateway import BlitzGateway
 from tqdm import tqdm
 
 from src.conversion import save_tiff
 from src.image_util import calc_pyramid, get_image_size_info
+from src.ome import create_ome_metadata_from_omero
 from src.omero_credentials import decrypt_credentials
 
 
@@ -142,7 +137,7 @@ class Omero:
             npyramid_add = output['npyramid_add']
             pyramid_downsample = output['pyramid_downsample']
             pyramid_sizes_add = calc_pyramid((w, h), npyramid_add, pyramid_downsample)
-            metadata = self.get_metadata(image_object, filetitle, pyramid_sizes_add)
+            metadata = create_ome_metadata_from_omero(image_object, filetitle, pyramid_sizes_add)
             xml_metadata = metadata.to_xml()
 
             image = self.get_omero_image(image_object, pixels)
@@ -212,136 +207,6 @@ class Omero:
         xs, ys = image_object.getSizeX(), image_object.getSizeY()
         zs, cs, ts = image_object.getSizeZ(), image_object.getSizeC(), image_object.getSizeT()
         return xs, ys, zs, cs, ts
-
-    def get_metadata(self, image_object, filetitle, pyramid_sizes_add=None):
-        uuid = f'urn:uuid:{uuid4()}'
-        ome = OME(uuid=uuid)
-
-        nchannels = image_object.getSizeC()
-        pixels = image_object.getPrimaryPixels()
-        channels = []
-        channels0 = image_object.getChannels(noRE=True)
-        if channels0 is not None and len(channels0) > 0:
-            channel = channels0[0]
-            channels.append(Channel(
-                    id='Channel:0',
-                    name=channel.getName(),
-                    fluor=channel.getName(),
-                    samples_per_pixel=nchannels
-                ))
-
-        tiff_datas = [TiffData(
-            uuid=UUID(file_name=filetitle, value=uuid)
-        )]
-
-        planes = []
-        stage = image_object.getStageLabel()
-        if stage is not None:
-            for plane in pixels.copyPlaneInfo():
-                planes.append(Plane(
-                    the_c=plane.getTheC(),
-                    the_t=plane.getTheT(),
-                    the_z=plane.getTheZ(),
-                    delta_t=plane.getDeltaT(),
-                    exposure_time=plane.getExposureTime(),
-                    position_x=stage.getPositionX().getValue(),
-                    position_y=stage.getPositionY().getValue(),
-                    position_z=stage.getPositionZ().getValue(),
-                    position_x_unit=stage.getPositionX().getSymbol(),
-                    position_y_unit=stage.getPositionY().getSymbol(),
-                    position_z_unit=stage.getPositionZ().getSymbol(),
-                ))
-            stage_label = StageLabel(
-                name=stage.getName(),
-                x=stage.getPositionX().getValue(),
-                y=stage.getPositionY().getValue(),
-                z=stage.getPositionZ().getValue(),
-                x_unit=stage.getPositionX().getSymbol(),
-                y_unit=stage.getPositionY().getSymbol(),
-                z_unit=stage.getPositionZ().getSymbol()
-            )
-
-        image = Image(
-            id='Image:0',
-            name=image_object.getName(),
-            description=image_object.getDescription(),
-            acquisition_date=image_object.getAcquisitionDate(),
-            pixels=Pixels(
-                size_c=image_object.getSizeC(),
-                size_t=image_object.getSizeT(),
-                size_x=image_object.getSizeX(),
-                size_y=image_object.getSizeY(),
-                size_z=image_object.getSizeZ(),
-                physical_size_x=image_object.getPixelSizeX(),   # get size in default unit (micron)
-                physical_size_y=image_object.getPixelSizeY(),   # get size in default unit (micron)
-                physical_size_z=image_object.getPixelSizeZ(),   # get size in default unit (micron)
-                physical_size_x_unit='micron',
-                physical_size_y_unit='micron',
-                physical_size_z_unit='micron',
-                type=image_object.getPixelsType(),
-                dimension_order=pixels.getDimensionOrder().getValue(),
-                channels=channels,
-                tiff_data_blocks=tiff_datas
-            ),
-        )
-        if stage is not None:
-            image.stage_label = stage_label
-            image.pixels.planes = planes
-        ome.images.append(image)
-
-        objective_settings = image_object.getObjectiveSettings()
-        if objective_settings is not None:
-            objective = objective_settings.getObjective()
-            instrument = Instrument(objectives=[
-                Objective(id=objective.getId(),
-                          manufacturer=objective.getManufacturer(),
-                          model=objective.getModel(),
-                          lot_number=objective.getLotNumber(),
-                          serial_number=objective.getSerialNumber(),
-                          nominal_magnification=objective.getNominalMagnification(),
-                          calibrated_magnification=objective.getCalibratedMagnification(),
-                          #correction=objective.getCorrection().getValue(),
-                          lens_na=objective.getLensNA(),
-                          working_distance=objective.getWorkingDistance().getValue(),
-                          working_distance_unit=objective.getWorkingDistance().getSymbol(),
-                          iris=objective.getIris(),
-                          immersion=objective.getImmersion().getValue()
-                          )])
-            ome.instruments.append(instrument)
-
-            for image in ome.images:
-                image.instrument_ref = InstrumentRef(id=instrument.id)
-
-        if pyramid_sizes_add is not None:
-            key_value_map = Map()
-            for i, pyramid_size in enumerate(pyramid_sizes_add):
-                key_value_map.m.append(M(k=(i + 1), value=' '.join(map(str, pyramid_size))))
-            annotation = MapAnnotation(value=key_value_map,
-                                       namespace='openmicroscopy.org/PyramidResolution',
-                                       id='Annotation:Resolution:0')
-            ome.structured_annotations.append(annotation)
-
-        for omero_annotation in image_object.listAnnotations():
-            id = omero_annotation.getId()
-            type = omero_annotation.OMERO_TYPE
-            annotation = None
-            if type == omero.model.MapAnnotationI:
-                key_value_map = Map()
-                for annotation in omero_annotation.getMapValue():
-                    key_value_map.m.append(M(k=annotation.name, value=annotation.value))
-                annotation = MapAnnotation(value=key_value_map,
-                                           namespace=omero_annotation.getNs(),
-                                           id=f'urn:lsid:export.openmicroscopy.org:Annotation:{id}')
-            elif type == omero.model.CommentAnnotationI:
-                annotation = CommentAnnotation(value=omero_annotation.getValue(),
-                                               namespace=omero_annotation.getNs(),
-                                               id=f'urn:lsid:export.openmicroscopy.org:Annotation:{id}')
-            if annotation is not None:
-                ome.structured_annotations.append(annotation)
-                for image in ome.images:
-                    image.annotation_ref.append(AnnotationRef(id=annotation.id))
-
-        return ome
 
     def get_original_files(self, image_object):
         return image_object.getFileset().listFiles()

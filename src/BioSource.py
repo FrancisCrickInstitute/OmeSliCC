@@ -40,9 +40,9 @@ class BioSource(OmeSource):
     def find_metadata(self):
         pixel_info = self.bio_ome_metadata.image().Pixels
         xyzct = self.sizes_xyzct[0]
-        pixel_size = [(get_default(pixel_info.get_PhysicalSizeX(), 1) / xyzct[0], get_default(pixel_info.get_PhysicalSizeXUnit(), '')),
-                      (get_default(pixel_info.get_PhysicalSizeY(), 1) / xyzct[1], get_default(pixel_info.get_PhysicalSizeYUnit(), '')),
-                      (get_default(pixel_info.get_PhysicalSizeZ(), 1) / xyzct[2], get_default(pixel_info.get_PhysicalSizeZUnit(), ''))]
+        pixel_size = [(get_default(pixel_info.get_PhysicalSizeX(), 0) / xyzct[0], get_default(pixel_info.get_PhysicalSizeXUnit(), '')),
+                      (get_default(pixel_info.get_PhysicalSizeY(), 0) / xyzct[1], get_default(pixel_info.get_PhysicalSizeYUnit(), '')),
+                      (get_default(pixel_info.get_PhysicalSizeZ(), 0) / xyzct[2], get_default(pixel_info.get_PhysicalSizeZUnit(), ''))]
         mag = int(float(self.bio_ome_metadata.instrument().Objective.get_NominalMagnification()))
         channel_info = []
         for c in range(pixel_info.get_channel_count()):

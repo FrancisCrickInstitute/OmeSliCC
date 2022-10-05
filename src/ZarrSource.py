@@ -42,7 +42,7 @@ class ZarrSource(OmeSource):
                 axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
         self.pixel_size = []
         self.channel_info = []
-        self.mag0 = 1
+        self.mag0 = 0
 
     def asarray_level(self, level, x0, y0, x1, y1):
         # move channels to back (tczyx -> yxc)

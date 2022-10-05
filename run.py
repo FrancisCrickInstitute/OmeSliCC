@@ -13,6 +13,7 @@ from src.util import ensure_list
 from src.parameters import *
 from version import __version__
 
+
 def run_actions(params):
     input = params['input']
     output = params['output']
@@ -69,11 +70,11 @@ def run_actions(params):
                 for source in tqdm(sources):
                     try:
                         if 'info' in action:
-                            logging.info(get_image_info(source))
+                            logging.info(get_image_info(source, params))
                         elif 'thumb' in action:
-                            extract_thumbnail(source, output_folder)
+                            extract_thumbnail(source, params)
                         elif 'convert' in action:
-                            convert(source, output)
+                            convert(source, params)
                     except Exception as e:
                         logging.exception(e)
                 logging.info(f'Done {action}')

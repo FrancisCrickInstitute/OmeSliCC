@@ -53,12 +53,18 @@ class OmeSource:
                 self.source_mags.append(check_round_significants(mag, 3))
 
     def set_best_mag(self):
-        if self.target_mag is not None:
+        if self.mag0 is not None and self.mag0 > 0 and self.target_mag is not None and self.target_mag > 0:
             source_mag, self.best_page = get_best_mag(self.source_mags, self.target_mag)
             self.best_factor = source_mag / self.target_mag
         else:
             self.best_page = 0
             self.best_factor = 1
+
+    def get_mag(self):
+        if self.target_mag is not None:
+            return self.target_mag
+        else:
+            return self.source_mags[0]
 
     def get_max_mag(self):
         return np.max(self.source_mags)
@@ -131,7 +137,7 @@ class OmeSource:
             ox0, oy0, ox1, oy1 = x0, y0, x1, y1
         image0 = self.asarray_level(self.best_page, ox0, oy0, ox1, oy1)
         if factor != 1:
-            w, h = np.round(np.divide(image0.shape[0:2], factor)).astype(int)
+            h, w = np.round(np.divide(image0.shape[0:2], factor)).astype(int)
             image = image_resize_fast(image0, (w, h))
         else:
             image = image0
@@ -167,20 +173,21 @@ class OmeSource:
 def get_best_mag(mags, target_mag):
     # find smallest mag larger/equal to target mag
     best_mag = None
-    best_index = -1
+    best_index = 0
     best_scale = 0
     for index, mag in enumerate(mags):
-        scale = target_mag / mag
-        if 1 >= scale > best_scale:
-            best_index = index
-            best_mag = mag
-            best_scale = scale
+        if mag > 0:
+            scale = target_mag / mag
+            if 1 >= scale > best_scale or best_scale == 0:
+                best_index = index
+                best_mag = mag
+                best_scale = scale
     return best_mag, best_index
 
 
 def get_best_size(sizes, target_size):
     # find largest scale but smaller to 1
-    best_index = -1
+    best_index = 0
     best_scale = 0
     for index, size in enumerate(sizes):
         scale = np.mean(np.divide(target_size, size))
