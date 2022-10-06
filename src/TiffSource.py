@@ -187,12 +187,7 @@ class TiffSource(OmeSource):
         page = self.pages[level]
         nchannels = self.sizes_xyzct[level][3]
 
-        if page.is_tiled:
-            tile_width, tile_height = page.tilewidth, page.tilelength
-        elif page.chunks is not None and page.chunks != (1, 1):
-            tile_height, tile_width = page.chunks
-        else:
-            tile_width, tile_height = dw, dh
+        tile_height, tile_width = page.chunks[0], page.chunks[1]
         tile_y0, tile_x0 = y0 // tile_height, x0 // tile_width
         tile_y1, tile_x1 = np.ceil([y1 / tile_height, x1 / tile_width]).astype(int)
         w = (tile_x1 - tile_x0) * tile_width

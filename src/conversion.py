@@ -206,7 +206,8 @@ def save_tiff(filename, data, metadata=None, xml_metadata=None, tile_size=None, 
     else:
         xml_metadata_bytes = None
     width, height = data.shape[1], data.shape[0]
-    with TiffWriter(filename, bigtiff=True) as writer:
+    bigtiff = (data.size * data.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)
+    with TiffWriter(filename, bigtiff=bigtiff) as writer:
         if pyramid_sizes_add is not None:
             npyramid_add = len(pyramid_sizes_add)
 
