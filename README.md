@@ -11,10 +11,12 @@ For support and discussion, please use the [Image.sc forum](https://forum.image.
 
 - Import WSI files: Omero, Ome.tiff, Tiff, basic image formats, Zarr*, Ome Zarr*
 - Export images: Ome.tiff, Zarr*, Ome Zarr*, thumbnails
+- Image scaling using target magnification
+- Channel operations: split channels
 - Export meta-data: Ome.tiff, csv
 - Omero credentials helper
 
-\*Zarr currently partially implemented
+*Zarr currently partially implemented
 
 ## Running OmeSliCC
 
