@@ -18,3 +18,4 @@ Pillow
 imageio
 python-bioformats
 matplotlib
+validators

@@ -1,4 +1,6 @@
 import logging
+import os
+
 import pandas as pd
 
 from src.Omero import Omero
@@ -40,4 +42,7 @@ class OmeroLabelReader:
                 logging.info(f'Label {input_label}:\n' + df[input_label].value_counts().to_string())
         df.insert(0, 'omero_name', image_names)
         df['path'] = [image_name + '.' + output['format'] for image_name in image_names]
+        log_path = os.path.dirname(output['csv'])
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
         df.to_csv(output['csv'])
