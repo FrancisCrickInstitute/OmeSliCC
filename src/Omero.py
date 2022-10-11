@@ -90,9 +90,14 @@ class Omero:
         image_object = self.get_image_object(image_id)
         xyzct = self.get_size(image_object)
         pixels = image_object.getPrimaryPixels()
-        pixel_type = pixels.getPixelsType()
-        type_size_bytes = pixel_type.getBitSize() / 8
-        image_info = f'{image_id} {image_object.getName()} ' + get_image_size_info(xyzct, type_size_bytes)
+        pixels_type = pixels.getPixelsType()
+        pixel_type = pixels_type.getValue()
+        type_size_bytes = pixels_type.getBitSize() / 8
+        channel_info = []
+        for channel in image_object.getChannels():
+            channel_info.append((channel.getName(), 1))
+        image_info = f'{image_id} {image_object.getName()} ' + get_image_size_info(xyzct, type_size_bytes,
+                                                                                   pixel_type, channel_info)
         logging.info(image_info)
         return image_info
 
