@@ -129,6 +129,7 @@ class Omero:
     def convert_image_to_ometiff(self, image_id, outpath):
         output = self.params['output']
         image_object = self.get_image_object(image_id)
+        print(image_object)
         filetitle = image_object.getName() + '.ome.tiff'
         outfilename = os.path.join(outpath, filetitle)
         if not os.path.exists(outfilename):
@@ -136,8 +137,13 @@ class Omero:
             xyzct = self.get_size(image_object)
             w, h, zs, cs, ts = xyzct
             pixels = image_object.getPrimaryPixels()
-            pixel_nbytes = pixels.getPixelsType().getBitSize() / 8
-            logging.info(f'{image_id} {image_object.getName()} {get_image_size_info(xyzct, pixel_nbytes)}')
+            pixels_type = pixels.getPixelsType()
+            pixel_type = pixels_type.getValue()
+            type_size_bytes = pixels_type.getBitSize() / 8
+            channel_info = []
+            for channel in image_object.getChannels():
+                channel_info.append((channel.getName(), 1))
+            logging.info(f'{image_id} {image_object.getName()} {get_image_size_info(xyzct, type_size_bytes, pixel_type, channel_info)}')
 
             npyramid_add = output['npyramid_add']
             pyramid_downsample = output['pyramid_downsample']
