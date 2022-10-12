@@ -21,7 +21,7 @@ def run_actions(params):
     ids = input.get('ids')
     output_folder = output['folder']
 
-    actions = params.get('actions')
+    actions = ensure_list(params.get('actions'))
 
     if 'omero' in input:
         with Omero(params) as omero:
@@ -40,7 +40,8 @@ def run_actions(params):
                 logging.info(f'Starting {action}')
                 if 'info' in action:
                     for id in image_ids:
-                        omero.get_image_info(id)
+                        image_info = omero.get_image_info(id)
+                        logging.info(image_info)
                 elif 'thumb' in action:
                     for id in image_ids:
                         omero.extract_thumbnail(id, output_folder)

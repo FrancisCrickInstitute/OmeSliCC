@@ -128,7 +128,7 @@ def create_ome_metadata(source, output_filename, pyramid_sizes_add=None):
     return ome
 
 
-def create_ome_metadata_from_omero(self, image_object, filetitle, pyramid_sizes_add=None):
+def create_ome_metadata_from_omero(image_object, filetitle, pyramid_sizes_add=None):
     uuid = f'urn:uuid:{uuid4()}'
     ome = OME(uuid=uuid)
 

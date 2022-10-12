@@ -96,9 +96,8 @@ class Omero:
         channel_info = []
         for channel in image_object.getChannels():
             channel_info.append((channel.getName(), 1))
-        image_info = f'{image_id} {image_object.getName()} ' + get_image_size_info(xyzct, type_size_bytes,
-                                                                                   pixel_type, channel_info)
-        logging.info(image_info)
+        image_info = f'{image_id} {image_object.getName()} ' \
+                     + get_image_size_info(xyzct, type_size_bytes, pixel_type, channel_info)
         return image_info
 
     def extract_thumbnail(self, image_id, outpath):
@@ -129,33 +128,25 @@ class Omero:
     def convert_image_to_ometiff(self, image_id, outpath):
         output = self.params['output']
         image_object = self.get_image_object(image_id)
-        print(image_object)
         filetitle = image_object.getName() + '.ome.tiff'
         outfilename = os.path.join(outpath, filetitle)
         if not os.path.exists(outfilename):
             # do not overwrite existing files
             xyzct = self.get_size(image_object)
             w, h, zs, cs, ts = xyzct
-            pixels = image_object.getPrimaryPixels()
-            pixels_type = pixels.getPixelsType()
-            pixel_type = pixels_type.getValue()
-            type_size_bytes = pixels_type.getBitSize() / 8
-            channel_info = []
-            for channel in image_object.getChannels():
-                channel_info.append((channel.getName(), 1))
-            logging.info(f'{image_id} {image_object.getName()} {get_image_size_info(xyzct, type_size_bytes, pixel_type, channel_info)}')
+            logging.info(f'{image_id} {image_object.getName()}')
 
-            npyramid_add = output['npyramid_add']
-            pyramid_downsample = output['pyramid_downsample']
+            npyramid_add = output.get('npyramid_add', 0)
+            pyramid_downsample = output.get('pyramid_downsample', 0)
             pyramid_sizes_add = calc_pyramid((w, h), npyramid_add, pyramid_downsample)
             metadata = create_ome_metadata_from_omero(image_object, filetitle, pyramid_sizes_add)
             xml_metadata = metadata.to_xml()
 
-            image = self.get_omero_image(image_object, pixels)
+            image = self.get_omero_image(image_object)
             if image is not None:
                 save_tiff(outfilename, image, xml_metadata=xml_metadata,
-                          tile_size=output['tile_size'],
-                          compression=output['compression'],
+                          tile_size=output.get('tile_size'),
+                          compression=output.get('compression'),
                           pyramid_sizes_add=pyramid_sizes_add)
 
     def get_omero_image0(self, image_object, pixels):
@@ -181,12 +172,9 @@ class Omero:
                 for c, tile in enumerate(tile_gen):
                     image[sy:sy + th, sx:sx + tw, c] = tile
 
-    def get_omero_image(self, image_object, pixels):
+    def get_omero_image(self, image_object, read_size=10240):
         w, h, zs, cs, ts = self.get_size(image_object)
-        read_size = 10240
-        ny = int(np.ceil(h / read_size))
-        nx = int(np.ceil(w / read_size))
-
+        pixels = image_object.getPrimaryPixels()
         dtype = np.dtype(pixels.getPixelsType().getValue()).type
         image = np.zeros((h, w, cs), dtype=dtype)
 
@@ -194,6 +182,8 @@ class Omero:
             pixels_store = self.conn.createRawPixelsStore()
             pixels_id = image_object.getPixelsId()
             pixels_store.setPixelsId(pixels_id, False, self.conn.SERVICE_OPTS)
+            ny = int(np.ceil(h / read_size))
+            nx = int(np.ceil(w / read_size))
             for y in range(ny):
                 for x in range(nx):
                     sx, sy = x * read_size, y * read_size
