@@ -16,7 +16,7 @@ For support and discussion, please use the [Image.sc forum](https://forum.image.
 - Export meta-data: Ome.tiff, csv
 - Omero credentials helper
 
-*Zarr currently partially implemented
+*Zarr currently partially implemented. Also see [OME NGFF](https://ngff.openmicroscopy.org)
 
 ## Running OmeSliCC
 
