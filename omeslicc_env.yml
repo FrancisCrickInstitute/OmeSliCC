@@ -8,14 +8,24 @@ dependencies:
  - python=3.10
  - pip
  - numpy
+ - pandas
+ - scikit-image
+ - scikit-learn
+ - imagecodecs
+ - numcodecs
+ - tifffile
+ - zarr
+ - aiohttp
+ - omero-py
+ - ome-types
+ - rsa
+ - tqdm
+ - psutil
+ - PyYAML
+ - Pillow
+ - imageio
+ - python-bioformats
+ - matplotlib
+ - validators
  - pip:
-   - remote-ikernel
-   - ipykernel
-   - pandas
-   - scikit-image
-   - scikit-learn
    - opencv-python
-   - zarr
-   - aiohttp
-   - omero-py
-   - python-bioformats
