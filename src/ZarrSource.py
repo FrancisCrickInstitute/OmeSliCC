@@ -6,7 +6,7 @@ from src.OmeSource import OmeSource
 
 
 class ZarrSource(OmeSource):
-    def __init__(self, filename, source_mag=None, target_mag=None, source_mag_required=False):
+    def __init__(self, filename: str, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False):
         super().__init__()
         self.mag0 = source_mag
         self.target_mag = target_mag
@@ -34,9 +34,9 @@ class ZarrSource(OmeSource):
                 self.pixel_nbits.append(data.dtype.itemsize * 8)
         except GroupNotFoundError:
             raise FileNotFoundError(f'File error {filename}')
-        self.init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
+        self._init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
 
-    def find_metadata(self):
+    def _find_metadata(self):
         if 'multiscales' in self.metadata:
             for scale in self.metadata.get('multiscales', []):
                 axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
@@ -44,7 +44,7 @@ class ZarrSource(OmeSource):
         self.channel_info = []
         self.mag0 = 0
 
-    def asarray_level(self, level, x0, y0, x1, y1):
+    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
         # move channels to back (tczyx -> yxc)
         out = self.levels[level][0, :, 0, y0:y1, x0:x1]
         if out.shape[0] > 1:

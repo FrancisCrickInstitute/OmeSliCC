@@ -14,7 +14,8 @@ from src.util import tags_to_dict, desc_to_dict, ensure_list
 
 
 class TiffSource(OmeSource):
-    def __init__(self, filename, source_mag=None, target_mag=None, source_mag_required=False, executor=None):
+    def __init__(self, filename, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False,
+                 executor: ThreadPoolExecutor = None):
         super().__init__()
         self.filename = filename
         self.target_mag = target_mag
@@ -65,9 +66,9 @@ class TiffSource(OmeSource):
             self.pixel_nbits.append(bitspersample)
 
         self.fh = tiff.filehandle
-        self.init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
+        self._init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
 
-    def find_metadata(self):
+    def _find_metadata(self):
         pixel_size = []
         pixel_size_unit = ''
         channel_info = []
@@ -117,7 +118,7 @@ class TiffSource(OmeSource):
         self.channel_info = channel_info
         self.mag0 = mag
 
-    def load(self, decompress=False):
+    def load(self, decompress: bool = False):
         self.fh.seek(0)
         self.data = self.fh.read()
         self.loaded = True
@@ -132,7 +133,7 @@ class TiffSource(OmeSource):
     def decompress(self):
         self.clear_decompress()
         for page in self.pages:
-            self.arrays.append(self.decompress_page(page))
+            self.arrays.append(self._decompress_page(page))
         self.decompressed = True
 
     def clear_decompress(self):
@@ -141,7 +142,7 @@ class TiffSource(OmeSource):
             del array
         self.arrays = []
 
-    def decompress_page(self, page):
+    def _decompress_page(self, page: TiffPage) -> np.ndarray:
         pw = page.shape[1]
         ph = page.shape[0]
         array = np.zeros(page.shape, page.dtype)
@@ -172,11 +173,7 @@ class TiffSource(OmeSource):
         #self.decode(page, page.dataoffsets, page.databytecounts, tile_width, tile_height, nx, array)  # numpy is not thread-safe!
         return array
 
-    def get_size(self):
-        # size at target magnification
-        return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
-
-    def asarray_level(self, level, x0, y0, x1, y1):
+    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
         # based on tiffile asarray
         if self.decompressed:
             array = self.arrays[level]
@@ -213,21 +210,21 @@ class TiffSource(OmeSource):
 
         out = np.zeros((h, w, nchannels), page.dtype)
 
-        self.decode(page, dataoffsets, databytecounts, tile_locations, out)
+        self._decode(page, dataoffsets, databytecounts, tile_locations, out)
 
         target_y0 = y0 - tile_y0 * tile_height
         target_x0 = x0 - tile_x0 * tile_width
         image = out[target_y0: target_y0 + dh, target_x0: target_x0 + dw, :]
         return image
 
-    def decode(self, page, dataoffsets, databytecounts, tile_locations, out):
+    def _decode(self, page: TiffPage, dataoffsets: list, databytecounts: list, tile_locations: list, out: np.ndarray):
         def process_decoded(decoded, index, out=out):
             segment, indices, shape = decoded
             tile_location = tile_locations[index]
             # Note: numpy is not thread-safe
             out[tile_location] = segment[0]
 
-        for _ in self.segments(
+        for _ in self._segments(
                 func=process_decoded,
                 page=page,
                 dataoffsets=dataoffsets,
@@ -235,7 +232,7 @@ class TiffSource(OmeSource):
         ):
             pass
 
-    def segments(self, func, page, dataoffsets, databytecounts):
+    def _segments(self, func: callable, page: TiffPage, dataoffsets: list, databytecounts: list) -> tuple:
         # based on tiffile segments
         def decode(args, page=page, func=func):
             decoded = page.decode(*args, jpegtables=page.jpegtables)

@@ -3,6 +3,7 @@ import os
 import numpy as np
 import omero
 from omero.gateway import BlitzGateway
+import omero.model
 from tqdm import tqdm
 
 from src.conversion import save_tiff
@@ -12,7 +13,7 @@ from src.omero_credentials import decrypt_credentials
 
 
 class Omero:
-    def __init__(self, params):
+    def __init__(self, params: dict):
         self.params = params
         self.private_key_filename = params['credentials']['private_key']
         self.credentials_filename = params['credentials']['credentials']
@@ -53,15 +54,15 @@ class Omero:
         for project in projects:
             print_omero_object(project)
 
-    def get_project(self, project_id):
+    def get_project(self, project_id: int) -> omero.gateway.ProjectWrapper:
         project = self.conn.getObject('Project', project_id)
         return project
 
-    def get_image_object(self, image_id):
+    def get_image_object(self, image_id: int) -> omero.gateway.ImageWrapper:
         image_object = self.conn.getObject('Image', image_id)
         return image_object
 
-    def get_annotation_image_ids(self, project_id, target_labels, filter_label_macro=False):
+    def get_annotation_image_ids(self, project_id: int, target_labels: list, filter_label_macro: bool = False) -> tuple:
         image_ids = []
         image_names = []
         image_annotations = []
@@ -78,7 +79,7 @@ class Omero:
                         image_annotations.append(annotations)
         return image_ids, image_names, image_annotations
 
-    def get_project_images(self, project_id):
+    def get_project_images(self, project_id: int) -> list:
         image_objects = []
         project = self.get_project(project_id)
         for dataset in project.listChildren():
@@ -86,7 +87,7 @@ class Omero:
                 image_objects.append(image_object)
         return image_objects
 
-    def get_image_info(self, image_id):
+    def get_image_info(self, image_id: int) -> str:
         image_object = self.get_image_object(image_id)
         xyzct = self.get_size(image_object)
         pixels = image_object.getPrimaryPixels()
@@ -100,7 +101,7 @@ class Omero:
                      + get_image_size_info(xyzct, type_size_bytes, pixel_type, channel_info)
         return image_info
 
-    def extract_thumbnail(self, image_id, outpath):
+    def extract_thumbnail(self, image_id: int, outpath: str):
         image_object = self.get_image_object(image_id)
         filetitle = image_object.getName() + '.jpg'
         outfilename = os.path.join(outpath, filetitle)
@@ -109,23 +110,23 @@ class Omero:
             w, h, zs, cs, ts = self.get_size(image_object)
             w2, h2 = int(round(w / 256)), int(round(h / 256))
             try:
-                thumb_bytes = image_object.getThumbnail((w2, h2))
+                thumb_bytes = image_object.getThumbnail((w2, h2)).encode()
                 with open(outfilename, 'wb') as file:
                     file.write(thumb_bytes)
             except Exception as e:
                 logging.error(e)
 
-    def convert_images(self, image_ids, outpath):
+    def convert_images(self, image_ids: list, outpath: str):
         # currently only ome-tiff supported
         self.convert_images_to_ometiff(image_ids, outpath)
 
-    def convert_images_to_ometiff(self, image_ids, outpath):
+    def convert_images_to_ometiff(self, image_ids: list, outpath: str):
         if not os.path.exists(outpath):
             os.makedirs(outpath)
         for image_id in tqdm(image_ids):
             self.convert_image_to_ometiff(image_id, outpath)
 
-    def convert_image_to_ometiff(self, image_id, outpath):
+    def convert_image_to_ometiff(self, image_id: int, outpath: str):
         output = self.params['output']
         image_object = self.get_image_object(image_id)
         filetitle = image_object.getName() + '.ome.tiff'
@@ -149,7 +150,7 @@ class Omero:
                           compression=output.get('compression'),
                           pyramid_sizes_add=pyramid_sizes_add)
 
-    def get_omero_image0(self, image_object, pixels):
+    def get_omero_image0(self, image_object: omero.gateway.ImageWrapper, pixels: omero.gateway.PixelsWrapper):
         w, h, zs, cs, ts = self.get_size(image_object)
         read_size = 10240
         ny = int(np.ceil(h / read_size))
@@ -172,7 +173,7 @@ class Omero:
                 for c, tile in enumerate(tile_gen):
                     image[sy:sy + th, sx:sx + tw, c] = tile
 
-    def get_omero_image(self, image_object, read_size=10240):
+    def get_omero_image(self, image_object: omero.gateway.ImageWrapper, read_size: int = 10240) -> np.ndarray:
         w, h, zs, cs, ts = self.get_size(image_object)
         pixels = image_object.getPrimaryPixels()
         dtype = np.dtype(pixels.getPixelsType().getValue()).type
@@ -204,18 +205,18 @@ class Omero:
             pixels_store.close()
         return image
 
-    def get_size(self, image_object):
+    def get_size(self, image_object: omero.gateway.ImageWrapper) -> tuple:
         xs, ys = image_object.getSizeX(), image_object.getSizeY()
         zs, cs, ts = image_object.getSizeZ(), image_object.getSizeC(), image_object.getSizeT()
         return xs, ys, zs, cs, ts
 
-    def get_original_files(self, image_object):
+    def get_original_files(self, image_object: omero.gateway.ImageWrapper) -> list:
         return image_object.getFileset().listFiles()
 
-    def get_magnification(self, image_object):
+    def get_magnification(self, image_object: omero.gateway.ImageWrapper) -> float:
         return image_object.getObjectiveSettings().getObjective().getNominalMagnification()
 
-    def get_image_annotations(self, image_object, annotation_keys):
+    def get_image_annotations(self, image_object: omero.gateway.ImageWrapper, annotation_keys: list) -> dict:
         annotations = {}
         for omero_annotation in image_object.listAnnotations():
             if omero_annotation.OMERO_TYPE == omero.model.MapAnnotationI:
@@ -226,13 +227,13 @@ class Omero:
         return annotations
 
 
-def print_omero_object(object, indent=0):
+def print_omero_object(omero_object: omero.gateway.BlitzObjectWrapper, indent: int = 0):
     logging.info("""%s%s:%s  Name:"%s" (owner=%s)""" % (
         " " * indent,
-        object.OMERO_CLASS,
-        object.getId(),
-        object.getName(),
-        object.getOwnerOmeName()))
+        omero_object.OMERO_CLASS,
+        omero_object.getId(),
+        omero_object.getName(),
+        omero_object.getOwnerOmeName()))
 
-    for child in object.listChildren():
+    for child in omero_object.listChildren():
         logging.info('\t', child.getName())

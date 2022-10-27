@@ -2,14 +2,14 @@ from getpass import getpass
 import rsa
 
 
-def generate_asymmetric_keys(private_key_filename, public_key_filename):
+def generate_asymmetric_keys(private_key_filename: str, public_key_filename: str):
     pub_key, pri_key = rsa.newkeys(2048)
     with open(public_key_filename, 'w') as pub_file, open(private_key_filename, 'w') as pri_file:
         pub_file.write(pub_key.save_pkcs1().decode())
         pri_file.write(pri_key.save_pkcs1().decode())
 
 
-def create_credentials_file(public_key_filename, credentials_filename):
+def create_credentials_file(public_key_filename: str, credentials_filename: str):
     with open(public_key_filename, 'r') as key_file, open(credentials_filename, 'wb') as enc_file:
         keydata = key_file.read().encode()
         pub_key = rsa.PublicKey.load_pkcs1(keydata)
@@ -18,7 +18,7 @@ def create_credentials_file(public_key_filename, credentials_filename):
         print('credentials file generated')
 
 
-def decrypt_credentials(private_key_filename, credentials_filename):
+def decrypt_credentials(private_key_filename: str, credentials_filename: str) -> tuple:
     with open(credentials_filename, 'rb') as cred_f, open(private_key_filename, 'rb') as key_file:
         keydata = key_file.read()
         pri_key = rsa.PrivateKey.load_pkcs1(keydata)

@@ -8,21 +8,24 @@ import numpy as np
 import zarr
 import cv2 as cv
 from PIL import Image
+from imagecodecs.numcodecs import Jpeg2k, JpegXr
 from numcodecs import register_codec
 from numcodecs.blosc import Blosc
 from tifffile import TIFF, TiffWriter
 
 from src.BioSource import BioSource
+from src.OmeSource import OmeSource
 from src.PlainImageSource import PlainImageSource
 from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
-from src.image_util import JPEG2000, image_resize, get_image_size_info, calc_pyramid
+from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_signed_image
 from src.util import get_filetitle
 
-register_codec(JPEG2000)
+register_codec(Jpeg2k)
+register_codec(JpegXr)
 
 
-def load_source(filename, params):
+def load_source(filename: str, params: dict) -> OmeSource:
     source_mag = params['input'].get('mag')
     target_mag = params['output'].get('mag')
     ext = os.path.splitext(filename)[1].lower()
@@ -37,7 +40,7 @@ def load_source(filename, params):
     return source
 
 
-def get_image_info(filename, params):
+def get_image_info(filename: str, params: dict) -> str:
     source = load_source(filename, params)
     xyzct = source.get_size_xyzct()
     pixel_nbytes = source.get_pixel_nbytes()
@@ -55,7 +58,7 @@ def get_image_info(filename, params):
     return image_info
 
 
-def extract_thumbnail(filename, params):
+def extract_thumbnail(filename: str, params: dict) -> np.ndarray:
     output_folder = params['output']['folder']
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -79,7 +82,7 @@ def extract_thumbnail(filename, params):
     return thumb
 
 
-def convert(filename, params):
+def convert(filename: str, params: dict):
     output_params = params['output']
     output_folder = output_params['folder']
     output_format = output_params['format']
@@ -95,7 +98,7 @@ def convert(filename, params):
         convert_to_tiff(source, output_filename, output_params)
 
 
-def convert_to_zarr0(input_filename, output_folder, patch_size=(256, 256)):
+def convert_to_zarr0(input_filename: str, output_folder: str, patch_size: tuple = (256, 256)):
     source = TiffSource(input_filename)
     size = source.sizes[0]
     width = size[0]
@@ -149,19 +152,18 @@ def convert_to_zarr0(input_filename, output_folder, patch_size=(256, 256)):
                 data[ys:ys+h, xs:xs+w] = tile
 
 
-def convert_to_zarr(source, output_filename, output_params):
+def convert_to_zarr(source: OmeSource, output_filename: str, output_params: dict):
     shape = source.get_shape()
     dtype = source.get_pixel_type()
     tile_size = output_params['tile_size']
     compression = output_params.get('compression')
 
     zarr_root = zarr.open_group(output_filename, mode='w')
-    zarr_data = zarr_root.create_dataset(str(0), shape=shape, chunks=(tile_size[0], tile_size[1], None), dtype=dtype,
-                                         compressor=None, filters=compression)
-    return zarr_data
+    zarr_root.create_dataset(str(0), shape=shape, chunks=(tile_size[0], tile_size[1], None), dtype=dtype,
+                             compressor=None, filters=compression)
 
 
-def convert_to_tiff(source, output_filename, output_params, ome=False):
+def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict, ome: bool = False):
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     channel_operation = output_params.get('channel_operation')
@@ -197,10 +199,16 @@ def convert_to_tiff(source, output_filename, output_params, ome=False):
                   npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
 
 
-def save_tiff(filename, data, metadata=None, xml_metadata=None, tile_size=None, compression=None,
-              npyramid_add=0, pyramid_downsample=4.0, pyramid_sizes_add=None):
-    # Use tiled(/slower?) writing:
+def save_tiff(filename: str, data: np.ndarray, metadata: dict = None, xml_metadata: str = None,
+              tile_size: tuple = None, compression: [] = None,
+              npyramid_add: int = 0, pyramid_downsample: float = 4.0, pyramid_sizes_add: list = None):
+    # Use tiled writing (less memory needed but maybe slower):
     # writer.write(tile_iterator, shape=shape_size_at_desired_mag_pyramid_scale, tile=tile_size)
+
+    if len(data.shape) > 2 and data.shape[-1] not in [1, 3]:
+        raise ValueError('Tiff output: Only 1 or 3 channels supported')
+
+    #data = ensure_signed_image(data)   # * Compression JPEGXR_NDPI does not support signed types
     if xml_metadata is not None:
         xml_metadata_bytes = xml_metadata.encode()
     else:

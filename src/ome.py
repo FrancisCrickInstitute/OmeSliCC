@@ -1,5 +1,11 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.OmeSource import OmeSource
+
 import os
-import omero
+import omero.gateway
+import omero.model
 from uuid import uuid4
 from ome_types import OME
 from ome_types.model import Image, Pixels, Plane, Channel, Instrument, Objective, StageLabel, Map, MapAnnotation, \
@@ -10,7 +16,7 @@ from ome_types.model.tiff_data import UUID
 from src.util import get_filetitle, ensure_list
 
 
-def create_ome_metadata(source, output_filename, pyramid_sizes_add=None):
+def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_add: list = None) -> OME:
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
@@ -128,7 +134,8 @@ def create_ome_metadata(source, output_filename, pyramid_sizes_add=None):
     return ome
 
 
-def create_ome_metadata_from_omero(image_object, filetitle, pyramid_sizes_add=None):
+def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper, filetitle: str,
+                                   pyramid_sizes_add: list = None) -> OME:
     uuid = f'urn:uuid:{uuid4()}'
     ome = OME(uuid=uuid)
 

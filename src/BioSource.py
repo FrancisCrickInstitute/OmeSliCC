@@ -10,7 +10,7 @@ from src.util import get_default
 
 
 class BioSource(OmeSource):
-    def __init__(self, filename, target_mag=None, source_mag_required=False):
+    def __init__(self, filename: str, target_mag: float = None, source_mag_required: bool = False):
         super().__init__()
         self.filename = filename
         self.target_mag = target_mag
@@ -35,9 +35,9 @@ class BioSource(OmeSource):
                 self.sizes_xyzct.append((pmetadata.SizeX, pmetadata.SizeY, pmetadata.SizeZ, pmetadata.SizeC, pmetadata.SizeT))
                 self.pixel_types.append(dtype)
                 self.pixel_nbits.append(dtype.itemsize * 8)
-        self.init_metadata(filename, source_mag_required=source_mag_required)
+        self._init_metadata(filename, source_mag_required=source_mag_required)
 
-    def find_metadata(self):
+    def _find_metadata(self):
         pixel_info = self.bio_ome_metadata.image().Pixels
         xyzct = self.sizes_xyzct[0]
         pixel_size = [(get_default(pixel_info.get_PhysicalSizeX(), 0) / xyzct[0], get_default(pixel_info.get_PhysicalSizeXUnit(), '')),
@@ -52,7 +52,7 @@ class BioSource(OmeSource):
         self.channel_info = channel_info
         self.mag0 = mag
 
-    def asarray_level(self, level, x0, y0, x1, y1):
+    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
         xywh = (x0, y0, x1 - x0, y1 - y0)
         image = self.reader.read(series=self.indexes[level], XYWH=xywh, rescale=False)      # don't 'rescale' to 0-1!
         return image

@@ -2,27 +2,28 @@ import ast
 import os
 import re
 import numpy as np
+import tifffile
 
 
 def get_default(x, default):
     return default if x is None else x
 
 
-def ensure_list(x):
+def ensure_list(x) -> list:
     if isinstance(x, list):
         return x
     else:
         return [x]
 
 
-def tags_to_dict(tags):
+def tags_to_dict(tags: tifffile.TiffTags) -> dict:
     tag_dict = {}
     for tag in tags.values():
         tag_dict[tag.name] = tag.value
     return tag_dict
 
 
-def desc_to_dict(desc):
+def desc_to_dict(desc: str) -> dict:
     desc_dict = {}
     if desc.startswith('{'):
         try:
@@ -52,9 +53,9 @@ def desc_to_dict(desc):
     return desc_dict
 
 
-def print_dict(d, compact=False, indent=0):
+def print_dict(dct: dict, compact: bool = False, indent: int = 0):
     s = ''
-    for key, value in d.items():
+    for key, value in dct.items():
         if not isinstance(value, list):
             if not compact: s += '\t' * indent
             s += str(key)
@@ -71,7 +72,7 @@ def print_dict(d, compact=False, indent=0):
     return s
 
 
-def print_hbytes(bytes):
+def print_hbytes(bytes: int) -> str:
     exps = ['', 'K', 'M', 'G', 'T']
     div = 1024
     exp = 0
@@ -82,7 +83,7 @@ def print_hbytes(bytes):
     return f'{bytes:.1f}{exps[exp]}B'
 
 
-def check_round_significants(a, significant_digits):
+def check_round_significants(a: float, significant_digits: int) -> float:
     rounded = round_significants(a, significant_digits)
     if a != 0:
         dif = 1 - rounded / a
@@ -93,14 +94,14 @@ def check_round_significants(a, significant_digits):
     return a
 
 
-def round_significants(a, significant_digits):
+def round_significants(a: float, significant_digits: int) -> float:
     if a != 0:
         round_decimals = significant_digits - int(np.floor(np.log10(abs(a)))) - 1
         return round(a, round_decimals)
     return a
 
 
-def get_filetitle(filename, remove_all_ext=False):
+def get_filetitle(filename: str, remove_all_ext: bool = False) -> str:
     filebase = os.path.basename(filename)
     if remove_all_ext:
         return filebase.split('.')[0]

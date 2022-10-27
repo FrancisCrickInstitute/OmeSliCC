@@ -14,24 +14,28 @@ from src.parameters import *
 from version import __version__
 
 
-def run_actions(params):
-    input = params['input']
-    output = params['output']
-    type = input['type'].lower()
-    ids = input.get('ids')
-    output_folder = output['folder']
+# TODO: formalise parameter types, and protected (_) and private (__) properties and methods, (and maybe @property)
+# https://www.tutorialsteacher.com/python/public-private-protected-modifiers
+
+
+def run_actions(params: dict):
+    action_input = params['input']
+    action_output = params['output']
+    action_type = action_input['type'].lower()
+    action_ids = action_input.get('ids')
+    output_folder = action_output['folder']
 
     actions = ensure_list(params.get('actions'))
 
-    if 'omero' in input:
+    if 'omero' in action_input:
         with Omero(params) as omero:
-            if 'project' in type:
-                input_labels = input['labels']
+            if 'project' in action_type:
+                input_labels = action_input['labels']
                 image_ids = []
-                for proj_id in ensure_list(ids):
+                for proj_id in ensure_list(action_ids):
                     image_ids.extend(omero.get_annotation_image_ids(proj_id, input_labels, filter_label_macro=True)[0])
-            elif 'image' in type:
-                image_ids = ensure_list(ids)
+            elif 'image' in action_type:
+                image_ids = ensure_list(action_ids)
             else:
                 image_ids = []
 
@@ -39,12 +43,12 @@ def run_actions(params):
                 action = action0.lower()
                 logging.info(f'Starting {action}')
                 if 'info' in action:
-                    for id in image_ids:
-                        image_info = omero.get_image_info(id)
+                    for image_id in image_ids:
+                        image_info = omero.get_image_info(image_id)
                         logging.info(image_info)
                 elif 'thumb' in action:
-                    for id in image_ids:
-                        omero.extract_thumbnail(id, output_folder)
+                    for image_id in image_ids:
+                        omero.extract_thumbnail(image_id, output_folder)
                 elif 'convert' in action:
                     omero.convert_images(image_ids, output_folder)
                 elif 'label' in action:
@@ -52,10 +56,10 @@ def run_actions(params):
                         label_reader.create_label_csv()
                 logging.info(f'Done {action}')
     else:
-        input_source = input['source']
+        input_source = action_input['source']
         sources = []
-        if ids is not None:
-            sources = [os.path.join(input_source, id) for id in ids]
+        if action_ids is not None:
+            sources = [os.path.join(input_source, action_id) for action_id in action_ids]
         if len(sources) == 0:
             if validators.url(input_source):
                 sources = [input_source]

@@ -1,5 +1,7 @@
+from __future__ import annotations
 import logging
 import os
+from types import TracebackType
 
 import pandas as pd
 
@@ -7,7 +9,7 @@ from src.Omero import Omero
 
 
 class OmeroLabelReader:
-    def __init__(self, params, omero=None):
+    def __init__(self, params: dict, omero: Omero = None):
         self.params = params
         self.manage_omero = (omero is None)
         if self.manage_omero:
@@ -15,12 +17,12 @@ class OmeroLabelReader:
         else:
             self.omero = omero
 
-    def __enter__(self):
+    def __enter__(self) -> OmeroLabelReader:
         if self.manage_omero:
             self.omero.init()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: type[BaseException], exc_value: BaseException, traceback: TracebackType):
         if self.manage_omero:
             self.omero.disconnect()
 

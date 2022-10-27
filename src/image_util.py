@@ -1,12 +1,10 @@
+import PIL.Image
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 import tifffile
 from PIL.ExifTags import TAGS
-from numcodecs.abc import Codec
-from numcodecs.compat import ensure_ndarray
 import imagecodecs
-from imagecodecs import jpeg2k_encode, jpeg2k_decode
 from tifffile import TiffFile, TiffPage, TiffFrame
 
 from src.util import tags_to_dict, print_dict, print_hbytes
@@ -17,19 +15,30 @@ def check_versions():
     print(imagecodecs.version())
 
 
-def show_image(image):
+def show_image(image: np.ndarray):
     plt.imshow(image)
     plt.show()
 
 
-def show_image_gray(image):
+def show_image_gray(image: np.ndarray):
     plt.imshow(image, cmap='gray')
     plt.show()
 
 
-def get_image_size_info(xyzct, pixel_nbytes, pixel_type, channel_info):
+def ensure_signed_image(image0: np.ndarray) -> np.ndarray:
+    dtype = image0.dtype
+    if dtype.kind == 'i':
+        unsigned_type = np.dtype(f'u{dtype.itemsize}')
+        offset = 2 ** (8 * dtype.itemsize - 1)
+        image = (image0 + offset).astype(unsigned_type)
+    else:
+        image = image0
+    return image
+
+
+def get_image_size_info(xyzct: tuple, pixel_nbytes: int, pixel_type: np.dtype, channel_info: list) -> str:
     w, h, zs, cs, ts = xyzct
-    size = print_hbytes(w * h * zs * cs * ts * pixel_nbytes)
+    size = print_hbytes(np.int64(pixel_nbytes) * w * h * zs * cs * ts)
     if (len(channel_info) == 1 and channel_info[0][1] == 3) or len(channel_info) == 3:
         channel_infos = 'rgb'
     else:
@@ -40,7 +49,7 @@ def get_image_size_info(xyzct, pixel_nbytes, pixel_type, channel_info):
     return image_size_info
 
 
-def pilmode_to_pixelinfo(mode):
+def pilmode_to_pixelinfo(mode: str) -> tuple:
     pixelinfo = (np.uint8, 8)
     mode_types = {'I': (np.uint32, 32), 'F': (np.float32, 32)}
     if mode in mode_types:
@@ -49,7 +58,7 @@ def pilmode_to_pixelinfo(mode):
     return pixelinfo
 
 
-def calc_pyramid(size, npyramid_add=0, pyramid_downsample=4.0):
+def calc_pyramid(size: tuple, npyramid_add: int = 0, pyramid_downsample: float = 4.0) -> list:
     width, height = size
     sizes_add = []
     scale = 1
@@ -59,11 +68,11 @@ def calc_pyramid(size, npyramid_add=0, pyramid_downsample=4.0):
     return sizes_add
 
 
-def image_resize_fast(image, target_size):
+def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
     return cv.resize(image, target_size, interpolation=cv.INTER_AREA)
 
 
-def image_resize(image, target_size0):
+def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
     if not isinstance(image, np.ndarray):
         image = image.asarray()
     if image.dtype == np.int8:
@@ -73,7 +82,7 @@ def image_resize(image, target_size0):
     return new_image
 
 
-def precise_resize(image, scale):
+def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
     h, w = np.ceil(image.shape[0:2] * scale).astype(int)
     new_image = np.zeros((h, w, image.shape[2]), dtype=np.float32)
     step_size = 1 / scale
@@ -87,7 +96,7 @@ def precise_resize(image, scale):
     return new_image
 
 
-def load_tiff(filename, only_tiled=True):
+def load_tiff(filename: str, only_tiled=True) -> tuple:
     tiff = TiffFile(filename)
     pages = get_tiff_pages(tiff, only_tiled=only_tiled)
     page0 = pages[0]
@@ -103,7 +112,7 @@ def load_tiff(filename, only_tiled=True):
     return image, metadata
 
 
-def get_tiff_pages(tiff, only_tiled=False):
+def get_tiff_pages(tiff: TiffFile, only_tiled: bool = False) -> list:
     pages = []
     for page in tiff.pages:
         if isinstance(page, TiffPage) or isinstance(page, TiffFrame):
@@ -128,7 +137,7 @@ def get_tiff_pages(tiff, only_tiled=False):
     return pages
 
 
-def tiff_info(filename):
+def tiff_info(filename: str) -> str:
     s = ''
     nom_size = 0
     tiff = TiffFile(filename)
@@ -163,7 +172,7 @@ def tiff_info(filename):
     return s
 
 
-def tiff_info_short(filename):
+def tiff_info_short(filename: str) -> str:
     nom_size = 0
     tiff = TiffFile(filename)
     s = str(filename)
@@ -175,7 +184,7 @@ def tiff_info_short(filename):
     return s
 
 
-def get_pil_metadata(image):
+def get_pil_metadata(image: PIL.Image) -> dict:
     metadata = {}
     exifdata = image.getexif()
     for tag_id in exifdata:
@@ -189,23 +198,7 @@ def get_pil_metadata(image):
     return metadata
 
 
-class JPEG2000(Codec):
-    codec_id = "JPEG2000"
-
-    def __init__(self, level=None):
-        self.level = level
-
-    def encode(self, buf):
-        if self.level is not None:
-            return jpeg2k_encode(ensure_ndarray(buf), level=self.level)
-        else:
-            return jpeg2k_encode(ensure_ndarray(buf))
-
-    def decode(self, buf):
-        return jpeg2k_decode(ensure_ndarray(buf))
-
-
-def compare_image(image0, image1, show=False):
+def compare_image(image0, image1, show=False) -> float:
     dif, dif_max, dif_mean, psnr = compare_image_dist(image0, image1)
     print(f'rgb dist max: {dif_max:.1f} mean: {dif_mean:.1f} PSNR: {psnr:.1f}')
     if show:
@@ -214,7 +207,7 @@ def compare_image(image0, image1, show=False):
     return dif
 
 
-def compare_image_dist(image0, image1):
+def compare_image_dist(image0: np.ndarray, image1: np.ndarray) -> tuple:
     dif = cv.absdiff(image0, image1)
     psnr = cv.PSNR(image0, image1)
     if dif.size > 1000000000:
@@ -234,7 +227,7 @@ def compare_image_dist(image0, image1):
     return dif, rgb_max, rgb_mean, psnr
 
 
-def calc_fraction_used(image, threshold=0.1):
+def calc_fraction_used(image: np.ndarray, threshold: float = 0.1) -> float:
     low = int(round(threshold * 255))
     high = int(round((1 - threshold) * 255))
     shape = image.shape

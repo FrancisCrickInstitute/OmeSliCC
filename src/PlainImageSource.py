@@ -10,7 +10,8 @@ Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents l
 
 
 class PlainImageSource(OmeSource):
-    def __init__(self, filename, source_mag=None, target_mag=None, source_mag_required=False, executor=None):
+    def __init__(self, filename: str, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False,
+                 executor: ThreadPoolExecutor = None):
         super().__init__()
         self.filename = filename
         self.mag0 = source_mag
@@ -34,9 +35,9 @@ class PlainImageSource(OmeSource):
         pixelinfo = pilmode_to_pixelinfo(self.image.mode)
         self.pixel_types = [pixelinfo[0]]
         self.pixel_nbits = [pixelinfo[1]]
-        self.init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
+        self._init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
 
-    def find_metadata(self):
+    def _find_metadata(self):
         self.pixel_size = []
         pixel_size_unit = self.metadata.get('unit', '')
         res0 = self.metadata.get('XResolution', 1)
@@ -61,7 +62,7 @@ class PlainImageSource(OmeSource):
         self.arrays = []
         self.loaded = False
 
-    def asarray_level(self, level, x0, y0, x1, y1):
+    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
         if self.loaded:
             array = self.arrays[level]
         else:

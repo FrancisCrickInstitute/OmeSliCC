@@ -11,12 +11,11 @@ from timeit import default_timer as timer
 
 from src.TiffSource import TiffSource
 from src.conversion import save_tiff
-from src.image_util import show_image, compare_image, tiff_info, compare_image_dist, load_tiff, calc_pyramid, \
-    calc_fraction_used
+from src.image_util import show_image, tiff_info, compare_image_dist, load_tiff, calc_pyramid, calc_fraction_used
 from src.ome import create_ome_metadata
 
 
-def test_load(filename, magnification, position=None, size=None):
+def test_load(filename: str, magnification: float, position: tuple = None, size: tuple = None) -> np.ndarray:
     source = TiffSource(filename, magnification)
     if position is None:
         position = (0, 0)
@@ -26,7 +25,7 @@ def test_load(filename, magnification, position=None, size=None):
     return image
 
 
-def compare_image_tiles(filename1, filename2, bits_per_channel=8, tile_size=(512, 512)):
+def compare_image_tiles(filename1: str, filename2: str, bits_per_channel: int = 8, tile_size: tuple = (512, 512)) -> tuple:
     source1 = TiffSource(filename1)
     source2 = TiffSource(filename2)
 
@@ -61,7 +60,7 @@ def compare_image_tiles(filename1, filename2, bits_per_channel=8, tile_size=(512
     return dif_max, dif_mean, psnr
 
 
-def test_read_source(image_filename, n=1000):
+def test_read_source(image_filename: str, n: int = 1000):
     print('Test read source')
     print(tiff_info(image_filename))
     source = TiffSource(image_filename, 40)
@@ -92,7 +91,7 @@ def test_read_source(image_filename, n=1000):
     print(f'time (total/step): {elapsed:.3f} / {elapsed / n:.3f}')
 
 
-def load_zarr_test(image_filename):
+def load_zarr_test(image_filename: str) -> np.ndarray:
     zarr_filename = os.path.splitext(image_filename)[0] + '.zarr'
     zarr_root = zarr.open_group(zarr_filename, mode='r')
     zarr_data = zarr_root.get(str(0))
@@ -108,7 +107,7 @@ def load_zarr_test(image_filename):
     return tile
 
 
-def test_read_zarr(image_filename, n=1000):
+def test_read_zarr(image_filename: str, n: int = 1000):
     print('Test read zarr')
     zarr_filename = os.path.splitext(image_filename)[0] + '.zarr'
     zarr_root = zarr.open_group(zarr_filename, mode='r')
@@ -129,31 +128,7 @@ def test_read_zarr(image_filename, n=1000):
         tile = zarr_data[ys:ye, xs:xe]
 
 
-def test_create_ometiff(infilename, outfilename):
-    image, metadata = load_tiff(infilename)
-    y, x, c = image.shape
-    tile_size = (256, 256)
-    #compression = ('JPEG2000', 65)
-    compression = ('JPEGXR_NDPI', 75)
-
-    image_info = {'description': 'test image',
-                  'size_c': c, 'size_t': 1, 'size_x': x, 'size_y': y, 'size_z': 1,
-                  'physical_size_x': 1, 'physical_size_y': 1, 'physical_size_z': 1,
-                  'type': str(image.dtype), 'dimension_order': DimensionOrder.XYCZT, 'acquisition_date': datetime.now()}
-
-    channels = [{'samples_per_channel': c}]
-
-    pyramid_sizes_add = calc_pyramid((x, y), npyramid_add=3, pyramid_downsample=4.0)
-
-    metadata = create_ome_metadata(outfilename, image_info, channels=channels, pyramid_sizes_add=pyramid_sizes_add)
-    xml_metadata = metadata.to_xml()
-    xml_metadata = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_metadata
-
-    save_tiff(outfilename, image, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
-              pyramid_sizes_add=pyramid_sizes_add)
-
-
-def calc_images_fraction(pattern):
+def calc_images_fraction(pattern: str):
     for filename in glob.glob(pattern):
         print(f'{os.path.splitext(os.path.basename(filename))[0]}', end='\t')
         try:

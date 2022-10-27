@@ -19,8 +19,8 @@ class OmeSource:
         self.pixel_size = []
         self.channel_info = []
 
-    def init_metadata(self, filename, source_mag=None, source_mag_required=False):
-        self.find_metadata()
+    def _init_metadata(self, filename: str, source_mag: float = None, source_mag_required: bool = False):
+        self._find_metadata()
         if self.mag0 == 0 and source_mag is not None:
             self.mag0 = source_mag
         if self.mag0 == 0:
@@ -29,11 +29,11 @@ class OmeSource:
                 raise ValueError(msg)
             else:
                 logging.warning(msg)
-        self.fix_pixelsize()
-        self.set_mags()
-        self.set_best_mag()
+        self._fix_pixelsize()
+        self._set_mags()
+        self._set_best_mag()
 
-    def fix_pixelsize(self):
+    def _fix_pixelsize(self):
         standard_units = {'micro': 'µm', 'nano': 'nm'}
         pixel_size = []
         for pixel_size0 in self.pixel_size:
@@ -45,14 +45,14 @@ class OmeSource:
             pixel_size.append((pixel_size1, unit1))
         self.pixel_size = pixel_size
 
-    def set_mags(self):
+    def _set_mags(self):
         self.source_mags = [self.mag0]
         for i, size in enumerate(self.sizes):
             if i > 0:
                 mag = self.mag0 * np.mean(np.divide(size, self.sizes[0]))
                 self.source_mags.append(check_round_significants(mag, 3))
 
-    def set_best_mag(self):
+    def _set_best_mag(self):
         if self.mag0 is not None and self.mag0 > 0 and self.target_mag is not None and self.target_mag > 0:
             source_mag, self.best_page = get_best_mag(self.source_mags, self.target_mag)
             self.best_factor = source_mag / self.target_mag
@@ -60,36 +60,36 @@ class OmeSource:
             self.best_page = 0
             self.best_factor = 1
 
-    def get_mag(self):
+    def get_mag(self) -> float:
         if self.target_mag is not None:
             return self.target_mag
         else:
             return self.source_mags[0]
 
-    def get_max_mag(self):
+    def get_max_mag(self) -> float:
         return np.max(self.source_mags)
 
-    def get_actual_size(self):
+    def get_actual_size(self) -> list:
         actual_size = []
         for size, pixel_size in zip(self.get_size_xyzct(), self.pixel_size):
             actual_size.append((np.multiply(size, pixel_size[0]), pixel_size[1]))
         return actual_size
 
-    def get_pixel_type(self, level=0):
+    def get_pixel_type(self, level: int = 0) -> np.dtype:
         return self.pixel_types[level]
 
-    def get_pixel_nbits(self, level=0):
+    def get_pixel_nbits(self, level: int = 0) -> int:
         return self.pixel_nbits[level]
 
-    def get_pixel_nbytes(self, level=0):
+    def get_pixel_nbytes(self, level: int = 0) -> int:
         return self.pixel_nbits[level] // 8
 
-    def get_channel_info(self):
+    def get_channel_info(self) -> list:
         return self.channel_info
 
-    def get_size_xyzct(self):
+    def get_size_xyzct(self) -> tuple:
         xyzct = list(self.sizes_xyzct[0])
-        n_same_size = len([size for size in self.sizes_xyzct[1:] if size == self.sizes_xyzct[0]]) + 1
+        n_same_size = len([size for size in self.sizes_xyzct[1:] if list(size) == xyzct]) + 1
         if n_same_size > 1:
             if xyzct[2] == 1:
                 xyzct[2] = n_same_size
@@ -97,23 +97,23 @@ class OmeSource:
                 xyzct[-1] = n_same_size
         return tuple(xyzct)
 
-    def get_size(self):
+    def get_size(self) -> tuple:
         # size at selected magnification
         return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
 
-    def get_shape(self):
+    def get_shape(self) -> tuple:
         size = self.get_size()
         xyzct = self.sizes_xyzct[0]
         shape = (size[1], size[0], xyzct[2] * xyzct[3])
         return shape
 
-    def clone_empty(self):
+    def clone_empty(self) -> np.ndarray:
         return np.zeros(self.get_shape(), dtype=self.get_pixel_type())
 
-    def get_thumbnail(self, target_size, precise=False):
+    def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:
         size, index = get_best_size(self.sizes, target_size)
         scale = np.divide(target_size, self.sizes[index])
-        image = self.asarray_level(index, 0, 0, size[0], size[1])
+        image = self._asarray_level(index, 0, 0, size[0], size[1])
         if np.round(scale, 3)[0] == 1 and np.round(scale, 3)[1] == 1:
             return image
         elif precise:
@@ -121,7 +121,7 @@ class OmeSource:
         else:
             return image_resize(image, target_size)
 
-    def asarray(self, x0=0, y0=0, x1=-1, y1=-1):
+    def asarray(self, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         # ensure fixed patch size
         if x1 < 0 or y1 < 0:
             x1, y1 = self.get_size()
@@ -135,7 +135,7 @@ class OmeSource:
             ox1, oy1 = np.round(np.multiply([x1, y1], factor)).astype(int)
         else:
             ox0, oy0, ox1, oy1 = x0, y0, x1, y1
-        image0 = self.asarray_level(self.best_page, ox0, oy0, ox1, oy1)
+        image0 = self._asarray_level(self.best_page, ox0, oy0, ox1, oy1)
         if factor != 1:
             h, w = np.round(np.divide(image0.shape[0:2], factor)).astype(int)
             image = image_resize_fast(image0, (w, h))
@@ -147,7 +147,7 @@ class OmeSource:
             image = np.pad(image, ((0, h0 - h), (0, w0 - w), (0, 0)), 'edge')
         return image
 
-    def produce_chunks(self, chunk_size):
+    def produce_chunks(self, chunk_size: tuple) -> tuple:
         w, h = self.get_size()
         ny = int(np.ceil(h / chunk_size[1]))
         nx = int(np.ceil(w / chunk_size[0]))
@@ -157,20 +157,20 @@ class OmeSource:
                 x1, y1 = min((chunkx + 1) * chunk_size[0], w), min((chunky + 1) * chunk_size[1], h)
                 yield x0, y0, x1, y1, self.asarray(x0, y0, x1, y1)
 
-    def get_metadata(self):
+    def get_metadata(self) -> dict:
         return self.metadata
 
-    def get_xml_metadata(self, output_filename, pyramid_sizes_add=None):
+    def get_xml_metadata(self, output_filename: str, pyramid_sizes_add: list = None) -> str:
         return create_ome_metadata(self, output_filename, pyramid_sizes_add=pyramid_sizes_add).to_xml()
 
-    def find_metadata(self):
+    def _find_metadata(self):
         raise NotImplementedError('Implement method in subclass')
 
-    def asarray_level(self, level, x0, y0, x1, y1):
+    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
         raise NotImplementedError('Implement method in subclass')
 
 
-def get_best_mag(mags, target_mag):
+def get_best_mag(mags: list, target_mag: float) -> tuple:
     # find smallest mag larger/equal to target mag
     best_mag = None
     best_index = 0
@@ -185,7 +185,7 @@ def get_best_mag(mags, target_mag):
     return best_mag, best_index
 
 
-def get_best_size(sizes, target_size):
+def get_best_size(sizes: list, target_size: tuple) -> tuple:
     # find largest scale but smaller to 1
     best_index = 0
     best_scale = 0
