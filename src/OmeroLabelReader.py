@@ -1,9 +1,8 @@
 from __future__ import annotations
 import logging
 import os
-from types import TracebackType
-
 import pandas as pd
+from types import TracebackType
 
 from src.Omero import Omero
 
@@ -24,17 +23,18 @@ class OmeroLabelReader:
 
     def __exit__(self, exc_type: type[BaseException], exc_value: BaseException, traceback: TracebackType):
         if self.manage_omero:
-            self.omero.disconnect()
+            self.omero.close()
 
     def create_label_csv(self):
         input = self.params['input']
         output = self.params['output']
-        if input['type'] == 'project':
-            project_id = input['ids']
+        ids = input['omero_ids']
+        if input['omero_type'] == 'project' and not isinstance(ids, list):
+            project_id = ids
         else:
-            logging.error("Please use project type in params file")
+            logging.error("Label extraction only supports single project id")
             project_id = -1
-        input_labels = input['labels']
+        input_labels = input['omero_labels']
         image_ids, image_names, image_annotations = self.omero.get_annotation_image_ids(project_id, input_labels, filter_label_macro=True)
         logging.info(f'Matching images found: {len(image_ids)}')
         df = pd.DataFrame(index=image_ids, data=image_annotations)

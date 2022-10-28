@@ -58,28 +58,33 @@ def get_image_info(filename: str, params: dict) -> str:
     return image_info
 
 
-def extract_thumbnail(filename: str, params: dict) -> np.ndarray:
-    output_folder = params['output']['folder']
+def extract_thumbnail(filename: str, params: dict):
+    output_params = params['output']
+    output_folder = output_params['folder']
+    target_size = output_params.get('thumbnail_size', 1000)
+    overwrite = output_params.get('overwrite', True)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    source = load_source(filename, params)
-    size = source.sizes[0]
 
-    #thumbsize = np.int0(np.divide(size, 10))    # use arbitrary factor 10
-    factor = np.max(np.divide(size, 1000))
-    thumbsize = np.round(np.divide(size, factor)).astype(int)
+    output_filename = os.path.join(output_folder, f'{get_filetitle(filename)}_thumb.tiff')
+    output_filename0 = os.path.join(output_folder, f'{get_filetitle(filename)}_channel0_thumb.tiff')
+    if overwrite or (not os.path.exists(output_filename) and not os.path.exists(output_filename0)):
+        source = load_source(filename, params)
+        size = source.sizes[0]
 
-    # write thumbnail to file
-    thumb = source.get_thumbnail(thumbsize)
-    nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
-    if nchannels == 2:
-        for channeli in range(nchannels):
-            output_filename = os.path.join(output_folder, f'{get_filetitle(filename)}_channel{channeli}_thumb.tiff')
-            cv.imwrite(output_filename, thumb[..., channeli])
-    else:
-        output_filename = os.path.join(output_folder, get_filetitle(filename) + '_thumb.tiff')
-        cv.imwrite(output_filename, thumb)
-    return thumb
+        if target_size < 1:
+            factor = target_size
+        else:
+            factor = np.max(np.divide(size, target_size))
+        thumb_size = np.round(np.divide(size, factor)).astype(int)
+        thumb = source.get_thumbnail(thumb_size)
+        nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
+        if nchannels not in [1, 3]:
+            for channeli in range(nchannels):
+                output_filename = os.path.join(output_folder, f'{get_filetitle(filename)}_channel{channeli}_thumb.tiff')
+                cv.imwrite(output_filename, thumb[..., channeli])
+        else:
+            cv.imwrite(output_filename, thumb)
 
 
 def convert(filename: str, params: dict):
@@ -157,10 +162,12 @@ def convert_to_zarr(source: OmeSource, output_filename: str, output_params: dict
     dtype = source.get_pixel_type()
     tile_size = output_params['tile_size']
     compression = output_params.get('compression')
+    overwrite = output_params.get('overwrite', True)
 
-    zarr_root = zarr.open_group(output_filename, mode='w')
-    zarr_root.create_dataset(str(0), shape=shape, chunks=(tile_size[0], tile_size[1], None), dtype=dtype,
-                             compressor=None, filters=compression)
+    if overwrite or not os.path.exists(output_filename):
+        zarr_root = zarr.open_group(output_filename, mode='w')
+        zarr_root.create_dataset(str(0), shape=shape, chunks=(tile_size[0], tile_size[1], None), dtype=dtype,
+                                 compressor=None, filters=compression)
 
 
 def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict, ome: bool = False):
@@ -168,6 +175,7 @@ def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict
     compression = output_params.get('compression')
     channel_operation = output_params.get('channel_operation')
     output_format = output_params['format']
+    overwrite = output_params.get('overwrite', True)
 
     npyramid_add = output_params.get('npyramid_add', 0)
     pyramid_downsample = output_params.get('pyramid_downsample')
@@ -176,27 +184,30 @@ def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict
     else:
         pyramid_sizes_add = None
 
-    image = source.clone_empty()
-    chunk_size = (10240, 10240)
-    for x0, y0, x1, y1, chunk in source.produce_chunks(chunk_size):
-        image[y0:y1, x0:x1] = chunk
+    output_filename0 = output_filename.replace(output_format, '').rstrip('.') + f'_channel0.{output_format}'
+    if overwrite or (not os.path.exists(output_filename) and not os.path.exists(output_filename0)):
+        image = source.clone_empty()
+        chunk_size = (10240, 10240)
+        for x0, y0, x1, y1, chunk in source.produce_chunks(chunk_size):
+            image[y0:y1, x0:x1] = chunk
 
-    if ome:
-        metadata = None
-        xml_metadata = source.get_xml_metadata(output_filename, pyramid_sizes_add=pyramid_sizes_add)
-    else:
-        metadata = source.get_metadata()
-        xml_metadata = None
+        if ome:
+            metadata = None
+            xml_metadata = source.get_xml_metadata(output_filename, pyramid_sizes_add=pyramid_sizes_add)
+        else:
+            metadata = source.get_metadata()
+            xml_metadata = None
 
-    if channel_operation == 'split' and len(image.shape) > 2 and image.shape[2] > 1:
-        for channeli in range(image.shape[2]):
-            image0 = image[..., channeli]
-            output_filename0 = output_filename.replace(output_format, '').rstrip('.') + f'_channel{channeli}.' + output_format
-            save_tiff(output_filename0, image0, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
-                      npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
-    else:
-        save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size, compression=compression,
-                  npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
+        nchannels = image.shape[2] if len(image.shape) > 2 else 1
+        if channel_operation == 'split' and nchannels > 1:
+            for channeli in range(image.shape[2]):
+                image0 = image[..., channeli]
+                output_filename0 = output_filename.replace(output_format, '').rstrip('.') + f'_channel{channeli}.{output_format}'
+                save_tiff(output_filename0, image0, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size,
+                          compression=compression, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
+        else:
+            save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size,
+                      compression=compression, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
 
 
 def save_tiff(filename: str, data: np.ndarray, metadata: dict = None, xml_metadata: str = None,

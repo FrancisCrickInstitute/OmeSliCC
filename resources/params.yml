@@ -1,28 +1,31 @@
+# input parameters
 input:
   # omero - Omero server address
   omero: ssl://omero.server
-  # source - input folder or URL
+  # source - input folder or URL (pattern or list supported)
   #source: /source/
 
-  # type - project or image
-  type: project
-  #type: image
+  # omero_type - Omero project or image
+  omero_type: project
+  #omero_type: image
+
+  # omero_ids - Omero project id or image id(s)
+  omero_ids: 0
+
+  # omero_labels - required Omero metadata labels
+  omero_labels: [label1,label2]
 
   # mag - source magnification (if not in metadata)
   #mag: 20
 
-  # ids - project or image id(s)
-  ids: 0
-
-  # labels - required Omero metadata labels
-  labels: [label1,label2]
-
+# output parameters
 output:
   # mag - output magnification
   mag: 20
 
   folder: output/images
   format: ome.tiff
+  overwrite: True
 
   # channel_operation - optional channel operation
   # channel_operation: combine
@@ -32,6 +35,10 @@ output:
   compression: ['JPEGXR_NDPI', 75]
   npyramid_add: 3
   pyramid_downsample: 4.0
+
+  # thumbnail_size - can be factor between 0 and 1 or single integer
+  thumbnail_size: 1000
+
   csv: resources/csv/labels.csv
 
 # actions can be: info, thumbnail, convert, labels
