@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+from ome_types import OME
 
 from src.image_util import image_resize_fast, image_resize, precise_resize
 from src.ome import create_ome_metadata
@@ -7,11 +8,32 @@ from src.util import check_round_significants
 
 
 class OmeSource:
+    """OME-compatible image source (base class)"""
+
+    metadata: dict
+    """metadata dictionary"""
+    ome_metadata: OME
+    """optional ome metadata"""
+    mag0: float
+    """original source magnification"""
+    target_mag: float
+    """target magnification"""
+    sizes: list
+    """x/y size pairs for all pages"""
+    sizes_xyzct: list
+    """xyzct size for all pages"""
+    pixel_types: list
+    """pixel types for all pages"""
+    pixel_nbits: list
+    """#bits for all pages"""
+    pixel_size: list
+    """pixel sizes for all pages"""
+    channel_info: list
+    """channel information for all channels"""
+
     def __init__(self):
         self.metadata = {}
-        self.ome_metadata = None
-        self.mag0 = None
-        self.target_mag = None
+        self.ome_metadata = OME()
         self.sizes = []
         self.sizes_xyzct = []
         self.pixel_types = []

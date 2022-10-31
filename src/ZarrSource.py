@@ -6,11 +6,18 @@ from src.OmeSource import OmeSource
 
 
 class ZarrSource(OmeSource):
+    """Zarr-compatible image source"""
+
+    filename: str
+    """original filename / URL"""
+    levels: list
+    """list of all image arrays for different sizes"""
+
     def __init__(self, filename: str, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False):
         super().__init__()
+        self.filename = filename
         self.mag0 = source_mag
         self.target_mag = target_mag
-        self.levels = []
 
         try:
             root = zarr.open_group(filename, mode='r')
@@ -24,6 +31,7 @@ class ZarrSource(OmeSource):
             else:
                 keys = root.array_keys()
 
+            self.levels = []
             for key in keys:
                 data = root.get(str(key))
                 self.levels.append(data)

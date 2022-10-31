@@ -12,7 +12,7 @@ input:
   # omero_ids - Omero project id or image id(s)
   omero_ids: 0
 
-  # omero_labels - required Omero metadata labels
+  # omero_labels - required Omero metadata labels (optional)
   omero_labels: [label1,label2]
 
   # mag - source magnification (if not in metadata)
@@ -20,23 +20,30 @@ input:
 
 # output parameters
 output:
-  # mag - output magnification
+  # mag - optional output magnification
   mag: 20
 
+  # folder - output folder
   folder: output/images
+  # format - output image format
   format: ome.tiff
+  # overwrite - overwrite existing files in output folder
   overwrite: True
 
   # channel_operation - optional channel operation
   # channel_operation: combine
   # channel_operation: split
 
+  # tile_size - size for optional tiling
   tile_size: [256, 256]
+  # compression - optional compression format/level
   compression: ['JPEGXR_NDPI', 75]
+  # npyramid_add - number of pyramid size levels to add
   npyramid_add: 3
+  # pyramid_downsample - factor each pyramid level is downsampled
   pyramid_downsample: 4.0
 
-  # thumbnail_size - can be factor between 0 and 1 or single integer
+  # thumbnail_size - can be factor between 0 and 1 or maximum pixel size (single value)
   thumbnail_size: 1000
 
   csv: resources/csv/labels.csv
@@ -46,7 +53,7 @@ actions: [convert, labels]
 
 # Omero credentials
 credentials:
-  # keys for encoding/decoding (in private space) note home ('~') doesn't work inside container:
+  # keys for encoding/decoding (in private space) note home (~) does not work inside container:
   private_key: ~/omero.pri.key
   public_key: ~/omero.pub.key
   # encoded credentials (in public space):

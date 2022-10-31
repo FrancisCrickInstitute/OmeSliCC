@@ -10,11 +10,17 @@ from src.util import get_default
 
 
 class BioSource(OmeSource):
+    """bioformats compatible image source"""
+
+    filename: str
+    """original filename"""
+    indexes: list
+    """list of relevant series indexes"""
+
     def __init__(self, filename: str, target_mag: float = None, source_mag_required: bool = False):
         super().__init__()
         self.filename = filename
         self.target_mag = target_mag
-        self.indexes = []
 
         open_javabridge()
 
@@ -26,6 +32,7 @@ class BioSource(OmeSource):
             self.metadata = self.metadata['OME']
         self.reader = ImageReader(filename)
 
+        self.indexes = []
         for i in range(self.bio_ome_metadata.get_image_count()):
             pmetadata = self.bio_ome_metadata.image(i).Pixels
             if pmetadata.PhysicalSizeX is not None:

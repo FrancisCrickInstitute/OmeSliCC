@@ -15,6 +15,11 @@ from version import __version__
 
 
 def run_actions(params: dict):
+    """
+    Run OmeSliCC pipeline using parameters
+    See resources/params.yml for parameter details
+    params: parameters defining pipeline input, output and actions
+    """
     input_params = params['input']
     output_params = params['output']
     omero_type = input_params['omero_type'].lower()
@@ -28,7 +33,7 @@ def run_actions(params: dict):
     if 'omero' in input_params:
         with Omero(params) as omero:
             if 'project' in omero_type:
-                omero_labels = input_params['omero_labels']
+                omero_labels = input_params.get('omero_labels', [])
                 image_ids = []
                 for proj_id in ensure_list(omero_ids):
                     image_ids.extend(omero.get_annotation_image_ids(proj_id, omero_labels, filter_label_macro=True)[0])

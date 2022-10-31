@@ -21,6 +21,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_a
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
     ome = OME(uuid=uuid)
+    is_ome = (source.ome_metadata is not None and source.ome_metadata != OME())
 
     tiff_datas = [TiffData(uuid=UUID(file_name=file_name, value=uuid))]
 
@@ -28,7 +29,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_a
         description = ''
         acquisition_date = None
         ome_channels = []
-        if source.ome_metadata is not None:
+        if is_ome:
             pmetadata = imetadata.get('Pixels', {})
             description = imetadata.get('Description')
             if description is None:
@@ -98,7 +99,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_a
         if acquisition_date is not None:
             image.acquisition_date = acquisition_date
 
-        if source.ome_metadata is not None:
+        if is_ome:
             imeta = source.ome_metadata.images[i]
             image.stage_label = imeta.stage_label
             image.pixels.planes = imeta.pixels.planes
@@ -106,7 +107,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_a
 
     instrument = None
     mag = source.get_mag()
-    if source.ome_metadata is not None:
+    if is_ome:
         ome.instruments = source.ome_metadata.instruments
         if len(ome.instruments) > 0:
             instrument = ome.instruments[0]
@@ -128,7 +129,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_a
                                    id='Annotation:Resolution:0')
         ome.structured_annotations.append(annotation)
 
-    if source.ome_metadata is not None:
+    if is_ome:
         ome.structured_annotations = source.ome_metadata.structured_annotations
 
     return ome

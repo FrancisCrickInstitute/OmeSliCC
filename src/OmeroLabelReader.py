@@ -8,6 +8,15 @@ from src.Omero import Omero
 
 
 class OmeroLabelReader:
+    """Omero metadata extraction to label file"""
+
+    params: dict
+    """input parameters"""
+    omero: Omero
+    """Omero instance"""
+    manage_omero: bool
+    """If responsible for managing Omero instance"""
+
     def __init__(self, params: dict, omero: Omero = None):
         self.params = params
         self.manage_omero = (omero is None)
@@ -34,7 +43,7 @@ class OmeroLabelReader:
         else:
             logging.error("Label extraction only supports single project id")
             project_id = -1
-        input_labels = input['omero_labels']
+        input_labels = input.get('omero_labels', [])
         image_ids, image_names, image_annotations = self.omero.get_annotation_image_ids(project_id, input_labels, filter_label_macro=True)
         logging.info(f'Matching images found: {len(image_ids)}')
         df = pd.DataFrame(index=image_ids, data=image_annotations)

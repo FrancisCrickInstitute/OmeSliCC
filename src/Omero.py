@@ -17,6 +17,8 @@ from src.omero_credentials import decrypt_credentials
 
 
 class Omero:
+    """Omero image and metadata extraction"""
+    
     def __init__(self, params: dict):
         self.params = params
         self.private_key_filename = params['credentials']['private_key']

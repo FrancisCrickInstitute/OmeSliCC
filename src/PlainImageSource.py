@@ -10,6 +10,15 @@ Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents l
 
 
 class PlainImageSource(OmeSource):
+    """Plain common format image source"""
+
+    filename: str
+    """original filename"""
+    loaded: bool
+    """if image data is loaded"""
+    arrays: list
+    """list of all image arrays for different sizes"""
+
     def __init__(self, filename: str, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False,
                  executor: ThreadPoolExecutor = None):
         super().__init__()
@@ -17,7 +26,6 @@ class PlainImageSource(OmeSource):
         self.mag0 = source_mag
         self.target_mag = target_mag
         self.loaded = False
-        self.data = None
         self.arrays = []
 
         if executor is not None:

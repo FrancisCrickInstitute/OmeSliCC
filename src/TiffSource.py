@@ -14,14 +14,31 @@ from src.util import tags_to_dict, desc_to_dict, ensure_list
 
 
 class TiffSource(OmeSource):
-    def __init__(self, filename, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False,
+    """Tiff-compatible image source"""
+
+    filename: str
+    """original filename"""
+    loaded: bool
+    """if image data is loaded"""
+    decompressed: bool
+    """if image data is decompressed"""
+    pages: list
+    """list of all relevant TiffPages"""
+    data: bytes
+    """raw un-decoded image byte data"""
+    arrays: list
+    """list of all image arrays for different sizes"""
+    executor: ThreadPoolExecutor
+    """ThreadPoolExecutor to be used for threaded operations"""
+
+    def __init__(self, filename: str, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False,
                  executor: ThreadPoolExecutor = None):
         super().__init__()
         self.filename = filename
         self.target_mag = target_mag
         self.loaded = False
         self.decompressed = False
-        self.data = None
+        self.data = bytes()
         self.arrays = []
 
         if executor is not None:
@@ -39,8 +56,6 @@ class TiffSource(OmeSource):
                 self.metadata = self.metadata['OME']
         elif tiff.is_imagej:
             self.metadata = tiff.imagej_metadata
-        else:
-            self.metadata = None
 
         self.pages = get_tiff_pages(tiff, only_tiled=True)
         if len(self.pages) == 0:
