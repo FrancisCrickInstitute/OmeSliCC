@@ -8,7 +8,8 @@ if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build
 )
 set SOURCEDIR=.
-set BUILDDIR=../docs
+set BUILDDIR=_build
+set DOCSDIR=..\docs
 
 %SPHINXBUILD% >NUL 2>NUL
 if errorlevel 9009 (
@@ -24,8 +25,17 @@ if errorlevel 9009 (
 )
 
 if "%1" == "" goto help
+if "%1" == "docs" goto docs
 
 %SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+goto end
+
+:docs
+%SPHINXBUILD% -M html %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+RD /S /Q %DOCSDIR%
+RD /S /Q %BUILDDIR%\html\_sources
+XCOPY /E /Q %BUILDDIR%\html %DOCSDIR%\
+cd . > %DOCSDIR%\.nojekyll
 goto end
 
 :help
