@@ -1,0 +1,393 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>OmeSource &#8212; OmeSliCC  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">OmeSliCC  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><code class="xref py py-mod docutils literal notranslate"><span class="pre">OmeSource</span></code></a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-OmeSource">
+<span id="omesource"></span><h1><a class="reference internal" href="#module-OmeSource" title="OmeSource"><code class="xref py py-mod docutils literal notranslate"><span class="pre">OmeSource</span></code></a><a class="headerlink" href="#module-OmeSource" title="Permalink to this heading">¶</a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this heading">¶</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#OmeSource.OmeSource" title="OmeSource.OmeSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OmeSource</span></code></a></p></td>
+<td><p>OME-compatible image source (base class)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#OmeSource.get_best_mag" title="OmeSource.get_best_mag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_best_mag</span></code></a>(→ tuple)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#OmeSource.get_best_size" title="OmeSource.get_best_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_best_size</span></code></a>(→ tuple)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="OmeSource.OmeSource">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">OmeSource.</span></span><span class="sig-name descname"><span class="pre">OmeSource</span></span><a class="headerlink" href="#OmeSource.OmeSource" title="Permalink to this definition">¶</a></dt>
+<dd><p>OME-compatible image source (base class)</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"><span class="w"> </span><span class="pre">:dict</span></em><a class="headerlink" href="#OmeSource.OmeSource.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>metadata dictionary</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.ome_metadata">
+<span class="sig-name descname"><span class="pre">ome_metadata</span></span><em class="property"><span class="w"> </span><span class="pre">:ome_types.OME</span></em><a class="headerlink" href="#OmeSource.OmeSource.ome_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>optional ome metadata</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.mag0">
+<span class="sig-name descname"><span class="pre">mag0</span></span><em class="property"><span class="w"> </span><span class="pre">:float</span></em><a class="headerlink" href="#OmeSource.OmeSource.mag0" title="Permalink to this definition">¶</a></dt>
+<dd><p>original source magnification</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.target_mag">
+<span class="sig-name descname"><span class="pre">target_mag</span></span><em class="property"><span class="w"> </span><span class="pre">:float</span></em><a class="headerlink" href="#OmeSource.OmeSource.target_mag" title="Permalink to this definition">¶</a></dt>
+<dd><p>target magnification</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.sizes">
+<span class="sig-name descname"><span class="pre">sizes</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.sizes" title="Permalink to this definition">¶</a></dt>
+<dd><p>x/y size pairs for all pages</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.sizes_xyzct">
+<span class="sig-name descname"><span class="pre">sizes_xyzct</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.sizes_xyzct" title="Permalink to this definition">¶</a></dt>
+<dd><p>xyzct size for all pages</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.pixel_types">
+<span class="sig-name descname"><span class="pre">pixel_types</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.pixel_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>pixel types for all pages</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.pixel_nbits">
+<span class="sig-name descname"><span class="pre">pixel_nbits</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.pixel_nbits" title="Permalink to this definition">¶</a></dt>
+<dd><p>#bits for all pages</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.pixel_size">
+<span class="sig-name descname"><span class="pre">pixel_size</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.pixel_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>pixel sizes for all pages</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.channel_info">
+<span class="sig-name descname"><span class="pre">channel_info</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.channel_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>channel information for all channels</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource._init_metadata">
+<span class="sig-name descname"><span class="pre">_init_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_mag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_mag_required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#OmeSource.OmeSource._init_metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource._fix_pixelsize">
+<span class="sig-name descname"><span class="pre">_fix_pixelsize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#OmeSource.OmeSource._fix_pixelsize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource._set_mags">
+<span class="sig-name descname"><span class="pre">_set_mags</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#OmeSource.OmeSource._set_mags" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource._set_best_mag">
+<span class="sig-name descname"><span class="pre">_set_best_mag</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#OmeSource.OmeSource._set_best_mag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_mag">
+<span class="sig-name descname"><span class="pre">get_mag</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_mag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_max_mag">
+<span class="sig-name descname"><span class="pre">get_max_mag</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_max_mag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_actual_size">
+<span class="sig-name descname"><span class="pre">get_actual_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_actual_size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_pixel_type">
+<span class="sig-name descname"><span class="pre">get_pixel_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.dtype</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_pixel_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_pixel_nbits">
+<span class="sig-name descname"><span class="pre">get_pixel_nbits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_pixel_nbits" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_pixel_nbytes">
+<span class="sig-name descname"><span class="pre">get_pixel_nbytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_pixel_nbytes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_channel_info">
+<span class="sig-name descname"><span class="pre">get_channel_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_channel_info" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_size_xyzct">
+<span class="sig-name descname"><span class="pre">get_size_xyzct</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_size_xyzct" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_size">
+<span class="sig-name descname"><span class="pre">get_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_shape">
+<span class="sig-name descname"><span class="pre">get_shape</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_shape" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.clone_empty">
+<span class="sig-name descname"><span class="pre">clone_empty</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.clone_empty" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_thumbnail">
+<span class="sig-name descname"><span class="pre">get_thumbnail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precise</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_thumbnail" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.asarray">
+<span class="sig-name descname"><span class="pre">asarray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.asarray" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.produce_chunks">
+<span class="sig-name descname"><span class="pre">produce_chunks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.produce_chunks" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_metadata">
+<span class="sig-name descname"><span class="pre">get_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_xml_metadata">
+<span class="sig-name descname"><span class="pre">get_xml_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pyramid_sizes_add</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_xml_metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource._find_metadata">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_find_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#OmeSource.OmeSource._find_metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeSource.OmeSource._asarray_level">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_asarray_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#OmeSource.OmeSource._asarray_level" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="OmeSource.get_best_mag">
+<span class="sig-prename descclassname"><span class="pre">OmeSource.</span></span><span class="sig-name descname"><span class="pre">get_best_mag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_mag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#OmeSource.get_best_mag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="OmeSource.get_best_size">
+<span class="sig-prename descclassname"><span class="pre">OmeSource.</span></span><span class="sig-name descname"><span class="pre">get_best_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sizes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#OmeSource.get_best_size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">OmeSource</span></code></a><ul>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#classes">Classes</a></li>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#OmeSource.OmeSource"><code class="docutils literal notranslate"><span class="pre">OmeSource</span></code></a><ul>
+<li><a class="reference internal" href="#OmeSource.OmeSource.metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource.metadata</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.ome_metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource.ome_metadata</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.mag0"><code class="docutils literal notranslate"><span class="pre">OmeSource.mag0</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.target_mag"><code class="docutils literal notranslate"><span class="pre">OmeSource.target_mag</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.sizes"><code class="docutils literal notranslate"><span class="pre">OmeSource.sizes</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.sizes_xyzct"><code class="docutils literal notranslate"><span class="pre">OmeSource.sizes_xyzct</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.pixel_types"><code class="docutils literal notranslate"><span class="pre">OmeSource.pixel_types</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.pixel_nbits"><code class="docutils literal notranslate"><span class="pre">OmeSource.pixel_nbits</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.pixel_size"><code class="docutils literal notranslate"><span class="pre">OmeSource.pixel_size</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.channel_info"><code class="docutils literal notranslate"><span class="pre">OmeSource.channel_info</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._init_metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource._init_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._fix_pixelsize"><code class="docutils literal notranslate"><span class="pre">OmeSource._fix_pixelsize()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._set_mags"><code class="docutils literal notranslate"><span class="pre">OmeSource._set_mags()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._set_best_mag"><code class="docutils literal notranslate"><span class="pre">OmeSource._set_best_mag()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_mag"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_mag()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_max_mag"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_max_mag()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_actual_size"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_actual_size()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_type"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_pixel_type()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_nbits"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_pixel_nbits()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_nbytes"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_pixel_nbytes()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_channel_info"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_channel_info()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_size_xyzct"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_size_xyzct()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_size"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_size()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_shape"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_shape()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.clone_empty"><code class="docutils literal notranslate"><span class="pre">OmeSource.clone_empty()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_thumbnail"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_thumbnail()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.asarray"><code class="docutils literal notranslate"><span class="pre">OmeSource.asarray()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.produce_chunks"><code class="docutils literal notranslate"><span class="pre">OmeSource.produce_chunks()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_xml_metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_xml_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._find_metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource._find_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._asarray_level"><code class="docutils literal notranslate"><span class="pre">OmeSource._asarray_level()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#OmeSource.get_best_mag"><code class="docutils literal notranslate"><span class="pre">get_best_mag()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.get_best_size"><code class="docutils literal notranslate"><span class="pre">get_best_size()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource">OmeSource</a><ul>
+<li><a class="reference internal" href="#OmeSource.OmeSource.metadata">metadata</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.ome_metadata">ome_metadata</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.mag0">mag0</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.target_mag">target_mag</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.sizes">sizes</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.sizes_xyzct">sizes_xyzct</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.pixel_types">pixel_types</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.pixel_nbits">pixel_nbits</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.pixel_size">pixel_size</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.channel_info">channel_info</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._init_metadata">_init_metadata</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._fix_pixelsize">_fix_pixelsize</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._set_mags">_set_mags</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._set_best_mag">_set_best_mag</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_mag">get_mag</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_max_mag">get_max_mag</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_actual_size">get_actual_size</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_type">get_pixel_type</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_nbits">get_pixel_nbits</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_nbytes">get_pixel_nbytes</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_channel_info">get_channel_info</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_size_xyzct">get_size_xyzct</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_size">get_size</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_shape">get_shape</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.clone_empty">clone_empty</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_thumbnail">get_thumbnail</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.asarray">asarray</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.produce_chunks">produce_chunks</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_metadata">get_metadata</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_xml_metadata">get_xml_metadata</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._find_metadata">_find_metadata</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource._asarray_level">_asarray_level</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#OmeSource.get_best_mag">get_best_mag</a></li>
+<li><a class="reference internal" href="#OmeSource.get_best_size">get_best_size</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/autoapi/OmeSource/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">OmeSliCC  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><code class="xref py py-mod docutils literal notranslate"><span class="pre">OmeSource</span></code></a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Francis Crick Institute.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>

@@ -137,4 +137,5 @@ dmypy.json
 *.key
 .idea/
 output/
-doc/_build/
+docs/html/_sources/
+docs/doctrees/

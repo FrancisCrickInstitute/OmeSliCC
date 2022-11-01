@@ -1,0 +1,296 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>image_util &#8212; OmeSliCC  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">OmeSliCC  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><code class="xref py py-mod docutils literal notranslate"><span class="pre">image_util</span></code></a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-image_util">
+<span id="image-util"></span><h1><a class="reference internal" href="#module-image_util" title="image_util"><code class="xref py py-mod docutils literal notranslate"><span class="pre">image_util</span></code></a><a class="headerlink" href="#module-image_util" title="Permalink to this heading">¶</a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this heading">¶</a></h2>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.check_versions" title="image_util.check_versions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_versions</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.show_image" title="image_util.show_image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">show_image</span></code></a>(image)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.show_image_gray" title="image_util.show_image_gray"><code class="xref py py-obj docutils literal notranslate"><span class="pre">show_image_gray</span></code></a>(image)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.ensure_signed_image" title="image_util.ensure_signed_image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ensure_signed_image</span></code></a>(→ numpy.ndarray)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.get_image_size_info" title="image_util.get_image_size_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_image_size_info</span></code></a>(→ str)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.pilmode_to_pixelinfo" title="image_util.pilmode_to_pixelinfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pilmode_to_pixelinfo</span></code></a>(→ tuple)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.calc_pyramid" title="image_util.calc_pyramid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">calc_pyramid</span></code></a>(→ list)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.image_resize_fast" title="image_util.image_resize_fast"><code class="xref py py-obj docutils literal notranslate"><span class="pre">image_resize_fast</span></code></a>(→ numpy.ndarray)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.image_resize" title="image_util.image_resize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">image_resize</span></code></a>(→ numpy.ndarray)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.precise_resize" title="image_util.precise_resize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">precise_resize</span></code></a>(→ numpy.ndarray)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.load_tiff" title="image_util.load_tiff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_tiff</span></code></a>(→ tuple)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.get_tiff_pages" title="image_util.get_tiff_pages"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_tiff_pages</span></code></a>(→ list)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.tiff_info" title="image_util.tiff_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tiff_info</span></code></a>(→ str)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.tiff_info_short" title="image_util.tiff_info_short"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tiff_info_short</span></code></a>(→ str)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.get_pil_metadata" title="image_util.get_pil_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pil_metadata</span></code></a>(→ dict)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.compare_image" title="image_util.compare_image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compare_image</span></code></a>(→ float)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#image_util.compare_image_dist" title="image_util.compare_image_dist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compare_image_dist</span></code></a>(→ tuple)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#image_util.calc_fraction_used" title="image_util.calc_fraction_used"><code class="xref py py-obj docutils literal notranslate"><span class="pre">calc_fraction_used</span></code></a>(→ float)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.check_versions">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">check_versions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#image_util.check_versions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.show_image">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">show_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#image_util.show_image" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.show_image_gray">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">show_image_gray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#image_util.show_image_gray" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.ensure_signed_image">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">ensure_signed_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#image_util.ensure_signed_image" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.get_image_size_info">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">get_image_size_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xyzct</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_nbytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.dtype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#image_util.get_image_size_info" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.pilmode_to_pixelinfo">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">pilmode_to_pixelinfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#image_util.pilmode_to_pixelinfo" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.calc_pyramid">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">calc_pyramid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npyramid_add</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pyramid_downsample</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#image_util.calc_pyramid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.image_resize_fast">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">image_resize_fast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#image_util.image_resize_fast" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.image_resize">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">image_resize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_size0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#image_util.image_resize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.precise_resize">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">precise_resize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#image_util.precise_resize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.load_tiff">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">load_tiff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">only_tiled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#image_util.load_tiff" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.get_tiff_pages">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">get_tiff_pages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tiff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tifffile.TiffFile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">only_tiled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#image_util.get_tiff_pages" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.tiff_info">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">tiff_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#image_util.tiff_info" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.tiff_info_short">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">tiff_info_short</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#image_util.tiff_info_short" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.get_pil_metadata">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">get_pil_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PIL.Image</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#image_util.get_pil_metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.compare_image">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">compare_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#image_util.compare_image" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.compare_image_dist">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">compare_image_dist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#image_util.compare_image_dist" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="image_util.calc_fraction_used">
+<span class="sig-prename descclassname"><span class="pre">image_util.</span></span><span class="sig-name descname"><span class="pre">calc_fraction_used</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#image_util.calc_fraction_used" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">image_util</span></code></a><ul>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#image_util.check_versions"><code class="docutils literal notranslate"><span class="pre">check_versions()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.show_image"><code class="docutils literal notranslate"><span class="pre">show_image()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.show_image_gray"><code class="docutils literal notranslate"><span class="pre">show_image_gray()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.ensure_signed_image"><code class="docutils literal notranslate"><span class="pre">ensure_signed_image()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.get_image_size_info"><code class="docutils literal notranslate"><span class="pre">get_image_size_info()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.pilmode_to_pixelinfo"><code class="docutils literal notranslate"><span class="pre">pilmode_to_pixelinfo()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.calc_pyramid"><code class="docutils literal notranslate"><span class="pre">calc_pyramid()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.image_resize_fast"><code class="docutils literal notranslate"><span class="pre">image_resize_fast()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.image_resize"><code class="docutils literal notranslate"><span class="pre">image_resize()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.precise_resize"><code class="docutils literal notranslate"><span class="pre">precise_resize()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.load_tiff"><code class="docutils literal notranslate"><span class="pre">load_tiff()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.get_tiff_pages"><code class="docutils literal notranslate"><span class="pre">get_tiff_pages()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.tiff_info"><code class="docutils literal notranslate"><span class="pre">tiff_info()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.tiff_info_short"><code class="docutils literal notranslate"><span class="pre">tiff_info_short()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.get_pil_metadata"><code class="docutils literal notranslate"><span class="pre">get_pil_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.compare_image"><code class="docutils literal notranslate"><span class="pre">compare_image()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.compare_image_dist"><code class="docutils literal notranslate"><span class="pre">compare_image_dist()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.calc_fraction_used"><code class="docutils literal notranslate"><span class="pre">calc_fraction_used()</span></code></a></li>
+<li><a class="reference internal" href="#image_util.check_versions">check_versions</a></li>
+<li><a class="reference internal" href="#image_util.show_image">show_image</a></li>
+<li><a class="reference internal" href="#image_util.show_image_gray">show_image_gray</a></li>
+<li><a class="reference internal" href="#image_util.ensure_signed_image">ensure_signed_image</a></li>
+<li><a class="reference internal" href="#image_util.get_image_size_info">get_image_size_info</a></li>
+<li><a class="reference internal" href="#image_util.pilmode_to_pixelinfo">pilmode_to_pixelinfo</a></li>
+<li><a class="reference internal" href="#image_util.calc_pyramid">calc_pyramid</a></li>
+<li><a class="reference internal" href="#image_util.image_resize_fast">image_resize_fast</a></li>
+<li><a class="reference internal" href="#image_util.image_resize">image_resize</a></li>
+<li><a class="reference internal" href="#image_util.precise_resize">precise_resize</a></li>
+<li><a class="reference internal" href="#image_util.load_tiff">load_tiff</a></li>
+<li><a class="reference internal" href="#image_util.get_tiff_pages">get_tiff_pages</a></li>
+<li><a class="reference internal" href="#image_util.tiff_info">tiff_info</a></li>
+<li><a class="reference internal" href="#image_util.tiff_info_short">tiff_info_short</a></li>
+<li><a class="reference internal" href="#image_util.get_pil_metadata">get_pil_metadata</a></li>
+<li><a class="reference internal" href="#image_util.compare_image">compare_image</a></li>
+<li><a class="reference internal" href="#image_util.compare_image_dist">compare_image_dist</a></li>
+<li><a class="reference internal" href="#image_util.calc_fraction_used">calc_fraction_used</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/autoapi/image_util/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">OmeSliCC  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><code class="xref py py-mod docutils literal notranslate"><span class="pre">image_util</span></code></a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Francis Crick Institute.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>
