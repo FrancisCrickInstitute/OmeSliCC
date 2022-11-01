@@ -47,10 +47,13 @@ To encode credentials for Omero access:
 python encode_omero_credentials.py --params path/to/params.yml
 ```
 
-To extract Omero label metadata to text file:
+To extract Omero label metadata to text file use the 'labels' action, or use:
 ```
 python extract_omero_labels.py --params path/to/params.yml
 ```
+## Documentation
+
+https://franciscrickinstitute.github.io/OmeSliCC/
 
 ## Acknowledgements
 
