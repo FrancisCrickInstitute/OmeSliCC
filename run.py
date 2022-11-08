@@ -22,7 +22,7 @@ def run_actions(params: dict):
     """
     input_params = params['input']
     output_params = params['output']
-    omero_type = input_params['omero_type'].lower()
+    omero_type = input_params.get('omero_type', '').lower()
     omero_ids = input_params.get('omero_ids')
     output_folder = output_params['folder']
     thumbnail_size = output_params.get('thumbnail_size', 1000)

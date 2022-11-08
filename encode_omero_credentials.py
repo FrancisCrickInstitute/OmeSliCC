@@ -10,7 +10,9 @@ if __name__ == '__main__':
     parser.add_argument('--params',
                         help='The parameters file',
                         default=PARAMETER_FILE)
-    with open(PARAMETER_FILE, 'r') as file:
+
+    args = parser.parse_args()
+    with open(args.params, 'r') as file:
         params = yaml.safe_load(file)
 
     params_cred = params['credentials']
