@@ -14,6 +14,7 @@ from src.conversion import save_tiff
 from src.image_util import calc_pyramid, get_image_size_info
 from src.ome import create_ome_metadata_from_omero
 from src.omero_credentials import decrypt_credentials
+from src.util import ensure_list
 
 
 class Omero:
@@ -62,25 +63,47 @@ class Omero:
         project = self.conn.getObject('Project', project_id)
         return project
 
+    def _get_dataset(self, dataset_id: int) -> omero.gateway.DatasetWrapper:
+        dataset = self.conn.getObject('Dataset', dataset_id)
+        return dataset
+
     def _get_image_object(self, image_id: int) -> omero.gateway.ImageWrapper:
         image_object = self.conn.getObject('Image', image_id)
         return image_object
 
-    def get_annotation_image_ids(self, project_id: int, target_labels: list, filter_label_macro: bool = False) -> tuple:
+    def get_annotation_image_ids(self, omero_type: str, omero_id: int, target_labels: list, filter_label_macro: bool = False) -> tuple:
         image_ids = []
         image_names = []
         image_annotations = []
-        project = self._get_project(project_id)
-        for dataset in project.listChildren():
-            for image_object in dataset.listChildren():
-                name = image_object.getName()
-                # filter _label and _macro items
-                if not filter_label_macro or (not name.endswith('_label') and not name.endswith('_macro')):
-                    annotations = self._get_image_annotations(image_object, target_labels)
-                    if len(annotations) == len(target_labels):
-                        image_ids.append(image_object.getId())
-                        image_names.append(image_object.getName())
-                        image_annotations.append(annotations)
+        if 'project' in omero_type:
+            project = self._get_project(omero_id)
+            exclude_ids = ensure_list(self.params['input']['exclude_ids'])
+            for dataset in project.listChildren():
+                dataset_id = dataset.getId()
+                if exclude_ids is None or (dataset_id not in exclude_ids):
+                    image_ids0, image_names0, image_annotations0 = self._get_dataset_annotation_image_ids(dataset_id, target_labels, filter_label_macro=filter_label_macro)
+                    image_ids.extend(image_ids0)
+                    image_names.extend(image_names0)
+                    image_annotations.extend(image_annotations0)
+        elif 'dataset' in omero_type:
+            image_ids, image_names, image_annotations = self._get_dataset_annotation_image_ids(omero_id, target_labels,
+                                                                                                 filter_label_macro=filter_label_macro)
+        return image_ids, image_names, image_annotations
+
+    def _get_dataset_annotation_image_ids(self, dataset_id: int, target_labels: list, filter_label_macro: bool = False) -> tuple:
+        dataset = self._get_dataset(dataset_id)
+        image_ids = []
+        image_names = []
+        image_annotations = []
+        for image_object in dataset.listChildren():
+            name = image_object.getName()
+            # filter _label and _macro items
+            if not filter_label_macro or (not name.endswith('_label') and not name.endswith('_macro')):
+                annotations = self._get_image_annotations(image_object, target_labels)
+                if len(annotations) == len(target_labels):
+                    image_ids.append(image_object.getId())
+                    image_names.append(image_object.getName())
+                    image_annotations.append(annotations)
         return image_ids, image_names, image_annotations
 
     def _get_project_images(self, project_id: int) -> list:

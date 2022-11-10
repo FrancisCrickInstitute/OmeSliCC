@@ -36,9 +36,14 @@ def run_actions(params: dict):
                 omero_labels = input_params.get('omero_labels', [])
                 image_ids = []
                 for proj_id in ensure_list(omero_ids):
-                    image_ids.extend(omero.get_annotation_image_ids(proj_id, omero_labels, filter_label_macro=True)[0])
+                    image_ids.extend(omero.get_annotation_image_ids(omero_type, proj_id, omero_labels, filter_label_macro=True)[0])
             elif 'image' in omero_type:
                 image_ids = ensure_list(omero_ids)
+            elif 'dataset' in omero_type:
+                omero_labels = input_params.get('omero_labels', [])
+                image_ids = []
+                for dataset_id in ensure_list(omero_ids):
+                    image_ids.extend(omero.get_annotation_image_ids(omero_type, dataset_id, omero_labels, filter_label_macro=True)[0])
             else:
                 image_ids = []
 

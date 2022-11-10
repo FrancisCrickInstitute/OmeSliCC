@@ -39,12 +39,14 @@ class OmeroLabelReader:
         output = self.params['output']
         ids = input['omero_ids']
         if input['omero_type'] == 'project' and not isinstance(ids, list):
-            project_id = ids
+            omero_id = ids
+        elif input['omero_type'] == 'dataset' and not isinstance(ids, list):
+            omero_id = ids
         else:
-            logging.error("Label extraction only supports single project id")
-            project_id = -1
+            logging.error("Label extraction only supports single project id or dataset id")
+            omero_id = -1
         input_labels = input.get('omero_labels', [])
-        image_ids, image_names, image_annotations = self.omero.get_annotation_image_ids(project_id, input_labels, filter_label_macro=True)
+        image_ids, image_names, image_annotations = self.omero.get_annotation_image_ids(input['omero_type'], omero_id, input_labels, filter_label_macro=True)
         logging.info(f'Matching images found: {len(image_ids)}')
         df = pd.DataFrame(index=image_ids, data=image_annotations)
         df.index.name = 'omero_id'
