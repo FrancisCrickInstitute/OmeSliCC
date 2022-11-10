@@ -5,12 +5,16 @@ input:
   # source - input folder or URL (pattern or list supported)
   #source: /source/
 
-  # omero_type - Omero project or image
+  # omero_type - Omero project, dataset or image
   omero_type: project
+  #omero_type: dataset
   #omero_type: image
 
-  # omero_ids - Omero project id or image id(s)
+  # omero_ids - Omero project id, dataset id or image id(s)
   omero_ids: 0
+
+  # dataset(s) to exclude from a project - Omero dataset id(s)
+  exclude_ids: 1
 
   # omero_labels - required Omero metadata labels (optional)
   omero_labels: [label1,label2]
