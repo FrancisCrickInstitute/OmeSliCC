@@ -22,31 +22,16 @@ def run_actions(params: dict):
     """
     input_params = params['input']
     output_params = params['output']
-    omero_type = input_params.get('omero_type', '').lower()
-    omero_ids = input_params.get('omero_ids')
+    input_source = input_params.get('source')
     output_folder = output_params['folder']
     thumbnail_size = output_params.get('thumbnail_size', 1000)
     overwrite = output_params.get('overwrite', True)
 
     actions = ensure_list(params.get('actions'))
 
-    if 'omero' in input_params:
+    if input_source is None:
         with Omero(params) as omero:
-            if 'project' in omero_type:
-                omero_labels = input_params.get('omero_labels', [])
-                image_ids = []
-                for proj_id in ensure_list(omero_ids):
-                    image_ids.extend(omero.get_annotation_image_ids(omero_type, proj_id, omero_labels, filter_label_macro=True)[0])
-            elif 'image' in omero_type:
-                image_ids = ensure_list(omero_ids)
-            elif 'dataset' in omero_type:
-                omero_labels = input_params.get('omero_labels', [])
-                image_ids = []
-                for dataset_id in ensure_list(omero_ids):
-                    image_ids.extend(omero.get_annotation_image_ids(omero_type, dataset_id, omero_labels, filter_label_macro=True)[0])
-            else:
-                image_ids = []
-
+            image_ids = omero.get_annotation_image_ids()
             for action0 in actions:
                 action = action0.lower()
                 logging.info(f'Starting {action}')
@@ -61,7 +46,7 @@ def run_actions(params: dict):
                     omero.convert_images(image_ids, output_folder, overwrite=overwrite)
                 elif 'label' in action:
                     with OmeroLabelReader(params, omero=omero) as label_reader:
-                        label_reader.create_label_csv()
+                        label_reader.create_label_csv(image_ids)
                 logging.info(f'Done {action}')
     else:
         input_source = input_params['source']
