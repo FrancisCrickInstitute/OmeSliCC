@@ -3,7 +3,7 @@ input:
   # source - input folder or URL (pattern or list supported) - if used Omero will be ignored as input
   #source: /source/
   omero:
-    # server - Omero server address
+    # host - Omero server address
     host: ssl://omero.server
     # include - Omero project id(s) / dataset id(s) / image id(s) to include
     include:
