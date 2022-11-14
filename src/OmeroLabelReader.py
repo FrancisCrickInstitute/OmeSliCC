@@ -34,18 +34,17 @@ class OmeroLabelReader:
         if self.manage_omero:
             self.omero.close()
 
-    def create_label_csv(self):
+    def create_label_csv(self, image_ids):
+        image_names = []
+        image_annotations = []
         input = self.params['input']
         output = self.params['output']
-        ids = input['omero_ids']
-        if input['omero_type'] == 'project' and not isinstance(ids, list):
-            project_id = ids
-        else:
-            logging.error("Label extraction only supports single project id")
-            project_id = -1
-        input_labels = input.get('omero_labels', [])
-        image_ids, image_names, image_annotations = self.omero.get_annotation_image_ids(project_id, input_labels, filter_label_macro=True)
-        logging.info(f'Matching images found: {len(image_ids)}')
+        input_labels = input.get('omero', {}).get('labels', [])
+        logging.info(f'Matching images: {len(image_ids)}')
+        for id in image_ids:
+            name, annotations = self.omero._get_image_annotation(id, input_labels)
+            image_names.append(name)
+            image_annotations.append(annotations)
         df = pd.DataFrame(index=image_ids, data=image_annotations)
         df.index.name = 'omero_id'
         for input_label in input_labels:

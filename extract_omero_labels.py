@@ -3,6 +3,7 @@ import logging
 import os
 import yaml
 
+from src.Omero import Omero
 from src.OmeroLabelReader import OmeroLabelReader
 from src.parameters import *
 
@@ -23,6 +24,8 @@ if __name__ == '__main__':
     logging.basicConfig(format=log_params['log_format'], level=logging.INFO,
                         handlers=[logging.StreamHandler(), logging.FileHandler(log_params['filename'])])
 
-    with OmeroLabelReader(params) as label_reader:
-        label_reader.create_label_csv()
+    with Omero(params) as omero:
+        with OmeroLabelReader(params, omero=omero) as label_reader:
+            image_ids = omero.get_annotation_image_ids()
+            label_reader.create_label_csv(image_ids)
     logging.info('Done')
