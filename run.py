@@ -92,7 +92,7 @@ def run_actions(params: dict):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='OmeSliCC ' + __version__)
+    parser = argparse.ArgumentParser(description=f'OmeSliCC {__version__}')
     parser.add_argument('--params',
                         help='The parameters file',
                         default=PARAMETER_FILE)
