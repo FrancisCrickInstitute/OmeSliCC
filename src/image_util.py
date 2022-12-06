@@ -75,6 +75,12 @@ def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
 def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
     if not isinstance(image, np.ndarray):
         image = image.asarray()
+    if image.dtype.itemsize > 1:
+        if image.dtype == np.int16:
+            new_type = np.int8
+        else:
+            new_type = np.uint8
+        image = (image // 256).astype(new_type)
     if image.dtype == np.int8:
         image = image.astype(np.uint8)
     target_size = np.clip(np.int0(np.round(target_size0)), 1, None)

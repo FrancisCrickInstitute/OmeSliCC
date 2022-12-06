@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import zarr
 from zarr.errors import GroupNotFoundError
@@ -45,17 +46,33 @@ class ZarrSource(OmeSource):
         self._init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
 
     def _find_metadata(self):
-        if 'multiscales' in self.metadata:
-            for scale in self.metadata.get('multiscales', []):
-                axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
-        self.pixel_size = []
-        self.channel_info = []
+        pixel_size = []
+        channel_info = []
+        size_xyzct = self.sizes_xyzct[0]
+        for scale in self.metadata.get('multiscales', []):
+            axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
+            units = [axis.get('unit', '') for axis in scale.get('axes', [])]
+            scale1 = scale.get('datasets', [])[0].get('coordinateTransformations', [])[0].get('scale', [0, 0, 0, 0, 0])
+            pixel_size = [
+                (scale1[axes.index('x')] / size_xyzct[0], units[axes.index('x')]),
+                (scale1[axes.index('y')] / size_xyzct[1], units[axes.index('y')]),
+                (scale1[axes.index('z')] / size_xyzct[2], units[axes.index('z')])]
+        for data in self.metadata.values():
+            if isinstance(data, dict):
+                for channel in data.get('channels', []):
+                    max_val = channel.get('window', {}).get('max', 0)
+                    samples_per_pixel = int(math.log(max_val + 1, 256))
+                    if samples_per_pixel < 1:
+                        samples_per_pixel = 1
+                    channel_info.append((channel.get('label', ''), samples_per_pixel))
+        self.pixel_size = pixel_size
+        self.channel_info = channel_info
         self.mag0 = 0
 
     def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
         # move channels to back (tczyx -> yxc)
         out = self.levels[level][0, :, 0, y0:y1, x0:x1]
-        if out.shape[0] > 1:
+        if len(out.shape) > 2:
             return np.moveaxis(out, 0, -1)  # move axis 0 (channel) to end
         else:
             return out
