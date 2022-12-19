@@ -1,4 +1,5 @@
 import PIL.Image
+import math
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
@@ -80,7 +81,8 @@ def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
             new_type = np.int8
         else:
             new_type = np.uint8
-        image = (image // 256).astype(new_type)
+        factor = 2 ** math.ceil(math.log2(image.max())) // 256
+        image = (image // factor).astype(new_type)
     if image.dtype == np.int8:
         image = image.astype(np.uint8)
     target_size = np.clip(np.int0(np.round(target_size0)), 1, None)
@@ -120,26 +122,27 @@ def load_tiff(filename: str, only_tiled=True) -> tuple:
 
 def get_tiff_pages(tiff: TiffFile, only_tiled: bool = False) -> list:
     pages = []
-    for page in tiff.pages:
-        if isinstance(page, TiffPage) or isinstance(page, TiffFrame):
-            for serie in tiff.series:
-                # has series
-                for level in serie.levels:
-                    # has levels
-                    if not level.keyframe in pages:
-                        pages.append(level.keyframe)
-                if not serie.keyframe in pages:
-                    pages.append(serie.keyframe)
-            if not page in pages:
+    found = False
+    for serie in tiff.series:
+        # has series
+        for level in serie.levels:
+            # has levels
+            level_pages = []
+            for page in level.pages:
+                found = True
+                if not only_tiled or \
+                        (isinstance(page, TiffPage) and page.is_tiled) or \
+                        (isinstance(page, TiffFrame) and page.tile is not None):
+                    level_pages.append(page)
+            if len(level_pages) > 0:
+                pages.append(level_pages)
+
+    if not found:
+        for page in tiff.pages:
+            if not only_tiled or \
+                    (isinstance(page, TiffPage) and page.is_tiled) or \
+                    (isinstance(page, TiffFrame) and page.tile is not None):
                 pages.append(page)
-
-    if only_tiled:
-        tiled_pages = []
-        for page in pages:
-            if isinstance(page, TiffPage) and page.is_tiled:
-                tiled_pages.append(page)
-        pages = tiled_pages
-
     return pages
 
 

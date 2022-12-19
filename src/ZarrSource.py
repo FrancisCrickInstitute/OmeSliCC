@@ -52,11 +52,19 @@ class ZarrSource(OmeSource):
         for scale in self.metadata.get('multiscales', []):
             axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
             units = [axis.get('unit', '') for axis in scale.get('axes', [])]
-            scale1 = scale.get('datasets', [])[0].get('coordinateTransformations', [])[0].get('scale', [0, 0, 0, 0, 0])
-            pixel_size = [
-                (scale1[axes.index('x')] / size_xyzct[0], units[axes.index('x')]),
-                (scale1[axes.index('y')] / size_xyzct[1], units[axes.index('y')]),
-                (scale1[axes.index('z')] / size_xyzct[2], units[axes.index('z')])]
+            scale1 = [0, 0, 0, 0, 0]
+            datasets = scale.get('datasets')
+            if datasets is not None:
+                coordinateTransformations = datasets[0].get('coordinateTransformations')
+                if coordinateTransformations is not None:
+                    scale1 = coordinateTransformations[0].get('scale', [0, 0, 0, 0, 0])
+            if 'z' in axes:
+                pixel_size = [
+                    (scale1[axes.index('x')] / size_xyzct[0], units[axes.index('x')]),
+                    (scale1[axes.index('y')] / size_xyzct[1], units[axes.index('y')]),
+                    (scale1[axes.index('z')] / size_xyzct[2], units[axes.index('z')])]
+            else:
+                pixel_size = [(1, ''), (1, ''), (1, '')]
         for data in self.metadata.values():
             if isinstance(data, dict):
                 for channel in data.get('channels', []):

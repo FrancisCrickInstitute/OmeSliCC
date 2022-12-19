@@ -60,7 +60,12 @@ class TiffSource(OmeSource):
         self.pages = get_tiff_pages(tiff, only_tiled=True)
         if len(self.pages) == 0:
             self.pages = get_tiff_pages(tiff, only_tiled=False)
-        for page in self.pages:
+        for page0 in self.pages:
+            npages = len(page0)
+            if isinstance(page0, list):
+                page = page0[0]
+            else:
+                page = page0
             shape = page.shape
             if isinstance(page, TiffPage):
                 width = page.imagewidth
@@ -75,6 +80,10 @@ class TiffSource(OmeSource):
             nchannels = 1
             if len(shape) > 2:
                 nchannels = shape[2]
+            if tiff.is_ome and npages == 3:
+                nchannels *= npages
+            else:
+                depth *= npages
             self.sizes.append((width, height))
             self.sizes_xyzct.append((width, height, depth, nchannels, 1))
             self.pixel_types.append(page.dtype)
@@ -89,6 +98,8 @@ class TiffSource(OmeSource):
         channel_info = []
         mag = 0
         page = self.pages[0]
+        if isinstance(page, list):
+            page = page[0]
         size_xyzct = self.sizes_xyzct[0]
         # from OME metadata
         if page.is_ome:
@@ -148,7 +159,14 @@ class TiffSource(OmeSource):
     def decompress(self):
         self.clear_decompress()
         for page in self.pages:
-            self.arrays.append(self._decompress_page(page))
+            if isinstance(page, list):
+                array = []
+                for page1 in page:
+                    array.append(self._decompress_page(page1))
+                array = np.asarray(array)
+            else:
+                array = self._decompress_page(page)
+            self.arrays.append(array)
         self.decompressed = True
 
     def clear_decompress(self):
@@ -196,7 +214,11 @@ class TiffSource(OmeSource):
 
         dw = x1 - x0
         dh = y1 - y0
-        page = self.pages[level]
+        page0 = self.pages[level]
+        if isinstance(page0, list):
+            page = page0[0]
+        else:
+            page = page0
         nchannels = self.sizes_xyzct[level][3]
 
         tile_height, tile_width = page.chunks[0], page.chunks[1]
@@ -205,27 +227,34 @@ class TiffSource(OmeSource):
         w = (tile_x1 - tile_x0) * tile_width
         h = (tile_y1 - tile_y0) * tile_height
         tile_per_line = int(np.ceil(page.imagewidth / tile_width))
-        dataoffsets = []
-        databytecounts = []
-        tile_locations = []
-        for y in range(tile_y0, tile_y1):
-            for x in range(tile_x0, tile_x1):
-                index = int(y * tile_per_line + x)
-                if index < len(page.databytecounts):
-                    offset = page.dataoffsets[index]
-                    count = page.databytecounts[index]
-                    if count > 0:
-                        dataoffsets.append(offset)
-                        databytecounts.append(count)
-                        target_y = (y - tile_y0) * tile_height
-                        target_x = (x - tile_x0) * tile_width
-                        tile_locations.append(
-                            (slice(target_y, target_y + tile_height),
-                             slice(target_x, target_x + tile_width)))
 
         out = np.zeros((h, w, nchannels), page.dtype)
 
-        self._decode(page, dataoffsets, databytecounts, tile_locations, out)
+        dataoffsets = []
+        databytecounts = []
+        tile_locations = []
+        for c, page in enumerate(page0):
+            for y in range(tile_y0, tile_y1):
+                for x in range(tile_x0, tile_x1):
+                    index = int(y * tile_per_line + x)
+                    if index < len(page.databytecounts):
+                        offset = page.dataoffsets[index]
+                        count = page.databytecounts[index]
+                        if count > 0:
+                            dataoffsets.append(offset)
+                            databytecounts.append(count)
+                            target_y = (y - tile_y0) * tile_height
+                            target_x = (x - tile_x0) * tile_width
+                            if len(page0) > 1:
+                                tile_location = (slice(target_y, target_y + tile_height),
+                                                 slice(target_x, target_x + tile_width),
+                                                 slice(c, c + 1))
+                            else:
+                                tile_location = (slice(target_y, target_y + tile_height),
+                                                 slice(target_x, target_x + tile_width))
+                            tile_locations.append(tile_location)
+
+            self._decode(page, dataoffsets, databytecounts, tile_locations, out)
 
         target_y0 = y0 - tile_y0 * tile_height
         target_x0 = x0 - tile_x0 * tile_width
