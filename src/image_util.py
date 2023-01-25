@@ -104,22 +104,6 @@ def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
     return new_image
 
 
-def load_tiff(filename: str, only_tiled=True) -> tuple:
-    tiff = TiffFile(filename)
-    pages = get_tiff_pages(tiff, only_tiled=only_tiled)
-    page0 = pages[0]
-    image = page0.asarray()
-    if tiff.ome_metadata:
-        metadata = tifffile.xml2dict(tiff.ome_metadata)
-    elif tiff.metaseries_metadata:
-        metadata = tiff.metaseries_metadata
-    elif tiff.imagej_metadata:
-        metadata = tiff.imagej_metadata
-    else:
-        metadata = tags_to_dict(page0.tags)
-    return image, metadata
-
-
 def get_tiff_pages(tiff: TiffFile, only_tiled: bool = False) -> list:
     pages = []
     found = False

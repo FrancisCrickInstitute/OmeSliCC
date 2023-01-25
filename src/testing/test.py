@@ -3,16 +3,12 @@ import os
 import numpy as np
 import random
 import zarr
-from datetime import datetime
 from imageio import imread
-from ome_types.model.pixels import DimensionOrder
 from tqdm import tqdm
 from timeit import default_timer as timer
 
 from src.TiffSource import TiffSource
-from src.conversion import save_tiff
-from src.image_util import show_image, tiff_info, compare_image_dist, load_tiff, calc_pyramid, calc_fraction_used
-from src.ome import create_ome_metadata
+from src.image_util import show_image, tiff_info, compare_image_dist, calc_fraction_used
 
 
 def test_load(filename: str, magnification: float, position: tuple = None, size: tuple = None) -> np.ndarray:

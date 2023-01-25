@@ -77,8 +77,10 @@ class ZarrSource(OmeSource):
         self.channel_info = channel_info
         self.mag0 = 0
 
-    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         # move channels to back (tczyx -> yxc)
+        if x1 < 0 or y1 < 0:
+            x1, y1 = self.sizes[level]
         out = self.levels[level][0, :, 0, y0:y1, x0:x1]
         if len(out.shape) > 2:
             return np.moveaxis(out, 0, -1)  # move axis 0 (channel) to end

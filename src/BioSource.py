@@ -59,7 +59,9 @@ class BioSource(OmeSource):
         self.channel_info = channel_info
         self.mag0 = mag
 
-    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
+        if x1 < 0 or y1 < 0:
+            x1, y1 = self.sizes[level]
         xywh = (x0, y0, x1 - x0, y1 - y0)
         image = self.reader.read(series=self.indexes[level], XYWH=xywh, rescale=False)      # don't 'rescale' to 0-1!
         return image

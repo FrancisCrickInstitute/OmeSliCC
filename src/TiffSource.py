@@ -2,6 +2,7 @@
 
 
 import os
+from enum import Enum
 import numpy as np
 import tifffile
 from ome_types import OME
@@ -121,6 +122,13 @@ class TiffSource(OmeSource):
         # from page TAGS
         metadata = tags_to_dict(page.tags)
         if len(pixel_size) < 2:
+            if pixel_size_unit == '':
+                pixel_size_unit = metadata.get('ResolutionUnit', '')
+                if isinstance(pixel_size_unit, Enum):
+                    pixel_size_unit = pixel_size_unit.name
+                pixel_size_unit = pixel_size_unit.lower()
+                if pixel_size_unit == 'none':
+                    pixel_size_unit = ''
             res0 = metadata.get('XResolution', 1)
             if isinstance(res0, tuple):
                 res0 = res0[0] / res0[1]
@@ -206,8 +214,11 @@ class TiffSource(OmeSource):
         #self.decode(page, page.dataoffsets, page.databytecounts, tile_width, tile_height, nx, array)  # numpy is not thread-safe!
         return array
 
-    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         # based on tiffile asarray
+        if x1 < 0 or y1 < 0:
+            x1, y1 = self.sizes[level]
+
         if self.decompressed:
             array = self.arrays[level]
             return array[y0:y1, x0:x1]
@@ -215,10 +226,7 @@ class TiffSource(OmeSource):
         dw = x1 - x0
         dh = y1 - y0
         page0 = self.pages[level]
-        if isinstance(page0, list):
-            page = page0[0]
-        else:
-            page = page0
+        page = page0[0] if isinstance(page0, list) else page0
         nchannels = self.sizes_xyzct[level][3]
 
         tile_height, tile_width = page.chunks[0], page.chunks[1]
@@ -245,28 +253,25 @@ class TiffSource(OmeSource):
                             databytecounts.append(count)
                             target_y = (y - tile_y0) * tile_height
                             target_x = (x - tile_x0) * tile_width
-                            if len(page0) > 1:
-                                tile_location = (slice(target_y, target_y + tile_height),
-                                                 slice(target_x, target_x + tile_width),
-                                                 slice(c, c + 1))
-                            else:
-                                tile_location = (slice(target_y, target_y + tile_height),
-                                                 slice(target_x, target_x + tile_width))
-                            tile_locations.append(tile_location)
+                            tile_locations.append((target_y, target_x, c))
 
             self._decode(page, dataoffsets, databytecounts, tile_locations, out)
 
         target_y0 = y0 - tile_y0 * tile_height
         target_x0 = x0 - tile_x0 * tile_width
-        image = out[target_y0: target_y0 + dh, target_x0: target_x0 + dw, :]
-        return image
+        image = out[target_y0: target_y0 + dh, target_x0: target_x0 + dw]
+        if nchannels == 1:
+            return image[..., 0]
+        else:
+            return image
 
     def _decode(self, page: TiffPage, dataoffsets: list, databytecounts: list, tile_locations: list, out: np.ndarray):
         def process_decoded(decoded, index, out=out):
             segment, indices, shape = decoded
-            tile_location = tile_locations[index]
+            y, x, c = tile_locations[index]
+            _, h, w, nc = shape
             # Note: numpy is not thread-safe
-            out[tile_location] = segment[0]
+            out[y: y + h, x: x + w, c: c + nc] = segment[0]
 
         for _ in self._segments(
                 func=process_decoded,

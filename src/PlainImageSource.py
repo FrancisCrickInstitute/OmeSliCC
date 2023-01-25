@@ -70,7 +70,10 @@ class PlainImageSource(OmeSource):
         self.arrays = []
         self.loaded = False
 
-    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
+        if x1 < 0 or y1 < 0:
+            x1, y1 = self.sizes[level]
+
         if self.loaded:
             array = self.arrays[level]
         else:

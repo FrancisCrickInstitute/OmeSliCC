@@ -188,7 +188,7 @@ class OmeSource:
     def _find_metadata(self):
         raise NotImplementedError('Implement method in subclass')
 
-    def _asarray_level(self, level: int, x0: float, y0: float, x1: float, y1: float) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         raise NotImplementedError('Implement method in subclass')
 
 
