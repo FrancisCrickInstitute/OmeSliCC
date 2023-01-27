@@ -11,10 +11,10 @@ from tqdm import tqdm
 from types import TracebackType
 
 from src.conversion import save_tiff
-from src.image_util import calc_pyramid, get_image_size_info
+from src.image_util import calc_pyramid, get_image_size_info, get_resolution_from_pixel_size
 from src.ome import create_ome_metadata_from_omero
 from src.omero_credentials import decrypt_credentials
-from src.util import ensure_list
+from src.util import ensure_list, get_default
 
 
 class Omero:
@@ -174,10 +174,16 @@ class Omero:
             pyramid_sizes_add = calc_pyramid((w, h), npyramid_add, pyramid_downsample)
             metadata = create_ome_metadata_from_omero(image_object, filetitle, pyramid_sizes_add)
             xml_metadata = metadata.to_xml()
+            pmetadata = metadata.images[0].pixels
+            pixel_size = [(get_default(pmetadata.physical_size_x, 0), get_default(pmetadata.physical_size_x_unit.value, '')),
+                          (get_default(pmetadata.physical_size_y, 0), get_default(pmetadata.physical_size_y_unit.value, '')),
+                          (get_default(pmetadata.physical_size_z, 0), get_default(pmetadata.physical_size_z_unit.value, ''))]
+            resolution, resolution_unit = get_resolution_from_pixel_size(pixel_size)
 
             image = self._get_omero_image(image_object)
             if image is not None:
                 save_tiff(output_filename, image, xml_metadata=xml_metadata,
+                          resolution=resolution, resolution_unit=resolution_unit,
                           tile_size=output.get('tile_size'),
                           compression=output.get('compression'),
                           pyramid_sizes_add=pyramid_sizes_add)

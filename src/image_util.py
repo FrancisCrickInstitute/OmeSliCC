@@ -130,6 +130,35 @@ def get_tiff_pages(tiff: TiffFile, only_tiled: bool = False) -> list:
     return pages
 
 
+def get_resolution_from_pixel_size(pixel_size: list, scale_factor: float = 1) -> tuple:
+    conversions = {
+        'cm': (1, 'centimeter'),
+        'mm': (1, 'millimeter'),
+        'µm': (1, 'micrometer'),
+        'nm': (1000, 'micrometer'),
+        'nanometer': (1000, 'micrometer'),
+    }
+    resolutions = None
+    resolutions_unit = None
+    if len(pixel_size) > 0:
+        resolutions = []
+        units = []
+        for size, unit in pixel_size:
+            if size != 0:
+                resolution = 1 / (size * scale_factor)
+                resolutions.append(resolution)
+                units.append(unit)
+        if len(units) > 0:
+            resolutions_unit = units[0]
+            if resolutions_unit in conversions:
+                conversion = conversions[resolutions_unit]
+                resolutions = list(np.multiply(resolutions, conversion[0]))
+                resolutions_unit = conversion[1]
+    if len(resolutions) == 0:
+        resolutions = None
+    return resolutions, resolutions_unit
+
+
 def tiff_info(filename: str) -> str:
     s = ''
     nom_size = 0
@@ -233,3 +262,10 @@ def calc_fraction_used(image: np.ndarray, threshold: float = 0.1) -> float:
                 good += 1
     fraction = good / total
     return fraction
+
+
+def reverse_color_axis(image, reverse=True):
+    if reverse and len(image.shape) > 2 and image.shape[-1] > 1:
+        return np.moveaxis(image, -1, 0)
+    else:
+        return image

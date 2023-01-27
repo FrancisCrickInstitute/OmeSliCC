@@ -182,8 +182,8 @@ class OmeSource:
     def get_metadata(self) -> dict:
         return self.metadata
 
-    def get_xml_metadata(self, output_filename: str, pyramid_sizes_add: list = None) -> str:
-        return create_ome_metadata(self, output_filename, pyramid_sizes_add=pyramid_sizes_add).to_xml()
+    def get_xml_metadata(self, output_filename: str, combine_channels: bool = False, pyramid_sizes_add: list = None) -> str:
+        return create_ome_metadata(self, output_filename, combine_channels=combine_channels, pyramid_sizes_add=pyramid_sizes_add).to_xml()
 
     def _find_metadata(self):
         raise NotImplementedError('Implement method in subclass')

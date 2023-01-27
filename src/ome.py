@@ -16,16 +16,23 @@ from ome_types.model.tiff_data import UUID
 from src.util import get_filetitle, ensure_list
 
 
-def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_add: list = None) -> OME:
+def create_ome_metadata(source: OmeSource, output_filename: str, combine_channels: bool = False, pyramid_sizes_add: list = None) -> OME:
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
     ome = OME(uuid=uuid)
     is_ome = (source.ome_metadata is not None and source.ome_metadata != OME())
 
-    tiff_datas = [TiffData(uuid=UUID(file_name=file_name, value=uuid))]
+    if combine_channels:
+        nplanes = 1
+    else:
+        nplanes = len(source.get_channel_info())
+    tiff_datas = [TiffData(uuid=UUID(file_name=file_name, value=uuid), plane_count=nplanes)]
 
-    for i, imetadata in enumerate(ensure_list(source.get_metadata().get('Image', {}))):
+    # normally only use first image
+    images = ensure_list(source.get_metadata().get('Image', {}))[0:1]
+
+    for i, imetadata in enumerate(images):
         description = ''
         acquisition_date = None
         ome_channels = []
@@ -45,6 +52,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_a
                                   pmetadata.get('PhysicalSizeYUnit', ''),
                                   pmetadata.get('PhysicalSizeZUnit', '')]
             for c, channel in enumerate(ensure_list(pmetadata.get('Channel', {}))):
+                # * ome-types feature: set empty color (otherwise default color=white)
                 ome_channels.append(Channel(
                     id=f'Channel:{c}',
                     name=channel.get('Name'),
@@ -130,7 +138,9 @@ def create_ome_metadata(source: OmeSource, output_filename: str, pyramid_sizes_a
         ome.structured_annotations.append(annotation)
 
     if is_ome:
-        ome.structured_annotations = source.ome_metadata.structured_annotations
+        for annotation in source.ome_metadata.structured_annotations:
+            if 'resolution' not in annotation.id.lower():
+                ome.structured_annotations.append(annotation)
 
     return ome
 

@@ -101,15 +101,14 @@ class TiffSource(OmeSource):
         page = self.pages[0]
         if isinstance(page, list):
             page = page[0]
-        size_xyzct = self.sizes_xyzct[0]
         # from OME metadata
         if page.is_ome:
             metadata = self.metadata
             for imetadata in ensure_list(metadata.get('Image', {})):
                 pmetadata = imetadata.get('Pixels', {})
-                pixel_size = [(pmetadata.get('PhysicalSizeX', 0) / size_xyzct[0], pmetadata.get('PhysicalSizeXUnit', 'µm')),
-                              (pmetadata.get('PhysicalSizeY', 0) / size_xyzct[1], pmetadata.get('PhysicalSizeYUnit', 'µm')),
-                              (pmetadata.get('PhysicalSizeZ', 0) / size_xyzct[2], pmetadata.get('PhysicalSizeZUnit', 'µm'))]
+                pixel_size = [(pmetadata.get('PhysicalSizeX', 0), pmetadata.get('PhysicalSizeXUnit', 'µm')),
+                              (pmetadata.get('PhysicalSizeY', 0), pmetadata.get('PhysicalSizeYUnit', 'µm')),
+                              (pmetadata.get('PhysicalSizeZ', 0), pmetadata.get('PhysicalSizeZUnit', 'µm'))]
                 for channel in ensure_list(pmetadata.get('Channel', {})):
                     channel_info.append((channel.get('Name', ''), channel.get('SamplesPerPixel', 1)))
             mag = metadata.get('Instrument', {}).get('Objective', {}).get('NominalMagnification', 0)

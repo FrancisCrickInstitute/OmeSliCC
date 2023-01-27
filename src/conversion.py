@@ -18,7 +18,8 @@ from src.OmeSource import OmeSource
 from src.PlainImageSource import PlainImageSource
 from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
-from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_signed_image
+from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_signed_image, reverse_color_axis, \
+    get_resolution_from_pixel_size
 from src.util import get_filetitle
 
 register_codec(Jpeg2k)
@@ -97,10 +98,8 @@ def convert(filename: str, params: dict):
     source = load_source(filename, params)
     if 'zar' in output_format:
         convert_to_zarr(source, output_filename, output_params)
-    elif 'ome' in output_format:
-        convert_to_tiff(source, output_filename, output_params, ome=True)
     else:
-        convert_to_tiff(source, output_filename, output_params)
+        convert_to_tiff(source, output_filename, output_params, ome=('ome' in output_format))
 
 
 def convert_to_zarr0(input_filename: str, output_folder: str, patch_size: tuple = (256, 256)):
@@ -173,8 +172,9 @@ def convert_to_zarr(source: OmeSource, output_filename: str, output_params: dict
 def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict, ome: bool = False):
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
-    channel_operation = output_params.get('channel_operation')
+    split_channel_files = output_params.get('split_channel_files')
     output_format = output_params['format']
+    combine_channels = output_params.get('combine_channels', False)
     overwrite = output_params.get('overwrite', True)
 
     npyramid_add = output_params.get('npyramid_add', 0)
@@ -187,60 +187,111 @@ def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict
     output_filename0 = output_filename.replace(output_format, '').rstrip('.') + f'_channel0.{output_format}'
     if overwrite or (not os.path.exists(output_filename) and not os.path.exists(output_filename0)):
         image = source.clone_empty()
+        # get source image chunks
         chunk_size = (10240, 10240)
         for x0, y0, x1, y1, chunk in source.produce_chunks(chunk_size):
             image[y0:y1, x0:x1] = chunk
 
         if ome:
             metadata = None
-            xml_metadata = source.get_xml_metadata(output_filename, pyramid_sizes_add=pyramid_sizes_add)
+            xml_metadata = source.get_xml_metadata(output_filename, combine_channels=combine_channels, pyramid_sizes_add=pyramid_sizes_add)
+            # TODO: fix hack:
+            xml_metadata = xml_metadata.replace('Color="-1"', '')
         else:
             metadata = source.get_metadata()
             xml_metadata = None
+        resolution, resolution_unit = get_resolution_from_pixel_size(source.pixel_size, source.best_factor)
 
         nchannels = image.shape[2] if len(image.shape) > 2 else 1
-        if channel_operation == 'split' and nchannels > 1:
+        if split_channel_files and nchannels > 1:
             for channeli in range(image.shape[2]):
                 image0 = image[..., channeli]
                 output_filename0 = output_filename.replace(output_format, '').rstrip('.') + f'_channel{channeli}.{output_format}'
-                save_tiff(output_filename0, image0, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size,
-                          compression=compression, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
+                save_tiff(output_filename0, image0, metadata=metadata, xml_metadata=xml_metadata, resolution=resolution,
+                          resolution_unit=resolution_unit, tile_size=tile_size, compression=compression,
+                          combine_channels=combine_channels, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
         else:
-            save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, tile_size=tile_size,
-                      compression=compression, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
+            save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata, resolution=resolution,
+                      resolution_unit=resolution_unit, tile_size=tile_size, compression=compression,
+                      combine_channels=combine_channels, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
 
 
-def save_tiff(filename: str, data: np.ndarray, metadata: dict = None, xml_metadata: str = None,
-              tile_size: tuple = None, compression: [] = None,
-              npyramid_add: int = 0, pyramid_downsample: float = 4.0, pyramid_sizes_add: list = None):
+def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metadata: str = None,
+              resolution: tuple = None, resolution_unit: str = None, tile_size: tuple = None, compression: [] = None,
+              combine_channels=True, npyramid_add: int = 0, pyramid_downsample: float = 4.0, pyramid_sizes_add: list = None):
     # Use tiled writing (less memory needed but maybe slower):
     # writer.write(tile_iterator, shape=shape_size_at_desired_mag_pyramid_scale, tile=tile_size)
 
-    if len(data.shape) > 2 and data.shape[-1] not in [1, 3]:
-        raise ValueError('Tiff output: Only 1 or 3 channels supported')
+    # image = ensure_signed_image(image)   # * Compression JPEGXR_NDPI does not support signed types
+
+    width, height = image.shape[1], image.shape[0]
+    nchannels = image.shape[2] if len(image.shape) > 2 else 1
+    if combine_channels:
+        nchannels = 1
+    if resolution is not None:
+        resolution = tuple(resolution[0:2])
+    if pyramid_sizes_add is not None:
+        npyramid_add = len(pyramid_sizes_add)
+    xml_metadata_bytes = xml_metadata.encode() if xml_metadata is not None else None
+    bigtiff = (image.size * image.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)
+
+    with TiffWriter(filename, bigtiff=bigtiff) as writer:
+        for c in range(nchannels):
+            if nchannels > 1:
+                image1 = image[..., c]
+            else:
+                image1 = image
+            writer.write(image1, subifds=npyramid_add, resolution=resolution, resolutionunit=resolution_unit,
+                         tile=tile_size, compression=compression, metadata=metadata, description=xml_metadata_bytes)
+            metadata = None
+            xml_metadata_bytes = None
+            scale = 1
+            for i in range(npyramid_add):
+                if pyramid_sizes_add is not None:
+                    new_width, new_height = pyramid_sizes_add[i]
+                else:
+                    scale /= pyramid_downsample
+                    if resolution is not None:
+                        resolution = tuple(np.divide(resolution, pyramid_downsample))
+                    new_width, new_height = np.int0(np.round(np.multiply([width, height], scale)))
+                image1 = image_resize(image1, (new_width, new_height))
+                writer.write(image1, subfiletype=1, resolution=resolution, resolutionunit=resolution_unit,
+                             tile=tile_size, compression=compression)
+
+
+def save_tiff_test(filename: str, image: np.ndarray, metadata: dict = None, xml_metadata: str = None,
+              resolution: tuple = None, resolution_unit: str = None, tile_size: tuple = None, compression: [] = None,
+              combine_channels=True, npyramid_add: int = 0, pyramid_downsample: float = 4.0, pyramid_sizes_add: list = None):
+    # Use tiled writing (less memory needed but maybe slower):
+    # writer.write(tile_iterator, shape=shape_size_at_desired_mag_pyramid_scale, tile=tile_size)
 
     #data = ensure_signed_image(data)   # * Compression JPEGXR_NDPI does not support signed types
+
+    split_channels = not combine_channels
+    width, height = image.shape[1], image.shape[0]
+    scale = 1
+    if resolution is not None:
+        resolution = tuple(resolution[0:2])
+    if pyramid_sizes_add is not None:
+        npyramid_add = len(pyramid_sizes_add)
+
     if xml_metadata is not None:
         xml_metadata_bytes = xml_metadata.encode()
     else:
         xml_metadata_bytes = None
-    width, height = data.shape[1], data.shape[0]
-    bigtiff = (data.size * data.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)
+    bigtiff = (image.size * image.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)
     with TiffWriter(filename, bigtiff=bigtiff) as writer:
-        if pyramid_sizes_add is not None:
-            npyramid_add = len(pyramid_sizes_add)
-
-        writer.write(data, subifds=npyramid_add,
+        writer.write(reverse_color_axis(image, reverse=split_channels), subifds=npyramid_add, resolution=resolution, resolutionunit=resolution_unit,
                      tile=tile_size, compression=compression, metadata=metadata, description=xml_metadata_bytes)
 
-        scale = 1
-        resized_image = data
         for i in range(npyramid_add):
             if pyramid_sizes_add is not None:
                 new_width, new_height = pyramid_sizes_add[i]
             else:
                 scale /= pyramid_downsample
-                new_width, new_height = np.int0(np.round(np.array([width, height]) * scale))
-            resized_image = image_resize(resized_image, (new_width, new_height))
-            writer.write(resized_image, subfiletype=1,
+                if resolution is not None:
+                    resolution = tuple(np.divide(resolution, pyramid_downsample))
+                new_width, new_height = np.int0(np.round(np.multiply([width, height], scale)))
+            image = image_resize(image, (new_width, new_height))
+            writer.write(reverse_color_axis(image, reverse=split_channels), subfiletype=1, resolution=resolution, resolutionunit=resolution_unit,
                          tile=tile_size, compression=compression)
