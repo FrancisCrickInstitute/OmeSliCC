@@ -17,5 +17,6 @@ PyYAML
 Pillow
 imageio
 python-bioformats
+xmltodict
 matplotlib
 validators

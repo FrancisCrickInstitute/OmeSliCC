@@ -29,3 +29,4 @@ dependencies:
  - validators
  - pip:
    - opencv-python
+   - xmltodict

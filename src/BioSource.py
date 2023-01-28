@@ -1,8 +1,8 @@
 import numpy as np
 import bioformats
 import javabridge
+import xmltodict
 from bioformats.formatreader import ImageReader
-import tifffile
 from ome_types import OME
 
 from src.OmeSource import OmeSource
@@ -27,7 +27,8 @@ class BioSource(OmeSource):
         xml_metadata = bioformats.get_omexml_metadata(filename)
         self.bio_ome_metadata = bioformats.OMEXML(xml_metadata)
         self.ome_metadata = OME.from_xml(xml_metadata)
-        self.metadata = tifffile.xml2dict(xml_metadata)
+        #self.metadata = tifffile.xml2dict(xml_metadata)
+        self.metadata = xmltodict.parse(xml_metadata)
         if 'OME' in self.metadata:
             self.metadata = self.metadata['OME']
         self.reader = ImageReader(filename)

@@ -4,7 +4,7 @@
 import os
 from enum import Enum
 import numpy as np
-import tifffile
+import xmltodict
 from ome_types import OME
 from tifffile import TiffFile, TiffPage
 from concurrent.futures import ThreadPoolExecutor
@@ -52,7 +52,8 @@ class TiffSource(OmeSource):
         if tiff.is_ome and tiff.ome_metadata is not None:
             xml_metadata = tiff.ome_metadata
             self.ome_metadata = OME.from_xml(xml_metadata)
-            self.metadata = tifffile.xml2dict(xml_metadata)
+            #self.metadata = tifffile.xml2dict(xml_metadata)
+            self.metadata = xmltodict.parse(xml_metadata)
             if 'OME' in self.metadata:
                 self.metadata = self.metadata['OME']
         elif tiff.is_imagej:
