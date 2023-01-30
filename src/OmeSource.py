@@ -117,6 +117,8 @@ class OmeSource:
                 xyzct[2] = n_same_size
             else:
                 xyzct[-1] = n_same_size
+        size = self.get_size()
+        xyzct[0:2] = size
         return tuple(xyzct)
 
     def get_size(self) -> tuple:
@@ -152,7 +154,6 @@ class OmeSource:
         h0 = y1 - y0
         factor = self.best_factor
         if factor != 1:
-            np.multiply([x1, y1], factor)
             ox0, oy0 = np.round(np.multiply([x0, y0], factor)).astype(int)
             ox1, oy1 = np.round(np.multiply([x1, y1], factor)).astype(int)
         else:

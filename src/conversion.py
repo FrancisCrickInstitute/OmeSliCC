@@ -206,7 +206,8 @@ def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict
 
             if ome:
                 metadata = None
-                xml_metadata = source.get_xml_metadata(output_filename, channel_output=channel_output, pyramid_sizes_add=pyramid_sizes_add)
+                xml_metadata = source.get_xml_metadata(output_filename1, channel_output=channel_output, pyramid_sizes_add=pyramid_sizes_add)
+                #print(xml_metadata)
             else:
                 metadata = source.get_metadata()
                 xml_metadata = None
@@ -226,8 +227,8 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     #data = ensure_signed_image(data)   # * Compression JPEGXR_NDPI does not support signed types
 
     nchannels = image.shape[2] if len(image.shape) > 2 else 1
-    split_channels = (nchannels > 1 and not combine_channels)
-    photometric = 'minisblack' if split_channels else None
+    split_channels = (nchannels > 1 and not combine_channels) or (nchannels not in [1, 3])
+    photometric = 'minisblack' if nchannels == 1 or split_channels else None
     width, height = image.shape[1], image.shape[0]
     scale = 1
     if resolution is not None:

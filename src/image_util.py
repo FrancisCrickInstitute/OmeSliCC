@@ -76,17 +76,12 @@ def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
 def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
     if not isinstance(image, np.ndarray):
         image = image.asarray()
-    if image.dtype.itemsize > 1:
-        if image.dtype == np.int16:
-            new_type = np.int8
-        else:
-            new_type = np.uint8
-        factor = 2 ** math.ceil(math.log2(image.max())) // 256
-        image = (image // factor).astype(new_type)
-    if image.dtype == np.int8:
-        image = image.astype(np.uint8)
-    target_size = np.clip(np.int0(np.round(target_size0)), 1, None)
-    new_image = cv.resize(image, tuple(target_size), interpolation=cv.INTER_AREA)
+    if image.dtype.kind == 'i':
+        # convert to unsigned type
+        nbytes = image.itemsize
+        image = image.astype(np.dtype(f'u{nbytes}')) + 2 ** (7 * nbytes)
+    target_size = tuple(np.clip(np.int0(np.round(target_size0)), 1, None))
+    new_image = cv.resize(image, target_size, interpolation=cv.INTER_AREA)
     return new_image
 
 

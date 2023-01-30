@@ -15,6 +15,8 @@ from ome_types.model.tiff_data import UUID
 import xmltodict
 
 from src.util import get_filetitle, ensure_list
+from version import __version__
+
 
 OME_URI = "http://www.openmicroscopy.org/Schemas/OME/2016-06"
 OME_XSI = "http://www.w3.org/2001/XMLSchema-instance"
@@ -25,97 +27,133 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
-    ome = {'@UUID': uuid, '@xmlns': OME_URI, '@xmlns:xsi': OME_XSI, '@xsi:schemaLocation': OME_SCHEMA_LOC, 'Image': []}
+    ome = {'@UUID': uuid, '@xmlns': OME_URI, '@xmlns:xsi': OME_XSI, '@xsi:schemaLocation': OME_SCHEMA_LOC,
+           '@Creator': f'OmeSliCC {__version__}'}
     source_metadata = source.get_metadata()
 
-    # only supporting single image
+    experimenter = source_metadata.get('Experimenter')
+    if experimenter is not None:
+        ome['Experimenter'] = experimenter
+        experimenter_id = experimenter.get('@ID')
+    else:
+        experimenter_id = None
+
+    mag = source.get_mag()
+    instrument = source_metadata.get('Instrument')
+    objective = instrument.get('Objective')
+    if mag != 0:
+        if instrument is None:
+            instrument = {'@ID': 'Instrument:0'}
+        if objective is None:
+            objective = {'@ID': 'Objective:0'}
+            instrument['Objective'] = objective
+        objective['@NominalMagnification'] = mag
+
+    if instrument is not None:
+        ome['Instrument'] = instrument
+
+    # currently only supporting single image
     nimages = 1
 
+    images = []
     for imagei in range(nimages):
         ome_channels = []
 
         imetadata = ensure_list(source_metadata.get('Image', {}))[imagei]
         pmetadata = imetadata.get('Pixels', {})
-        description = imetadata.get('Description', '')
-        if description != '':
-            description += ' '
+        description = imetadata.get('@Description', '')
 
         combine_channels = ('combine' in channel_output.lower())
+        split_channel_files = channel_output.isnumeric()
         channel_info = source.channel_info
-        nchannels = sum([info[1] for info in channel_info]) if not channel_output.isnumeric() else 1
-        if combine_channels and len(channel_info) > 1:
+        nchannels = sum([info[1] for info in channel_info]) if not split_channel_files else 1
+        if combine_channels and len(channel_info) == 3:
             channel_info = [(channel_info[0][0], nchannels)]
         elif not combine_channels and len(channel_info) < nchannels:
             channel_info = [(channel_info[0][0], 1) for _ in range(nchannels)]
-
         channels = ensure_list(pmetadata.get('Channel', {}))
-        for channeli, info in enumerate(channel_info):
-            if not channel_output.isnumeric() or channeli == int(channel_output):
-                channel = channels[channeli] if channeli < len(channels) else {}
+        channeli = 0
+        planes = ensure_list(pmetadata.get('Plane', {}))
+        ome_planes = []
+
+        for channeli0, info in enumerate(channel_info):
+            if not split_channel_files or channeli0 == int(channel_output):
+                channel = channels[channeli0] if channeli0 < len(channels) else {}
                 color = channel.get('Color')
-                channel['@ID'] = f'Channel:0:{len(ome_channels)}'
+                channel['@ID'] = f'Channel:{imagei}:{channeli}'
                 if info[0] != '':
                     channel['@Name'] = info[0]
-                channel['@SamplesPerPixel'] = info[1]
+                channel['@SamplesPerPixel'] = info[1] if not split_channel_files else 1
                 if color is not None:
                     channel['@Color'] = color
                 ome_channels.append(channel)
 
-        description += 'converted by OmeSliCC'
+                for plane in planes:
+                    ome_plane = plane.copy()
+                    plane_channel = plane.get('@TheC')
+                    if split_channel_files:
+                        if int(plane_channel) == int(channel_output):
+                            ome_plane['@TheC'] = channeli
+                            ome_planes.append(ome_plane)
+                    elif plane_channel is None or int(plane_channel) == channeli0:
+                        ome_planes.append(ome_plane)
 
-        xyzct = source.sizes_xyzct[0]
+                channeli += 1
+
+        xyzct = source.get_size_xyzct()
         pixel_size = source.pixel_size
+
         image = {
             '@ID': f'Image:{imagei}',
             '@Name': file_title,
-            'Pixels': {
-                '@ID': 'Pixels:0',
-                '@SizeX': xyzct[0],
-                '@SizeY': xyzct[1],
-                '@SizeZ': xyzct[2],
-                '@SizeC': nchannels,
-                '@SizeT': xyzct[4],
-                '@Type': str(source.get_pixel_type()),
-                '@DimensionOrder': 'XYZCT',
-                'Channel': ome_channels,
-                'TiffData': {'UUID': {'@FileName': file_name, '#text': uuid}},
-            },
         }
-        if len(pixel_size) > 0 and pixel_size[0][0] != 0:
-            image['Pixels']['@PhysicalSizeX'] = pixel_size[0][0]
-        if len(pixel_size) > 1 and pixel_size[1][0] != 0:
-            image['Pixels']['@PhysicalSizeY'] = pixel_size[1][0]
-        if len(pixel_size) > 2 and pixel_size[2][0] != 0:
-            image['Pixels']['@PhysicalSizeZ'] = pixel_size[2][0]
-        if len(pixel_size) > 0 and pixel_size[0][1] != '':
-            image['Pixels']['@PhysicalSizeXUnit'] = pixel_size[0][1]
-        if len(pixel_size) > 1 and pixel_size[1][1] != '':
-            image['Pixels']['@PhysicalSizeYUnit'] = pixel_size[1][1]
-        if len(pixel_size) > 2 and pixel_size[2][1] != '':
-            image['Pixels']['@PhysicalSizeZUnit'] = pixel_size[2][1]
 
-        if description != '':
-            image['Description'] = description
+        pixels = {
+            '@ID': f'Pixels:{imagei}',
+            '@SizeX': xyzct[0],
+            '@SizeY': xyzct[1],
+            '@SizeZ': xyzct[2],
+            '@SizeC': nchannels,
+            '@SizeT': xyzct[4],
+            '@Type': str(source.get_pixel_type()),
+            '@DimensionOrder': 'XYCZT',
+            'Channel': ome_channels,
+            'TiffData': {'UUID': {'@FileName': file_name, '#text': uuid}},
+        }
+        if len(ome_planes) > 0:
+            pixels['Plane'] = ome_planes
+
+        if len(pixel_size) > 0 and pixel_size[0][0] != 0:
+            pixels['@PhysicalSizeX'] = pixel_size[0][0]
+        if len(pixel_size) > 1 and pixel_size[1][0] != 0:
+            pixels['@PhysicalSizeY'] = pixel_size[1][0]
+        if len(pixel_size) > 2 and pixel_size[2][0] != 0:
+            pixels['@PhysicalSizeZ'] = pixel_size[2][0]
+        if len(pixel_size) > 0 and pixel_size[0][1] != '':
+            pixels['@PhysicalSizeXUnit'] = pixel_size[0][1]
+        if len(pixel_size) > 1 and pixel_size[1][1] != '':
+            pixels['@PhysicalSizeYUnit'] = pixel_size[1][1]
+        if len(pixel_size) > 2 and pixel_size[2][1] != '':
+            pixels['@PhysicalSizeZUnit'] = pixel_size[2][1]
+
         if 'AcquisitionDate' in imetadata:
             image['AcquisitionDate'] = imetadata['AcquisitionDate']
-
+        if description != '':
+            image['Description'] = description
+        # Set image refs
+        if experimenter_id is not None:
+            image['ExperimenterRef'] = {'@ID': experimenter_id}
+        if instrument is not None:
+            image['InstrumentRef'] = {'@ID': instrument['@ID']}
+        if objective is not None:
+            image['ObjectiveSettings'] = {'@ID': objective['@ID']}
+        # (end image refs)
         if 'StageLabel' in imetadata:
             image['StageLabel'] = imetadata['StageLabel']
-        if 'Plane' in pmetadata:
-            image['Pixels']['Plane'] = pmetadata['Plane']
-        ome['Image'].append(image)
+        image['Pixels'] = pixels
+        images.append(image)
 
-    instrument = None
-    mag = source.get_mag()
-    if 'Instrument' in source_metadata:
-        instrument = source_metadata['Instrument']
-    elif mag != 0:
-        instrument = {'@ID': 'Instrument:1', 'Objective': {'@ID': 'Objective:1', '@NominalMagnification': mag}}
-
-    if instrument is not None:
-        ome['Instrument'] = instrument
-        for image in ome['Image']:
-            image['InstrumentRef'] = {'@ID': instrument['@ID']}
+    ome['Image'] = images
 
     if pyramid_sizes_add is not None:
         key_value_map = {'M': [{'@K': i + 1, '#text': f'{pyramid_size[0]} {pyramid_size[1]}'}
