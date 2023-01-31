@@ -5,13 +5,12 @@ import os
 from enum import Enum
 import numpy as np
 import xmltodict
-from ome_types import OME
 from tifffile import TiffFile, TiffPage
 from concurrent.futures import ThreadPoolExecutor
 
 from src.OmeSource import OmeSource
 from src.image_util import get_tiff_pages
-from src.util import tags_to_dict, desc_to_dict, ensure_list
+from src.util import tags_to_dict, desc_to_dict
 
 
 class TiffSource(OmeSource):
@@ -51,16 +50,13 @@ class TiffSource(OmeSource):
         tiff = TiffFile(filename)
         if tiff.is_ome and tiff.ome_metadata is not None:
             xml_metadata = tiff.ome_metadata
-            self.ome_metadata = OME.from_xml(xml_metadata)
             self.metadata = xmltodict.parse(xml_metadata)
             if 'OME' in self.metadata:
                 self.metadata = self.metadata['OME']
         elif tiff.is_imagej:
             self.metadata = tiff.imagej_metadata
 
-        self.pages = get_tiff_pages(tiff, only_tiled=True)
-        if len(self.pages) == 0:
-            self.pages = get_tiff_pages(tiff, only_tiled=False)
+        self.pages = get_tiff_pages(tiff)
         for page0 in self.pages:
             npages = len(page0)
             if isinstance(page0, list):

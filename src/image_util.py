@@ -105,7 +105,7 @@ def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
     return new_image
 
 
-def get_tiff_pages(tiff: TiffFile, only_tiled: bool = False) -> list:
+def get_tiff_pages(tiff: TiffFile) -> list:
     pages = []
     found = False
     for serie in tiff.series:
@@ -115,19 +115,13 @@ def get_tiff_pages(tiff: TiffFile, only_tiled: bool = False) -> list:
             level_pages = []
             for page in level.pages:
                 found = True
-                if not only_tiled or \
-                        (isinstance(page, TiffPage) and page.is_tiled) or \
-                        (isinstance(page, TiffFrame) and page.tile is not None):
-                    level_pages.append(page)
+                level_pages.append(page)
             if len(level_pages) > 0:
                 pages.append(level_pages)
 
     if not found:
         for page in tiff.pages:
-            if not only_tiled or \
-                    (isinstance(page, TiffPage) and page.is_tiled) or \
-                    (isinstance(page, TiffFrame) and page.tile is not None):
-                pages.append(page)
+            pages.append(page)
     return pages
 
 

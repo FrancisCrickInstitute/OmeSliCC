@@ -3,10 +3,8 @@ import bioformats
 import javabridge
 import xmltodict
 from bioformats.formatreader import ImageReader
-from ome_types import OME
 
 from src.OmeSource import OmeSource
-from src.util import get_default
 
 
 class BioSource(OmeSource):
@@ -26,7 +24,6 @@ class BioSource(OmeSource):
 
         xml_metadata = bioformats.get_omexml_metadata(filename)
         self.bio_ome_metadata = bioformats.OMEXML(xml_metadata)
-        self.ome_metadata = OME.from_xml(xml_metadata)
         self.metadata = xmltodict.parse(xml_metadata)
         if 'OME' in self.metadata:
             self.metadata = self.metadata['OME']
