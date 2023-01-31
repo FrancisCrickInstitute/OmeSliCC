@@ -14,6 +14,7 @@ from ome_types.model.map import M
 from ome_types.model.tiff_data import UUID
 import xmltodict
 
+from src.image_util import ensure_signed_type
 from src.util import get_filetitle, ensure_list
 from version import __version__
 
@@ -40,7 +41,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
 
     mag = source.get_mag()
     instrument = source_metadata.get('Instrument')
-    objective = instrument.get('Objective')
+    objective = source_metadata.get('Instrument', {}).get('Objective')
     if mag != 0:
         if instrument is None:
             instrument = {'@ID': 'Instrument:0'}
@@ -63,13 +64,13 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
         pmetadata = imetadata.get('Pixels', {})
         description = imetadata.get('@Description', '')
 
-        combine_channels = ('combine' in channel_output.lower())
+        combine_rgb = ('combine' in channel_output.lower())
         split_channel_files = channel_output.isnumeric()
         channel_info = source.channel_info
         nchannels = sum([info[1] for info in channel_info]) if not split_channel_files else 1
-        if combine_channels and len(channel_info) == 3:
+        if combine_rgb and len(channel_info) == 3:
             channel_info = [(channel_info[0][0], nchannels)]
-        elif not combine_channels and len(channel_info) < nchannels:
+        elif not combine_rgb and len(channel_info) < nchannels:
             channel_info = [(channel_info[0][0], 1) for _ in range(nchannels)]
         channels = ensure_list(pmetadata.get('Channel', {}))
         channeli = 0
@@ -115,8 +116,8 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
             '@SizeZ': xyzct[2],
             '@SizeC': nchannels,
             '@SizeT': xyzct[4],
-            '@Type': str(source.get_pixel_type()),
-            '@DimensionOrder': 'XYCZT',
+            '@Type': str(ensure_signed_type(source.get_pixel_type())),
+            '@DimensionOrder': 'XYZCT',
             'Channel': ome_channels,
             'TiffData': {'UUID': {'@FileName': file_name, '#text': uuid}},
         }
@@ -172,138 +173,6 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
             ome['StructuredAnnotations'].append(annotation)
 
     return xmltodict.unparse({'OME': ome}, short_empty_elements=True, pretty=True)
-
-
-def create_ome_metadata_ome_types(source: OmeSource, output_filename: str, channel_output: str = '', pyramid_sizes_add: list = None) -> str:
-    file_name = os.path.basename(output_filename)
-    file_title = get_filetitle(file_name)
-    uuid = f'urn:uuid:{uuid4()}'
-    ome = OME(uuid=uuid)
-    source_metadata = source.get_metadata()
-    rgb_colors = [(0xFF, 0, 0), (0, 0xFF, 0), (0, 0, 0xFF)]
-
-    tiff_datas = [TiffData(uuid=UUID(file_name=file_name, value=uuid))]
-
-    # only supporting single image
-    nimages = 1
-
-    for imagei in range(nimages):
-        ome_channels = []
-
-        imetadata = ensure_list(source_metadata.get('Image', {}))[imagei]
-        pmetadata = imetadata.get('Pixels', {})
-        acquisition_date = imetadata.get('AcquisitionDate')
-        description = imetadata.get('Description', '')
-        if description != '':
-            description += ' '
-
-        combine_channels = ('combine' in channel_output.lower())
-        channel_info = source.channel_info
-        nchannels = sum([info[1] for info in channel_info]) if not channel_output.isnumeric() else 1
-        if combine_channels and len(channel_info) > 1:
-            channel_info = [(channel_info[0][0], nchannels)]
-        elif not combine_channels and len(channel_info) < nchannels:
-            channel_info = [(channel_info[0][0], 1) for _ in range(nchannels)]
-        is_rgb = (len(channel_info) == 3 and not channel_output.isnumeric())
-
-        channels = ensure_list(pmetadata.get('Channel', {}))
-        for channeli, info in enumerate(channel_info):
-            if not channel_output.isnumeric() or channeli == int(channel_output):
-                channel = channels[channeli] if channeli < len(channels) else {}
-                color = channel.get('Color', -1)
-                if color == -1 and is_rgb:
-                    color = rgb_colors[channeli]
-                ome_channels.append(Channel(
-                    id=f'Channel:{len(ome_channels)}',
-                    name=info[0],
-                    samples_per_pixel=info[1],
-                    fluor=channel.get('Fluor'),
-                    color=color,
-                    light_path=channel.get('LightPath'),
-                    illumination_type=channel.get('IlluminationType'),
-                    detector_settings=channel.get('DetectorSettings'),
-                    acquisition_mode=channel.get('AcquisitionMode'),
-                    filter_set_ref=channel.get('FilterSetRef'),
-                ))
-
-        description += 'converted by OmeSliCC'
-
-        xyzct = source.sizes_xyzct[0]
-        pixel_size = source.pixel_size
-        image = Image(
-            id=f'Image:{imagei}',
-            name=file_title,
-            pixels=Pixels(
-                id='Pixels:0',
-                size_x=xyzct[0],
-                size_y=xyzct[1],
-                size_z=xyzct[2],
-                size_c=nchannels,
-                size_t=xyzct[4],
-                type=str(source.get_pixel_type()),
-                dimension_order='XYZCT',
-                channels=ome_channels,
-                tiff_data_blocks=tiff_datas
-            ),
-        )
-        if len(pixel_size) > 0 and pixel_size[0][0] != 0:
-            image.pixels.physical_size_x = pixel_size[0][0]
-        if len(pixel_size) > 1 and pixel_size[1][0] != 0:
-            image.pixels.physical_size_y = pixel_size[1][0]
-        if len(pixel_size) > 2 and pixel_size[2][0] != 0:
-            image.pixels.physical_size_z = pixel_size[2][0]
-        if len(pixel_size) > 0 and pixel_size[0][1] != '':
-            image.pixels.physical_size_x_unit = pixel_size[0][1]
-        if len(pixel_size) > 1 and pixel_size[1][1] != '':
-            image.pixels.physical_size_y_unit = pixel_size[1][1]
-        if len(pixel_size) > 2 and pixel_size[2][1] != '':
-            image.pixels.physical_size_z_unit = pixel_size[2][1]
-
-        if description != '':
-            image.description = description
-        if acquisition_date is not None:
-            image.acquisition_date = acquisition_date
-
-        #image.stage_label = imetadata.get('StageLabel')
-        #image.pixels.planes = ensure_list(pmetadata.get('Plane'))
-        # copy dict unsupported - work-around: manually create or copy formatted ome values
-        if source.ome_metadata is not None and source.ome_metadata != OME():
-            imeta = source.ome_metadata.images[imagei]
-            image.stage_label = imeta.stage_label
-            image.pixels.planes = imeta.pixels.planes
-        ome.images.append(image)
-
-    instrument = None
-    mag = source.get_mag()
-    ome.instruments = ensure_list(source_metadata.get('Instrument', []))
-    if len(ome.instruments) > 0:
-        instrument = ome.instruments[0]
-    if instrument is None and mag != 0:
-        instrument = Instrument(objectives=[Objective()])
-        instrument.objectives[0].nominal_magnification = mag
-        ome.instruments.append(instrument)
-
-    if instrument is not None:
-        for image in ome.images:
-            image.instrument_ref = InstrumentRef(id=instrument.id)
-
-    if pyramid_sizes_add is not None:
-        key_value_map = Map()
-        for i, pyramid_size in enumerate(pyramid_sizes_add):
-            key_value_map.m.append(M(k=(i + 1), value=' '.join(map(str, pyramid_size))))
-        annotation = MapAnnotation(value=key_value_map,
-                                   namespace='openmicroscopy.org/PyramidResolution',
-                                   id='Annotation:Resolution:0')
-        ome.structured_annotations.append(annotation)
-
-    #for annotation in ensure_list(source_metadata.get('StructuredAnnotations', []):
-    # copy dict unsupported - work-around: manually create or copy formatted ome values
-    if source.ome_metadata is not None and source.ome_metadata != OME():
-        for annotation in source.ome_metadata.structured_annotations:
-            if 'resolution' not in annotation.id.lower():
-                ome.structured_annotations.append(annotation)
-
-    return ome.to_xml()
 
 
 def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper, filetitle: str,

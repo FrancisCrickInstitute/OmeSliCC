@@ -26,12 +26,21 @@ def show_image_gray(image: np.ndarray):
     plt.show()
 
 
-def ensure_signed_image(image0: np.ndarray) -> np.ndarray:
-    dtype = image0.dtype
+def ensure_signed_type(dtype: np.dtype) -> np.dtype:
     if dtype.kind == 'i':
         unsigned_type = np.dtype(f'u{dtype.itemsize}')
+        return unsigned_type
+    else:
+        return dtype
+
+
+def ensure_signed_image(image0: np.ndarray) -> np.ndarray:
+    dtype0 = image0.dtype
+    dtype = ensure_signed_type(dtype0)
+    if dtype != dtype0:
+        # conversion without overhead
         offset = 2 ** (8 * dtype.itemsize - 1)
-        image = (image0 + offset).astype(unsigned_type)
+        image = image0.astype(dtype) + offset
     else:
         image = image0
     return image
@@ -76,10 +85,7 @@ def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
 def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
     if not isinstance(image, np.ndarray):
         image = image.asarray()
-    if image.dtype.kind == 'i':
-        # convert to unsigned type
-        nbytes = image.itemsize
-        image = image.astype(np.dtype(f'u{nbytes}')) + 2 ** (7 * nbytes)
+    image = ensure_signed_image(image)
     target_size = tuple(np.clip(np.int0(np.round(target_size0)), 1, None))
     new_image = cv.resize(image, target_size, interpolation=cv.INTER_AREA)
     return new_image
@@ -139,10 +145,11 @@ def get_resolution_from_pixel_size(pixel_size: list, scale_factor: float = 1) ->
         resolutions = []
         units = []
         for size, unit in pixel_size:
-            if size != 0:
+            if size != 0 and size != 1:
                 resolution = 1 / (size * scale_factor)
                 resolutions.append(resolution)
-                units.append(unit)
+                if unit != '':
+                    units.append(unit)
         if len(units) > 0:
             resolutions_unit = units[0]
             if resolutions_unit in conversions:

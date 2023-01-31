@@ -27,7 +27,6 @@ class BioSource(OmeSource):
         xml_metadata = bioformats.get_omexml_metadata(filename)
         self.bio_ome_metadata = bioformats.OMEXML(xml_metadata)
         self.ome_metadata = OME.from_xml(xml_metadata)
-        #self.metadata = tifffile.xml2dict(xml_metadata)
         self.metadata = xmltodict.parse(xml_metadata)
         if 'OME' in self.metadata:
             self.metadata = self.metadata['OME']
@@ -46,18 +45,7 @@ class BioSource(OmeSource):
         self._init_metadata(filename, source_mag_required=source_mag_required)
 
     def _find_metadata(self):
-        pixel_info = self.bio_ome_metadata.image().Pixels
-        pixel_size = [(get_default(pixel_info.get_PhysicalSizeX(), 0), get_default(pixel_info.get_PhysicalSizeXUnit(), '')),
-                      (get_default(pixel_info.get_PhysicalSizeY(), 0), get_default(pixel_info.get_PhysicalSizeYUnit(), '')),
-                      (get_default(pixel_info.get_PhysicalSizeZ(), 0), get_default(pixel_info.get_PhysicalSizeZUnit(), ''))]
-        mag = int(float(self.bio_ome_metadata.instrument().Objective.get_NominalMagnification()))
-        channel_info = []
-        for c in range(pixel_info.get_channel_count()):
-            channel = pixel_info.Channel(c)
-            channel_info.append((channel.get_Name(), channel.get_SamplesPerPixel()))
-        self.pixel_size = pixel_size
-        self.channel_info = channel_info
-        self.mag0 = mag
+        self._get_ome_metadate()
 
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         if x1 < 0 or y1 < 0:

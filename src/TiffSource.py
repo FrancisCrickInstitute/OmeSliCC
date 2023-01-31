@@ -52,7 +52,6 @@ class TiffSource(OmeSource):
         if tiff.is_ome and tiff.ome_metadata is not None:
             xml_metadata = tiff.ome_metadata
             self.ome_metadata = OME.from_xml(xml_metadata)
-            #self.metadata = tifffile.xml2dict(xml_metadata)
             self.metadata = xmltodict.parse(xml_metadata)
             if 'OME' in self.metadata:
                 self.metadata = self.metadata['OME']
@@ -104,15 +103,9 @@ class TiffSource(OmeSource):
             page = page[0]
         # from OME metadata
         if page.is_ome:
-            metadata = self.metadata
-            for imetadata in ensure_list(metadata.get('Image', {})):
-                pmetadata = imetadata.get('Pixels', {})
-                pixel_size = [(pmetadata.get('PhysicalSizeX', 0), pmetadata.get('PhysicalSizeXUnit', 'µm')),
-                              (pmetadata.get('PhysicalSizeY', 0), pmetadata.get('PhysicalSizeYUnit', 'µm')),
-                              (pmetadata.get('PhysicalSizeZ', 0), pmetadata.get('PhysicalSizeZUnit', 'µm'))]
-                for channel in ensure_list(pmetadata.get('Channel', {})):
-                    channel_info.append((channel.get('Name', ''), channel.get('SamplesPerPixel', 1)))
-            mag = metadata.get('Instrument', {}).get('Objective', {}).get('NominalMagnification', 0)
+            self._get_ome_metadate()
+            return
+
         # from imageJ metadata
         if len(pixel_size) == 0 and self.metadata is not None:
             pixel_size_unit = self.metadata.get('unit', '')
@@ -132,11 +125,13 @@ class TiffSource(OmeSource):
             res0 = metadata.get('XResolution', 1)
             if isinstance(res0, tuple):
                 res0 = res0[0] / res0[1]
-            pixel_size.insert(0, (1 / res0, pixel_size_unit))
+            if res0 != 0:
+                pixel_size.insert(0, (1 / res0, pixel_size_unit))
             res0 = metadata.get('YResolution', 1)
             if isinstance(res0, tuple):
                 res0 = res0[0] / res0[1]
-            pixel_size.insert(1, (1 / res0, pixel_size_unit))
+            if res0 != 0:
+                pixel_size.insert(1, (1 / res0, pixel_size_unit))
         if len(channel_info) == 0:
             channel_info = [(str(metadata.get('PhotometricInterpretation', '')).lower().split('.')[-1],
                             metadata.get('SamplesPerPixel', 1))]
@@ -227,7 +222,8 @@ class TiffSource(OmeSource):
         dh = y1 - y0
         page0 = self.pages[level]
         page = page0[0] if isinstance(page0, list) else page0
-        nchannels = self.sizes_xyzct[level][3]
+        size_xyzct = self.sizes_xyzct[level]
+        n = size_xyzct[2] * size_xyzct[3]
 
         tile_height, tile_width = page.chunks[0], page.chunks[1]
         tile_y0, tile_x0 = y0 // tile_height, x0 // tile_width
@@ -236,12 +232,12 @@ class TiffSource(OmeSource):
         h = (tile_y1 - tile_y0) * tile_height
         tile_per_line = int(np.ceil(page.imagewidth / tile_width))
 
-        out = np.zeros((h, w, nchannels), page.dtype)
+        out = np.zeros((h, w, n), page.dtype)
 
         dataoffsets = []
         databytecounts = []
         tile_locations = []
-        for c, page in enumerate(page0):
+        for i, page in enumerate(page0):
             for y in range(tile_y0, tile_y1):
                 for x in range(tile_x0, tile_x1):
                     index = int(y * tile_per_line + x)
@@ -253,14 +249,14 @@ class TiffSource(OmeSource):
                             databytecounts.append(count)
                             target_y = (y - tile_y0) * tile_height
                             target_x = (x - tile_x0) * tile_width
-                            tile_locations.append((target_y, target_x, c))
+                            tile_locations.append((target_y, target_x, i))
 
             self._decode(page, dataoffsets, databytecounts, tile_locations, out)
 
         target_y0 = y0 - tile_y0 * tile_height
         target_x0 = x0 - tile_x0 * tile_width
         image = out[target_y0: target_y0 + dh, target_x0: target_x0 + dw]
-        if nchannels == 1:
+        if n == 1:
             return image[..., 0]
         else:
             return image
@@ -268,10 +264,10 @@ class TiffSource(OmeSource):
     def _decode(self, page: TiffPage, dataoffsets: list, databytecounts: list, tile_locations: list, out: np.ndarray):
         def process_decoded(decoded, index, out=out):
             segment, indices, shape = decoded
-            y, x, c = tile_locations[index]
-            _, h, w, nc = shape
+            y, x, i = tile_locations[index]
+            _, h, w, n = shape
             # Note: numpy is not thread-safe
-            out[y: y + h, x: x + w, c: c + nc] = segment[0]
+            out[y: y + h, x: x + w, i: i + n] = segment[0]
 
         for _ in self._segments(
                 func=process_decoded,

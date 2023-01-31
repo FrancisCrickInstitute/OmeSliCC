@@ -4,7 +4,7 @@ from ome_types import OME
 
 from src.image_util import image_resize_fast, image_resize, precise_resize
 from src.ome import create_ome_metadata
-from src.util import check_round_significants
+from src.util import check_round_significants, ensure_list
 
 
 class OmeSource:
@@ -54,6 +54,17 @@ class OmeSource:
         self._fix_pixelsize()
         self._set_mags()
         self._set_best_mag()
+
+    def _get_ome_metadate(self):
+        # TODO: use objective settings to get matching mag instead
+        imetadata = ensure_list(self.metadata.get('Image', {}))[0]
+        pmetadata = imetadata.get('Pixels', {})
+        self.pixel_size = [(float(pmetadata.get('@PhysicalSizeX', 0)), pmetadata.get('@PhysicalSizeXUnit', 'µm')),
+                           (float(pmetadata.get('@PhysicalSizeY', 0)), pmetadata.get('@PhysicalSizeYUnit', 'µm')),
+                           (float(pmetadata.get('@PhysicalSizeZ', 0)), pmetadata.get('@PhysicalSizeZUnit', 'µm'))]
+        for channel in ensure_list(pmetadata.get('Channel', {})):
+            self.channel_info.append((channel.get('@Name', ''), int(channel.get('@SamplesPerPixel', 1))))
+        self.mag0 = float(self.metadata.get('Instrument', {}).get('Objective', {}).get('@NominalMagnification', 0))
 
     def _fix_pixelsize(self):
         standard_units = {'micro': 'µm', 'nano': 'nm'}
@@ -125,10 +136,17 @@ class OmeSource:
         # size at selected magnification
         return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
 
+    def get_nchannels(self):
+        return self.sizes_xyzct[0][3]
+
     def get_shape(self) -> tuple:
         size = self.get_size()
         xyzct = self.sizes_xyzct[0]
-        shape = (size[1], size[0], xyzct[2] * xyzct[3])
+        n = xyzct[2] * xyzct[3]
+        if n > 1:
+            shape = (size[1], size[0], n)
+        else:
+            shape = (size[1], size[0])
         return shape
 
     def clone_empty(self) -> np.ndarray:
