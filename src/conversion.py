@@ -18,7 +18,7 @@ from src.OmeSource import OmeSource
 from src.PlainImageSource import PlainImageSource
 from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
-from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_unsigned_image, reverse_color_axis, \
+from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_unsigned_image, reverse_last_axis, \
     get_resolution_from_pixel_size
 from src.util import get_filetitle
 
@@ -245,7 +245,7 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     xml_metadata_bytes = xml_metadata.encode() if xml_metadata is not None else None
     bigtiff = (image.size * image.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)
     with TiffWriter(filename, ome=False, bigtiff=bigtiff) as writer:    # set ome=False to provide custom OME xml in description
-        writer.write(reverse_color_axis(image, reverse=split_channels), photometric=photometric, subifds=npyramid_add,
+        writer.write(reverse_last_axis(image, reverse=split_channels), photometric=photometric, subifds=npyramid_add,
                      resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression,
                      metadata=metadata, description=xml_metadata_bytes)
 
@@ -258,5 +258,5 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
                     resolution = tuple(np.divide(resolution, pyramid_downsample))
                 new_size = np.multiply(size, scale)
             image = image_resize(image, new_size)
-            writer.write(reverse_color_axis(image, reverse=split_channels), photometric=photometric, subfiletype=1,
+            writer.write(reverse_last_axis(image, reverse=split_channels), photometric=photometric, subfiletype=1,
                          resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression)

@@ -283,7 +283,7 @@ def calc_fraction_used(image: np.ndarray, threshold: float = 0.1) -> float:
     return fraction
 
 
-def reverse_color_axis(image, reverse=True):
+def reverse_last_axis(image, reverse=True):
     if reverse and len(image.shape) > 2 and image.shape[-1] > 1:
         return np.moveaxis(image, -1, 0)
     else:
