@@ -239,8 +239,6 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
         resolution = tuple(resolution[0:2])
     if pyramid_sizes_add is not None:
         npyramid_add = len(pyramid_sizes_add)
-    #if volumetric:
-    #    npyramid_add = 0
     scale = 1
     xml_metadata_bytes = xml_metadata.encode() if xml_metadata is not None else None
     bigtiff = (image.size * image.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)

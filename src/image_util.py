@@ -2,7 +2,6 @@ import PIL.Image
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
-import scipy.ndimage
 import tifffile
 from PIL.ExifTags import TAGS
 import imagecodecs
@@ -80,9 +79,10 @@ def pilmode_to_pixelinfo(mode: str) -> tuple:
     return pixelinfo
 
 
-def calc_pyramid(xyzct: tuple, npyramid_add: int = 0, pyramid_downsample: float = 4.0) -> list:
+def calc_pyramid(xyzct: tuple, npyramid_add: int = 0, pyramid_downsample: float = 4.0,
+                 volumetric_resize: bool = False) -> list:
     x, y, z, c, t = xyzct
-    if z > 1:
+    if volumetric_resize and z > 1:
         size = (x, y, z)
     else:
         size = (x, y)
@@ -106,8 +106,10 @@ def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
     target_size = tuple(np.clip(np.int0(np.round(target_size0)), 1, None))
     if len(image.shape) > 2 and image.shape[2] > 4:
         # volumetric
-        scale = np.divide((target_size[1], target_size[0], target_size[2]), image.shape)
-        new_image = scipy.ndimage.zoom(image, scale)
+        target_shape = (target_size[1], target_size[0], image.shape[2])
+        new_image = np.zeros(target_shape, dtype=image.dtype)
+        for z in range(target_shape[2]):
+            new_image[..., z] = cv.resize(image[..., z], target_size, interpolation=cv.INTER_AREA)
     else:
         new_image = cv.resize(image, target_size, interpolation=cv.INTER_AREA)
     new_image = convert_image_sign_type(new_image, dtype0)
