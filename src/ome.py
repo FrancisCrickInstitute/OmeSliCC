@@ -14,7 +14,7 @@ from ome_types.model.map import M
 from ome_types.model.tiff_data import UUID
 import xmltodict
 
-from src.image_util import ensure_signed_type
+from src.image_util import ensure_unsigned_type
 from src.util import get_filetitle, ensure_list
 from version import __version__
 
@@ -116,7 +116,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
             '@SizeZ': xyzct[2],
             '@SizeC': nchannels,
             '@SizeT': xyzct[4],
-            '@Type': str(ensure_signed_type(source.get_pixel_type())),
+            '@Type': str(ensure_unsigned_type(source.get_pixel_type())),
             '@DimensionOrder': 'XYZCT',
             'Channel': ome_channels,
             'TiffData': {'UUID': {'@FileName': file_name, '#text': uuid}},
@@ -157,8 +157,8 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
     ome['Image'] = images
 
     if pyramid_sizes_add is not None:
-        key_value_map = {'M': [{'@K': i + 1, '#text': f'{pyramid_size[0]} {pyramid_size[1]}'}
-                         for i, pyramid_size in enumerate(pyramid_sizes_add)]}
+        key_value_map = {'M': [{'@K': i + 1, '#text': f'{" ".join([str(size) for size in pyramid_size])}'}
+                               for i, pyramid_size in enumerate(pyramid_sizes_add)]}
         ome['StructuredAnnotations'] = [{'MapAnnotation': {
             '@ID': 'Annotation:Resolution:0',
             '@Namespace': 'openmicroscopy.org/PyramidResolution',

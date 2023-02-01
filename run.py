@@ -51,15 +51,18 @@ def run_actions(params: dict):
     else:
         input_source = input_params['source']
         if isinstance(input_source, list):
+            # list of filenames
             sources = input_source
         else:
             if validators.url(input_source):
+                # URL
                 sources = [input_source]
             else:
+                # filename or path
                 input_path = input_source
-                if os.path.isdir(input_path) and not input_path.lower().endswith('zarr'):
+                if os.path.isdir(input_path) and not input_path.lower().endswith('.zarr'):
                     input_path = os.path.join(input_path, '*')
-                sources = [file for file in glob.glob(input_path) if os.path.isfile(file) or file.lower().endswith('zarr')]
+                sources = [file for file in glob.glob(input_path) if os.path.isfile(file) or file.lower().endswith('.zarr')]
         if len(sources) > 0:
             for action0 in actions:
                 action = action0.lower()

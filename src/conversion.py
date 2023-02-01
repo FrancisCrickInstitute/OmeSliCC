@@ -18,9 +18,9 @@ from src.OmeSource import OmeSource
 from src.PlainImageSource import PlainImageSource
 from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
-from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_signed_image, reverse_color_axis, \
+from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_unsigned_image, reverse_color_axis, \
     get_resolution_from_pixel_size
-from src.util import get_filetitle, ensure_list
+from src.util import get_filetitle
 
 register_codec(Jpeg2k)
 register_codec(JpegXr)
@@ -181,7 +181,7 @@ def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict
     npyramid_add = output_params.get('npyramid_add', 0)
     pyramid_downsample = output_params.get('pyramid_downsample')
     if npyramid_add > 0:
-        pyramid_sizes_add = calc_pyramid(source.get_size(), npyramid_add, pyramid_downsample)
+        pyramid_sizes_add = calc_pyramid(source.get_size_xyzct(), npyramid_add, pyramid_downsample)
     else:
         pyramid_sizes_add = None
 
@@ -205,7 +205,8 @@ def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict
 
             if ome:
                 metadata = None
-                xml_metadata = source.get_xml_metadata(output_filename1, channel_output=channel_output, pyramid_sizes_add=pyramid_sizes_add)
+                xml_metadata = source.get_xml_metadata(output_filename1, channel_output=channel_output,
+                                                       pyramid_sizes_add=pyramid_sizes_add)
                 #print(xml_metadata)
             else:
                 metadata = source.get_metadata()
@@ -213,8 +214,8 @@ def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict
             resolution, resolution_unit = get_resolution_from_pixel_size(source.pixel_size, source.best_factor)
 
             save_tiff(output_filename1, image1, metadata=metadata, xml_metadata=xml_metadata,
-                      resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size, compression=compression,
-                      combine_rgb=combine_rgb, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
+                      resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size,
+                      compression=compression, combine_rgb=combine_rgb, pyramid_sizes_add=pyramid_sizes_add)
 
 
 def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metadata: str = None,
@@ -223,19 +224,24 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     # Use tiled writing (less memory needed but maybe slower):
     # writer.write(tile_iterator, shape=shape_size_at_desired_mag_pyramid_scale, tile=tile_size)
 
-    image = ensure_signed_image(image)
+    image = ensure_unsigned_image(image)
 
     nchannels = image.shape[2] if len(image.shape) > 2 else 1
+    volumetric = (nchannels > 4)
     split_channels = not (combine_rgb and nchannels == 3)
     photometric = 'minisblack' if split_channels or nchannels != 3 else None
-    width, height = image.shape[1], image.shape[0]
-    scale = 1
+    if volumetric:
+        size = image.shape[1], image.shape[0], image.shape[2]
+    else:
+        size = image.shape[1], image.shape[0]
     if resolution is not None:
+        # tifffile only support x/y resolution
         resolution = tuple(resolution[0:2])
     if pyramid_sizes_add is not None:
         npyramid_add = len(pyramid_sizes_add)
-    if nchannels > 4:
-        npyramid_add = 0
+    #if volumetric:
+    #    npyramid_add = 0
+    scale = 1
     xml_metadata_bytes = xml_metadata.encode() if xml_metadata is not None else None
     bigtiff = (image.size * image.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)
     with TiffWriter(filename, ome=False, bigtiff=bigtiff) as writer:    # set ome=False to provide custom OME xml in description
@@ -245,12 +251,12 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
 
         for i in range(npyramid_add):
             if pyramid_sizes_add is not None:
-                new_width, new_height = pyramid_sizes_add[i]
+                new_size = pyramid_sizes_add[i]
             else:
                 scale /= pyramid_downsample
                 if resolution is not None:
                     resolution = tuple(np.divide(resolution, pyramid_downsample))
-                new_width, new_height = np.int0(np.round(np.multiply([width, height], scale)))
-            image = image_resize(image, (new_width, new_height))
+                new_size = np.multiply(size, scale)
+            image = image_resize(image, new_size)
             writer.write(reverse_color_axis(image, reverse=split_channels), photometric=photometric, subfiletype=1,
                          resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression)

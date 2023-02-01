@@ -1,12 +1,12 @@
 import PIL.Image
-import math
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
+import scipy.ndimage
 import tifffile
 from PIL.ExifTags import TAGS
 import imagecodecs
-from tifffile import TiffFile, TiffPage, TiffFrame
+from tifffile import TiffFile
 
 from src.util import tags_to_dict, print_dict, print_hbytes
 
@@ -26,7 +26,7 @@ def show_image_gray(image: np.ndarray):
     plt.show()
 
 
-def ensure_signed_type(dtype: np.dtype) -> np.dtype:
+def ensure_unsigned_type(dtype: np.dtype) -> np.dtype:
     if dtype.kind == 'i':
         unsigned_type = np.dtype(f'u{dtype.itemsize}')
         return unsigned_type
@@ -34,15 +34,27 @@ def ensure_signed_type(dtype: np.dtype) -> np.dtype:
         return dtype
 
 
-def ensure_signed_image(image0: np.ndarray) -> np.ndarray:
+def ensure_unsigned_image(image0: np.ndarray) -> np.ndarray:
     dtype0 = image0.dtype
-    dtype = ensure_signed_type(dtype0)
+    dtype = ensure_unsigned_type(dtype0)
     if dtype != dtype0:
         # conversion without overhead
         offset = 2 ** (8 * dtype.itemsize - 1)
         image = image0.astype(dtype) + offset
     else:
         image = image0
+    return image
+
+
+def convert_image_sign_type(image0: np.ndarray, dtype: np.dtype) -> np.ndarray:
+    if image0.dtype.kind == dtype.kind:
+        image = image0
+    elif image0.dtype.kind == 'i':
+        image = ensure_unsigned_image(image0)
+    else:
+        # conversion without overhead
+        offset = 2 ** (8 * dtype.itemsize - 1)
+        image = (image0 - offset).astype(dtype)
     return image
 
 
@@ -68,13 +80,17 @@ def pilmode_to_pixelinfo(mode: str) -> tuple:
     return pixelinfo
 
 
-def calc_pyramid(size: tuple, npyramid_add: int = 0, pyramid_downsample: float = 4.0) -> list:
-    width, height = size
+def calc_pyramid(xyzct: tuple, npyramid_add: int = 0, pyramid_downsample: float = 4.0) -> list:
+    x, y, z, c, t = xyzct
+    if z > 1:
+        size = (x, y, z)
+    else:
+        size = (x, y)
     sizes_add = []
     scale = 1
     for _ in range(npyramid_add):
         scale /= pyramid_downsample
-        sizes_add.append((int(round(width * scale)), int(round(height * scale))))
+        sizes_add.append(np.round(np.multiply(size, scale)).astype(int))
     return sizes_add
 
 
@@ -85,9 +101,16 @@ def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
 def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
     if not isinstance(image, np.ndarray):
         image = image.asarray()
-    image = ensure_signed_image(image)
+    dtype0 = image.dtype
+    image = ensure_unsigned_image(image)
     target_size = tuple(np.clip(np.int0(np.round(target_size0)), 1, None))
-    new_image = cv.resize(image, target_size, interpolation=cv.INTER_AREA)
+    if len(image.shape) > 2 and image.shape[2] > 4:
+        # volumetric
+        scale = np.divide((target_size[1], target_size[0], target_size[2]), image.shape)
+        new_image = scipy.ndimage.zoom(image, scale)
+    else:
+        new_image = cv.resize(image, target_size, interpolation=cv.INTER_AREA)
+    new_image = convert_image_sign_type(new_image, dtype0)
     return new_image
 
 
