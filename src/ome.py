@@ -28,41 +28,43 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
-    ome = {'@UUID': uuid, '@xmlns': OME_URI, '@xmlns:xsi': OME_XSI, '@xsi:schemaLocation': OME_SCHEMA_LOC,
-           '@Creator': f'OmeSliCC {__version__}'}
-    source_metadata = source.get_metadata()
 
-    experimenter = source_metadata.get('Experimenter')
-    if experimenter is not None:
-        ome['Experimenter'] = experimenter
-        experimenter_id = experimenter.get('@ID')
-    else:
-        experimenter_id = None
+    ome = source.get_metadata().copy()
+    ome['@xmlns'] = OME_URI
+    ome['@xmlns:xsi'] = OME_XSI
+    ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
+    ome['@UUID'] = uuid
+    ome['@Creator'] = f'OmeSliCC {__version__}'
+
+    experimenter = ome.get('Experimenter')
 
     mag = source.get_mag()
-    instrument = source_metadata.get('Instrument')
-    objective = source_metadata.get('Instrument', {}).get('Objective')
+    instrument = ome.get('Instrument')
+    objective = ome.get('Instrument', {}).get('Objective')
     if mag != 0:
         if instrument is None:
             instrument = {'@ID': 'Instrument:0'}
         if objective is None:
             objective = {'@ID': 'Objective:0'}
             instrument['Objective'] = objective
-        objective['@NominalMagnification'] = mag
-
-    if instrument is not None:
-        ome['Instrument'] = instrument
+            objective['@NominalMagnification'] = mag
+        if instrument is not None:
+            ome['Instrument'] = instrument
 
     # currently only supporting single image
     nimages = 1
 
     images = []
     for imagei in range(nimages):
-        ome_channels = []
+        channels = []
+        planes = []
 
-        imetadata = ensure_list(source_metadata.get('Image', {}))[imagei]
-        pmetadata = imetadata.get('Pixels', {})
-        description = imetadata.get('@Description', '')
+        images0 = ensure_list(ome.get('Image', []))
+        if len(images0) > 0:
+            image0 = images0[imagei]
+        else:
+            image0 = {}
+        pixels0 = image0.get('Pixels', {})
 
         combine_rgb = ('combine' in channel_output.lower())
         split_channel_files = channel_output.isnumeric()
@@ -72,14 +74,13 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
             channel_info = [(channel_info[0][0], nchannels)]
         elif not combine_rgb and len(channel_info) < nchannels:
             channel_info = [(channel_info[0][0], 1) for _ in range(nchannels)]
-        channels = ensure_list(pmetadata.get('Channel', {}))
+        channels0 = ensure_list(pixels0.get('Channel', []))
         channeli = 0
-        planes = ensure_list(pmetadata.get('Plane', {}))
-        ome_planes = []
+        planes0 = ensure_list(pixels0.get('Plane', []))
 
         for channeli0, info in enumerate(channel_info):
             if not split_channel_files or channeli0 == int(channel_output):
-                channel = channels[channeli0] if channeli0 < len(channels) else {}
+                channel = channels0[channeli0].copy() if channeli0 < len(channels0) else {}
                 color = channel.get('Color')
                 channel['@ID'] = f'Channel:{imagei}:{channeli}'
                 if info[0] != '':
@@ -87,17 +88,17 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
                 channel['@SamplesPerPixel'] = info[1] if not split_channel_files else 1
                 if color is not None:
                     channel['@Color'] = color
-                ome_channels.append(channel)
+                channels.append(channel)
 
-                for plane in planes:
-                    ome_plane = plane.copy()
-                    plane_channel = plane.get('@TheC')
+                for plane0 in planes0:
+                    plane = plane0.copy()
+                    plane_channel0 = plane0.get('@TheC')
                     if split_channel_files:
-                        if int(plane_channel) == int(channel_output):
-                            ome_plane['@TheC'] = channeli
-                            ome_planes.append(ome_plane)
-                    elif plane_channel is None or int(plane_channel) == channeli0:
-                        ome_planes.append(ome_plane)
+                        if int(plane_channel0) == int(channel_output):
+                            plane['@TheC'] = channeli
+                            planes.append(plane)
+                    elif plane_channel0 is None or int(plane_channel0) == channeli0:
+                        planes.append(plane)
 
                 channeli += 1
 
@@ -118,11 +119,11 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
             '@SizeT': xyzct[4],
             '@Type': str(ensure_unsigned_type(source.get_pixel_type())),
             '@DimensionOrder': 'XYZCT',
-            'Channel': ome_channels,
+            'Channel': channels,
             'TiffData': {'UUID': {'@FileName': file_name, '#text': uuid}},
         }
-        if len(ome_planes) > 0:
-            pixels['Plane'] = ome_planes
+        if len(planes) > 0:
+            pixels['Plane'] = planes
 
         if len(pixel_size) > 0 and pixel_size[0][0] != 0:
             pixels['@PhysicalSizeX'] = pixel_size[0][0]
@@ -137,40 +138,47 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
         if len(pixel_size) > 2 and pixel_size[2][1] != '':
             pixels['@PhysicalSizeZUnit'] = pixel_size[2][1]
 
-        if 'AcquisitionDate' in imetadata:
-            image['AcquisitionDate'] = imetadata['AcquisitionDate']
-        if description != '':
-            image['Description'] = description
+        if 'AcquisitionDate' in image0:
+            image['AcquisitionDate'] = image0['AcquisitionDate']
+        if 'Description' in image0:
+            image['Description'] = image0['Description']
         # Set image refs
-        if experimenter_id is not None:
-            image['ExperimenterRef'] = {'@ID': experimenter_id}
+        if experimenter is not None:
+            image['ExperimenterRef'] = {'@ID': experimenter['@ID']}
         if instrument is not None:
             image['InstrumentRef'] = {'@ID': instrument['@ID']}
         if objective is not None:
             image['ObjectiveSettings'] = {'@ID': objective['@ID']}
         # (end image refs)
-        if 'StageLabel' in imetadata:
-            image['StageLabel'] = imetadata['StageLabel']
+        if 'StageLabel' in image0:
+            image['StageLabel'] = image0['StageLabel']
         image['Pixels'] = pixels
         images.append(image)
 
     ome['Image'] = images
 
+    if 'StructuredAnnotations' not in ome:
+        ome['StructuredAnnotations'] = {}
+
+    # filter source pyramid sizes
+    map_annotations0 = ensure_list(ome['StructuredAnnotations'].get('MapAnnotation', []))
+    map_annotations = [annotation for annotation in map_annotations0
+                       if 'resolution' not in annotation.get('@ID', '').lower()]
+    # add pyramid sizes
     if pyramid_sizes_add is not None:
         key_value_map = {'M': [{'@K': i + 1, '#text': f'{" ".join([str(size) for size in pyramid_size])}'}
                                for i, pyramid_size in enumerate(pyramid_sizes_add)]}
-        ome['StructuredAnnotations'] = [{'MapAnnotation': {
+        map_annotations.insert(0, {
             '@ID': 'Annotation:Resolution:0',
             '@Namespace': 'openmicroscopy.org/PyramidResolution',
-            'Value': key_value_map}
-        }]
+            'Value': key_value_map})
+    ome['StructuredAnnotations']['MapAnnotation'] = map_annotations
 
-    for annotation in ensure_list(source_metadata.get('StructuredAnnotations', [])):
-        annotation_type, value = next(iter(annotation.items()))
-        # filter metadate dump as xml annotations, filter source pyramid sizes
-        if 'xml' not in annotation_type.lower() and (
-                not isinstance(value, dict) or 'resolution' not in next(iter(annotation.values())).get('@ID').lower()):
-            ome['StructuredAnnotations'].append(annotation)
+    # filter original metadata elements
+    xml_annotations0 = ensure_list(ome.get('StructuredAnnotations', {}).get('XMLAnnotation', []))
+    xml_annotations = [annotation for annotation in xml_annotations0
+                       if 'originalmetadata' not in annotation.get('@Namespace', '').lower()]
+    ome['StructuredAnnotations']['XMLAnnotation'] = xml_annotations
 
     return xmltodict.unparse({'OME': ome}, short_empty_elements=True, pretty=True)
 
