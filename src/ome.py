@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.OmeSource import OmeSource
 
+import Ice
+import inspect
 import os
 import omero.gateway
 import omero.model
@@ -19,6 +21,7 @@ from src.util import get_filetitle, ensure_list
 from version import __version__
 
 
+# https://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2016-06/ome.html
 OME_URI = "http://www.openmicroscopy.org/Schemas/OME/2016-06"
 OME_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 OME_SCHEMA_LOC = f"{OME_URI} {OME_URI}/ome.xsd"
@@ -181,6 +184,51 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
     ome['StructuredAnnotations']['XMLAnnotation'] = xml_annotations
 
     return xmltodict.unparse({'OME': ome}, short_empty_elements=True, pretty=True)
+
+
+def get_omero_metadata_dict(omero_obj, parents=[]):
+    #TODO: add Omero annotations
+    dct = {}
+    level = len(parents)
+
+    if isinstance(omero_obj, omero.gateway.BlitzObjectWrapper):
+        obj = omero_obj._obj
+    else:
+        obj = omero_obj
+    for field in obj._field_info._fields:
+        name = field[0].capitalize() + field[1:]
+        if name == 'DimensionOrder':
+            basdsa=True
+        if field != 'details' \
+                and not ('Pixels' in parents and name == 'Image') \
+                and not ('ObjectiveSettings' in parents and name == 'Objective'):
+            if hasattr(omero_obj, 'get' + name):
+                method = getattr(omero_obj, 'get' + name)
+                try:
+                    if len(inspect.getfullargspec(method)[0]) > 2:
+                        value0 = method(0)
+                    else:
+                        value0 = method()
+                except:
+                    value0 = None
+                if value0 is not None:
+                    data = []
+                    for value in ensure_list(value0):
+                        if isinstance(value, omero.gateway.BlitzObjectWrapper) or isinstance(value, omero.model.IObject):
+                            print('  ' * level + '+', name)
+                            data.append(get_omero_metadata_dict(value, parents + [name]))
+                        elif isinstance(value, Ice.Object):
+                            if field != 'value':
+                                print('  ' * level + ' ', name)
+                            data.append(value.getValue())
+                        else:
+                            if field != 'value':
+                                print('  ' * level + ' ', name)
+                            data.append(value)
+                    if len(data) == 1:
+                        data = data[0]
+                    dct[name] = data
+    return dct
 
 
 def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper, filetitle: str,

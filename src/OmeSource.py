@@ -63,7 +63,7 @@ class OmeSource:
         self.mag0 = float(self.metadata.get('Instrument', {}).get('Objective', {}).get('@NominalMagnification', 0))
 
     def _fix_pixelsize(self):
-        standard_units = {'micro': 'µm', 'nano': 'nm'}
+        standard_units = {'nano': 'nm', 'micro': 'µm', 'milli': 'mm', 'centi': 'cm'}
         pixel_size = []
         for pixel_size0 in self.pixel_size:
             pixel_size1 = check_round_significants(pixel_size0[0], 6)
@@ -134,6 +134,13 @@ class OmeSource:
 
     def get_nchannels(self):
         return self.sizes_xyzct[0][3]
+
+    def get_pixelsize(self):
+        return self.pixel_size
+
+    def get_pixelsize_micrometer(self):
+        conversion = {'nm': 1e-3, 'µm': 1, 'mm': 1e3, 'cm': 1e4}
+        return [pixelsize[0] * conversion.get(pixelsize[1], 1) for pixelsize in self.get_pixelsize()]
 
     def get_shape(self) -> tuple:
         size = self.get_size()

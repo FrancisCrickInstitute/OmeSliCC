@@ -12,7 +12,7 @@ from types import TracebackType
 
 from src.conversion import save_tiff
 from src.image_util import calc_pyramid, get_image_size_info, get_resolution_from_pixel_size
-from src.ome import create_ome_metadata_from_omero
+from src.ome import create_ome_metadata_from_omero, create_ome_metadata, get_omero_metadata_dict
 from src.omero_credentials import decrypt_credentials
 from src.util import ensure_list, get_default
 
@@ -166,18 +166,19 @@ class Omero:
         output_filename = os.path.join(outpath, filetitle)
         if overwrite or not os.path.exists(output_filename):
             xyzct = self._get_size(image_object)
-            w, h, zs, cs, ts = xyzct
             logging.info(f'{image_id} {image_object.getName()}')
 
             npyramid_add = output.get('npyramid_add', 0)
             pyramid_downsample = output.get('pyramid_downsample', 0)
-            pyramid_sizes_add = calc_pyramid((w, h), npyramid_add, pyramid_downsample)
-            metadata = create_ome_metadata_from_omero(image_object, filetitle, pyramid_sizes_add)
-            xml_metadata = metadata.to_xml()
-            pmetadata = metadata.images[0].pixels
-            pixel_size = [(get_default(pmetadata.physical_size_x, 0), get_default(pmetadata.physical_size_x_unit.value, '')),
-                          (get_default(pmetadata.physical_size_y, 0), get_default(pmetadata.physical_size_y_unit.value, '')),
-                          (get_default(pmetadata.physical_size_z, 0), get_default(pmetadata.physical_size_z_unit.value, ''))]
+            pyramid_sizes_add = calc_pyramid(xyzct, npyramid_add, pyramid_downsample)
+            metadata = get_omero_metadata_dict(image_object)
+            #metadata = omero_to_ome_metadata(image_object)
+            xml_metadata = create_ome_metadata(metadata, output_filename, pyramid_sizes_add)
+            #pmetadata = metadata.images[0].pixels
+            #pixel_size = [(get_default(pmetadata.physical_size_x, 0), get_default(pmetadata.physical_size_x_unit.value, '')),
+            #              (get_default(pmetadata.physical_size_y, 0), get_default(pmetadata.physical_size_y_unit.value, '')),
+            #              (get_default(pmetadata.physical_size_z, 0), get_default(pmetadata.physical_size_z_unit.value, ''))]
+            pixel_size = []     # * will be done in OmeSource
             resolution, resolution_unit = get_resolution_from_pixel_size(pixel_size)
 
             image = self._get_omero_image(image_object)
