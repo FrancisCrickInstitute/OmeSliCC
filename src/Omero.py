@@ -171,9 +171,14 @@ class Omero:
             npyramid_add = output.get('npyramid_add', 0)
             pyramid_downsample = output.get('pyramid_downsample', 0)
             pyramid_sizes_add = calc_pyramid(xyzct, npyramid_add, pyramid_downsample)
-            metadata = get_omero_metadata_dict(image_object)
-            #metadata = omero_to_ome_metadata(image_object)
-            xml_metadata = create_ome_metadata(metadata, output_filename, pyramid_sizes_add)
+            combine_rgb = output.get('combine_rgb', True)
+            channel_output = 'combine_rgb' if combine_rgb else ''
+
+            #metadata = get_omero_metadata_dict(image_object)
+            #xml_metadata = create_ome_metadata(metadata, output_filename, pyramid_sizes_add)
+
+            xml_metadata = create_ome_metadata_from_omero(image_object, filetitle, channel_output, pyramid_sizes_add)
+
             #pmetadata = metadata.images[0].pixels
             #pixel_size = [(get_default(pmetadata.physical_size_x, 0), get_default(pmetadata.physical_size_x_unit.value, '')),
             #              (get_default(pmetadata.physical_size_y, 0), get_default(pmetadata.physical_size_y_unit.value, '')),

@@ -158,10 +158,9 @@ def get_resolution_from_pixel_size(pixel_size: list, scale_factor: float = 1) ->
         'nm': (1000, 'micrometer'),
         'nanometer': (1000, 'micrometer'),
     }
-    resolutions = None
+    resolutions = []
     resolutions_unit = None
     if len(pixel_size) > 0:
-        resolutions = []
         units = []
         for size, unit in pixel_size:
             if size != 0 and size != 1:

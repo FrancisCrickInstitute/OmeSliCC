@@ -9,11 +9,6 @@ import os
 import omero.gateway
 import omero.model
 from uuid import uuid4
-from ome_types import OME
-from ome_types.model import Image, Pixels, Plane, Channel, Instrument, Objective, StageLabel, Map, MapAnnotation, \
-    CommentAnnotation, InstrumentRef, AnnotationRef, TiffData
-from ome_types.model.map import M
-from ome_types.model.tiff_data import UUID
 import xmltodict
 
 from src.image_util import ensure_unsigned_type
@@ -27,7 +22,11 @@ OME_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 OME_SCHEMA_LOC = f"{OME_URI} {OME_URI}/ome.xsd"
 
 
-def create_ome_metadata(source: OmeSource, output_filename: str, channel_output: str = '', pyramid_sizes_add: list = None) -> str:
+def create_ome_metadata(source: OmeSource,
+                        output_filename: str,
+                        channel_output: str = '',
+                        pyramid_sizes_add: list = None) -> str:
+
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
@@ -51,8 +50,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
             objective = {'@ID': 'Objective:0'}
             instrument['Objective'] = objective
             objective['@NominalMagnification'] = mag
-        if instrument is not None:
-            ome['Instrument'] = instrument
+        ome['Instrument'] = instrument
 
     # currently only supporting single image
     nimages = 1
@@ -68,6 +66,7 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
         else:
             image0 = {}
         pixels0 = image0.get('Pixels', {})
+        planes0 = ensure_list(pixels0.get('Plane', []))
 
         combine_rgb = ('combine' in channel_output.lower())
         split_channel_files = channel_output.isnumeric()
@@ -79,7 +78,6 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
             channel_info = [(channel_info[0][0], 1) for _ in range(nchannels)]
         channels0 = ensure_list(pixels0.get('Channel', []))
         channeli = 0
-        planes0 = ensure_list(pixels0.get('Plane', []))
 
         for channeli0, info in enumerate(channel_info):
             if not split_channel_files or channeli0 == int(channel_output):
@@ -174,7 +172,8 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
         map_annotations.insert(0, {
             '@ID': 'Annotation:Resolution:0',
             '@Namespace': 'openmicroscopy.org/PyramidResolution',
-            'Value': key_value_map})
+            'Value': key_value_map
+        })
     ome['StructuredAnnotations']['MapAnnotation'] = map_annotations
 
     # filter original metadata elements
@@ -186,8 +185,206 @@ def create_ome_metadata(source: OmeSource, output_filename: str, channel_output:
     return xmltodict.unparse({'OME': ome}, short_empty_elements=True, pretty=True)
 
 
+def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
+                        output_filename: str,
+                        channel_output: str = '',
+                        pyramid_sizes_add: list = None) -> str:
+
+    file_name = os.path.basename(output_filename)
+    file_title = get_filetitle(file_name)
+    uuid = f'urn:uuid:{uuid4()}'
+
+    ome = {}
+    ome['@xmlns'] = OME_URI
+    ome['@xmlns:xsi'] = OME_XSI
+    ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
+    ome['@UUID'] = uuid
+    ome['@Creator'] = f'OmeSliCC {__version__}'
+
+    instrument = None
+    objective = None
+    instrument0 = image_object.getInstrument()
+    if instrument0 is not None:
+        instrument = {'@ID': 'Instrument:0'}
+        objectives0 = instrument0.getObjectives()
+        if objectives0 is not None:
+            objective0 = objectives0[0]
+            objective = {
+                '@ID': 'Objective:0',
+                'Manufacturer': objective0.getManufacturer(),
+                'Model': objective0.getModel(),
+                'LotNumber': objective0.getLotNumber(),
+                'SerialNumber': objective0.getSerialNumber(),
+                'NominalMagnification': objective0.getNominalMagnification(),
+                'CalibratedMagnification': objective0.getCalibratedMagnification(),
+                #'Correction': objective0.getCorrection().getValue(),
+                'LensNa': objective0.getLensNA(),
+                'WorkingDistance': objective0.getWorkingDistance().getValue(),
+                'WorkingDistanceUnit': objective0.getWorkingDistance().getSymbol(),
+                'Iris': objective0.getIris(),
+                'Immersion': objective0.getImmersion().getValue()
+            }
+            instrument['Objective'] = objective
+        ome['Instrument'] = instrument
+
+    # currently only supporting single image
+    nimages = 1
+
+    images = []
+    for imagei in range(nimages):
+        channels = []
+        planes = []
+
+        pixels0 = image_object.getPrimaryPixels()
+
+        planes0 = []
+        stage0 = image_object.getStageLabel()
+        if stage0 is not None:
+            for plane0 in pixels0.copyPlaneInfo():
+                planes0.append({
+                    '@TheC': plane0.getTheC(),
+                    '@TheT': plane0.getTheT(),
+                    '@TheZ': plane0.getTheZ(),
+                    'DeltaT': plane0.getDeltaT(),
+                    'ExposureTime': plane0.getExposureTime(),
+                    'PositionX': stage0.getPositionX().getValue(),
+                    'PositionY': stage0.getPositionY().getValue(),
+                    'PositionZ': stage0.getPositionZ().getValue(),
+                    'PositionXUnit': stage0.getPositionX().getSymbol(),
+                    'PositionYUnit': stage0.getPositionY().getSymbol(),
+                    'PositionZUnit': stage0.getPositionZ().getSymbol(),
+                })
+
+        combine_rgb = ('combine' in channel_output.lower())
+        split_channel_files = channel_output.isnumeric()
+        channelso = image_object.getChannels()
+        channels0 = []
+        for channelo in channelso:
+            channell = channelo.getLogicalChannel()
+            channel0 = {
+                'Name': channelo.getName(),
+                'Color': channelo.getColor().getRGB(),
+                'Lut': channelo.getLut(),
+                'Coefficient': channelo.getCoefficient(),
+                'EmissionWave': channelo.getEmissionWave(),
+                'ExcitationWave': channelo.getExcitationWave(),
+                'WindowMin': channelo.getWindowMin(),
+                'WindowMax': channelo.getWindowMax(),
+                'WindowStart': channelo.getWindowStart(),
+                'WindowEnd': channelo.getWindowEnd(),
+                'Fluor': channell.getFluor(),
+                'Otf': channell.getOtf(),
+                'Illumination': channell.getIllumination(),
+                'PhotometricInterpretation': channell.getPhotometricInterpretation(),
+                'ContrastMethod': channell.getContrastMethod(),
+                'PinHoleSize': channell.getPinHoleSize(),
+                '@SamplesPerPixel': channell.getSamplesPerPixel(),
+            }
+            channels0.append(channel0)
+        nchannels = sum([channel0['@SamplesPerPixel'] for channel0 in channels0]) if not split_channel_files else 1
+        if combine_rgb and len(channels0) == 3:
+            channels0 = channels0[0:1]
+            channels0[0]['@SamplesPerPixel'] = nchannels
+            channels0[0].pop('Color', None)
+        elif not combine_rgb and len(channels0) < nchannels:
+            channel1 = channels0[0].copy()
+            channel1['@SamplesPerPixel'] = 1
+            channels0 = [channel0 for channel0 in range(nchannels)]
+        channeli = 0
+
+        for channeli0, channel0 in enumerate(channels0):
+            if not split_channel_files or channeli0 == int(channel_output):
+                channel = channels0[channeli0] if channeli0 < len(channels0) else {}
+                channel['@ID'] = f'Channel:{imagei}:{channeli}'
+                if split_channel_files:
+                    channel['@SamplesPerPixel'] = 1
+                channels.append(channel)
+
+                for plane0 in planes:
+                    plane = plane0.copy()
+                    plane_channel0 = plane0.get('@TheC')
+                    if split_channel_files:
+                        if int(plane_channel0) == int(channel_output):
+                            plane['@TheC'] = channeli
+                            planes.append(plane)
+                    elif plane_channel0 is None or int(plane_channel0) == channeli0:
+                        planes.append(plane)
+
+                channeli += 1
+
+        image = {
+            '@ID': f'Image:{imagei}',
+            '@Name': file_title,
+            'AcquisitionDate': image_object.getAcquisitionDate(),
+            'Description': image_object.getDescription(),
+        }
+
+        pixels = {
+            '@ID': f'Pixels:{imagei}',
+            '@SizeX': image_object.getSizeX(),
+            '@SizeY': image_object.getSizeY(),
+            '@SizeZ': image_object.getSizeZ(),
+            '@SizeC': nchannels,
+            '@SizeT': image_object.getSizeT(),
+            '@PhysicalSizeX': image_object.getPixelSizeX(),   # get size in default unit (micron)
+            '@PhysicalSizeY': image_object.getPixelSizeY(),   # get size in default unit (micron)
+            '@PhysicalSizeZ': image_object.getPixelSizeZ(),   # get size in default unit (micron)
+            '@PhysicalSizeXUnit': 'µm',
+            '@PhysicalSizeYUnit': 'µm',
+            '@PhysicalSizeZUnit': 'µm',
+            '@Type': image_object.getPixelsType(),
+            '@DimensionOrder': 'XYZCT',
+            'Channel': channels,
+            'TiffData': {'UUID': {'@FileName': file_name, '#text': uuid}},
+        }
+        if len(planes) > 0:
+            pixels['Plane'] = planes
+
+        # Set image refs
+        if instrument is not None:
+            image['InstrumentRef'] = {'@ID': instrument['@ID']}
+        if objective is not None:
+            image['ObjectiveSettings'] = {'@ID': objective['@ID']}
+        # (end image refs)
+        if stage0 is not None:
+            image['StageLabel'] = stage0.getId()
+        image['Pixels'] = pixels
+        images.append(image)
+
+    ome['Image'] = images
+
+    annotations = {}
+    for annotations0 in image_object.listAnnotations():
+        annotation_type = annotations0.OMERO_TYPE.__name__
+        if annotation_type.endswith('I'):
+            annotation_type = annotation_type[:-1]
+        if annotation_type not in annotations:
+            annotations[annotation_type] = []
+        annotations[annotation_type].append({
+            '@ID': f'Annotation:{len(annotations[annotation_type])}',
+            '@Namespace': annotations0.getNs(),
+            'Value': annotations0.getValue()
+        })
+    # add pyramid sizes
+    if pyramid_sizes_add is not None:
+        if 'MapAnnotation' not in annotations:
+            annotations['MapAnnotation'] = []
+        key_value_map = {'M': [{'@K': i + 1, '#text': f'{" ".join([str(size) for size in pyramid_size])}'}
+                               for i, pyramid_size in enumerate(pyramid_sizes_add)]}
+        annotations['MapAnnotation'].insert(0, {
+            '@ID': 'Annotation:Resolution:0',
+            '@Namespace': 'openmicroscopy.org/PyramidResolution',
+            'Value': key_value_map
+        })
+
+    ome['StructuredAnnotations'] = annotations
+
+    return xmltodict.unparse({'OME': ome}, short_empty_elements=True, pretty=True)
+
+
 def get_omero_metadata_dict(omero_obj, parents=[]):
     #TODO: add Omero annotations
+    # This *almost works, but gives some unloaded exceptions that can't be overcome
     dct = {}
     level = len(parents)
 
@@ -197,8 +394,6 @@ def get_omero_metadata_dict(omero_obj, parents=[]):
         obj = omero_obj
     for field in obj._field_info._fields:
         name = field[0].capitalize() + field[1:]
-        if name == 'DimensionOrder':
-            basdsa=True
         if field != 'details' \
                 and not ('Pixels' in parents and name == 'Image') \
                 and not ('ObjectiveSettings' in parents and name == 'Objective'):
@@ -225,137 +420,8 @@ def get_omero_metadata_dict(omero_obj, parents=[]):
                             if field != 'value':
                                 print('  ' * level + ' ', name)
                             data.append(value)
-                    if len(data) == 1:
-                        data = data[0]
-                    dct[name] = data
+                    if len(data) > 0:
+                        if len(data) == 1:
+                            data = data[0]
+                        dct[name] = data
     return dct
-
-
-def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper, filetitle: str,
-                                   pyramid_sizes_add: list = None) -> OME:
-    uuid = f'urn:uuid:{uuid4()}'
-    ome = OME(uuid=uuid)
-
-    nchannels = image_object.getSizeC()
-    pixels = image_object.getPrimaryPixels()
-    channels = []
-    channels0 = image_object.getChannels(noRE=True)
-    if channels0 is not None and len(channels0) > 0:
-        channel = channels0[0]
-        channels.append(Channel(
-                id='Channel:0',
-                name=channel.getName(),
-                fluor=channel.getName(),
-                samples_per_pixel=nchannels
-            ))
-
-    tiff_datas = [TiffData(uuid=UUID(file_name=filetitle, value=uuid))]
-
-    planes = []
-    stage = image_object.getStageLabel()
-    if stage is not None:
-        for plane in pixels.copyPlaneInfo():
-            planes.append(Plane(
-                the_c=plane.getTheC(),
-                the_t=plane.getTheT(),
-                the_z=plane.getTheZ(),
-                delta_t=plane.getDeltaT(),
-                exposure_time=plane.getExposureTime(),
-                position_x=stage.getPositionX().getValue(),
-                position_y=stage.getPositionY().getValue(),
-                position_z=stage.getPositionZ().getValue(),
-                position_x_unit=stage.getPositionX().getSymbol(),
-                position_y_unit=stage.getPositionY().getSymbol(),
-                position_z_unit=stage.getPositionZ().getSymbol(),
-            ))
-        stage_label = StageLabel(
-            name=stage.getName(),
-            x=stage.getPositionX().getValue(),
-            y=stage.getPositionY().getValue(),
-            z=stage.getPositionZ().getValue(),
-            x_unit=stage.getPositionX().getSymbol(),
-            y_unit=stage.getPositionY().getSymbol(),
-            z_unit=stage.getPositionZ().getSymbol()
-        )
-
-    image = Image(
-        id='Image:0',
-        name=image_object.getName(),
-        description=image_object.getDescription(),
-        acquisition_date=image_object.getAcquisitionDate(),
-        pixels=Pixels(
-            size_c=image_object.getSizeC(),
-            size_t=image_object.getSizeT(),
-            size_x=image_object.getSizeX(),
-            size_y=image_object.getSizeY(),
-            size_z=image_object.getSizeZ(),
-            physical_size_x=image_object.getPixelSizeX(),   # get size in default unit (micron)
-            physical_size_y=image_object.getPixelSizeY(),   # get size in default unit (micron)
-            physical_size_z=image_object.getPixelSizeZ(),   # get size in default unit (micron)
-            physical_size_x_unit='µm',
-            physical_size_y_unit='µm',
-            physical_size_z_unit='µm',
-            type=image_object.getPixelsType(),
-            dimension_order=pixels.getDimensionOrder().getValue(),
-            channels=channels,
-            tiff_data_blocks=tiff_datas
-        ),
-    )
-    if stage is not None:
-        image.stage_label = stage_label
-        image.pixels.planes = planes
-    ome.images.append(image)
-
-    objective_settings = image_object.getObjectiveSettings()
-    if objective_settings is not None:
-        objective = objective_settings.getObjective()
-        instrument = Instrument(objectives=[
-            Objective(id=objective.getId(),
-                      manufacturer=objective.getManufacturer(),
-                      model=objective.getModel(),
-                      lot_number=objective.getLotNumber(),
-                      serial_number=objective.getSerialNumber(),
-                      nominal_magnification=objective.getNominalMagnification(),
-                      calibrated_magnification=objective.getCalibratedMagnification(),
-                      #correction=objective.getCorrection().getValue(),
-                      lens_na=objective.getLensNA(),
-                      working_distance=objective.getWorkingDistance().getValue(),
-                      working_distance_unit=objective.getWorkingDistance().getSymbol(),
-                      iris=objective.getIris(),
-                      immersion=objective.getImmersion().getValue()
-                      )])
-        ome.instruments.append(instrument)
-
-        for image in ome.images:
-            image.instrument_ref = InstrumentRef(id=instrument.id)
-
-    if pyramid_sizes_add is not None:
-        key_value_map = Map()
-        for i, pyramid_size in enumerate(pyramid_sizes_add):
-            key_value_map.m.append(M(k=(i + 1), value=' '.join(map(str, pyramid_size))))
-        annotation = MapAnnotation(value=key_value_map,
-                                   namespace='openmicroscopy.org/PyramidResolution',
-                                   id='Annotation:Resolution:0')
-        ome.structured_annotations.append(annotation)
-
-    for omero_annotation in image_object.listAnnotations():
-        id = omero_annotation.getId()
-        type = omero_annotation.OMERO_TYPE
-        annotation = None
-        if type == omero.model.MapAnnotationI:
-            key_value_map = Map()
-            for annotation in omero_annotation.getMapValue():
-                key_value_map.m.append(M(k=annotation.name, value=annotation.value))
-            annotation = MapAnnotation(value=key_value_map,
-                                       namespace=omero_annotation.getNs(),
-                                       id=f'urn:lsid:export.openmicroscopy.org:Annotation:{id}')
-        elif type == omero.model.CommentAnnotationI:
-            annotation = CommentAnnotation(value=omero_annotation.getValue(),
-                                           namespace=omero_annotation.getNs(),
-                                           id=f'urn:lsid:export.openmicroscopy.org:Annotation:{id}')
-        if annotation is not None:
-            ome.structured_annotations.append(annotation)
-            for image in ome.images:
-                image.annotation_ref.append(AnnotationRef(id=annotation.id))
-
-    return ome
