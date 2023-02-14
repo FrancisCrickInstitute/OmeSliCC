@@ -178,6 +178,7 @@ class Omero:
             #xml_metadata = create_ome_metadata(metadata, output_filename, pyramid_sizes_add)
 
             xml_metadata = create_ome_metadata_from_omero(image_object, filetitle, channel_output, pyramid_sizes_add)
+            #print(xml_metadata)
 
             #pmetadata = metadata.images[0].pixels
             #pixel_size = [(get_default(pmetadata.physical_size_x, 0), get_default(pmetadata.physical_size_x_unit.value, '')),

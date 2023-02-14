@@ -16,6 +16,21 @@ def ensure_list(x) -> list:
         return [x]
 
 
+def filter_dict(dict0):
+    new_dict = {}
+    for key, value0 in dict0.items():
+        if value0 is not None:
+            values = []
+            for value in ensure_list(value0):
+                if isinstance(value, dict):
+                    value = filter_dict(value)
+                values.append(value)
+            if len(values) == 1:
+                values = values[0]
+            new_dict[key] = values
+    return new_dict
+
+
 def tags_to_dict(tags: tifffile.TiffTags) -> dict:
     tag_dict = {}
     for tag in tags.values():

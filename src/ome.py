@@ -12,7 +12,7 @@ from uuid import uuid4
 import xmltodict
 
 from src.image_util import ensure_unsigned_type
-from src.util import get_filetitle, ensure_list
+from src.util import get_filetitle, ensure_list, filter_dict
 from version import __version__
 
 
@@ -217,7 +217,7 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
                 'SerialNumber': objective0.getSerialNumber(),
                 'NominalMagnification': objective0.getNominalMagnification(),
                 'CalibratedMagnification': objective0.getCalibratedMagnification(),
-                #'Correction': objective0.getCorrection().getValue(),
+                'Correction': objective0.getCorrection().getValue(),
                 'LensNa': objective0.getLensNA(),
                 'WorkingDistance': objective0.getWorkingDistance().getValue(),
                 'WorkingDistanceUnit': objective0.getWorkingDistance().getSymbol(),
@@ -261,24 +261,22 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
         channels0 = []
         for channelo in channelso:
             channell = channelo.getLogicalChannel()
+            light_path = channell.getLightPath()
+            if light_path is None:
+                light_path = {}
             channel0 = {
-                'Name': channelo.getName(),
-                'Color': channelo.getColor().getRGB(),
-                'Lut': channelo.getLut(),
-                'Coefficient': channelo.getCoefficient(),
-                'EmissionWave': channelo.getEmissionWave(),
-                'ExcitationWave': channelo.getExcitationWave(),
-                'WindowMin': channelo.getWindowMin(),
-                'WindowMax': channelo.getWindowMax(),
-                'WindowStart': channelo.getWindowStart(),
-                'WindowEnd': channelo.getWindowEnd(),
-                'Fluor': channell.getFluor(),
-                'Otf': channell.getOtf(),
-                'Illumination': channell.getIllumination(),
-                'PhotometricInterpretation': channell.getPhotometricInterpretation(),
-                'ContrastMethod': channell.getContrastMethod(),
-                'PinHoleSize': channell.getPinHoleSize(),
+                '@Name': channelo.getName(),
+                '@Color': channelo.getColor().getInt(),
+                '@Lut': channelo.getLut(),
+                '@EmissionWave': channelo.getEmissionWave(),
+                '@ExcitationWave': channelo.getExcitationWave(),
+                '@Fluor': channell.getFluor(),
+                '@Otf': channell.getOtf(),
+                '@PhotometricInterpretation': channell.getPhotometricInterpretation(),
+                '@ContrastMethod': channell.getContrastMethod(),
+                '@PinHoleSize': channell.getPinHoleSize(),
                 '@SamplesPerPixel': channell.getSamplesPerPixel(),
+                'LightPath': light_path,
             }
             channels0.append(channel0)
         nchannels = sum([channel0['@SamplesPerPixel'] for channel0 in channels0]) if not split_channel_files else 1
@@ -315,7 +313,7 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
         image = {
             '@ID': f'Image:{imagei}',
             '@Name': file_title,
-            'AcquisitionDate': image_object.getAcquisitionDate(),
+            'AcquisitionDate': image_object.getAcquisitionDate().isoformat(),
             'Description': image_object.getDescription(),
         }
 
@@ -347,7 +345,7 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
             image['ObjectiveSettings'] = {'@ID': objective['@ID']}
         # (end image refs)
         if stage0 is not None:
-            image['StageLabel'] = stage0.getId()
+            image['StageLabel'] = {'@Name': stage0.getName()}
         image['Pixels'] = pixels
         images.append(image)
 
@@ -360,10 +358,13 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
             annotation_type = annotation_type[:-1]
         if annotation_type not in annotations:
             annotations[annotation_type] = []
+        value = annotations0.getValue()
+        if annotation_type == 'MapAnnotation':
+            value = {'M': value}
         annotations[annotation_type].append({
             '@ID': f'Annotation:{len(annotations[annotation_type])}',
             '@Namespace': annotations0.getNs(),
-            'Value': annotations0.getValue()
+            'Value': value
         })
     # add pyramid sizes
     if pyramid_sizes_add is not None:
@@ -379,7 +380,7 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
 
     ome['StructuredAnnotations'] = annotations
 
-    return xmltodict.unparse({'OME': ome}, short_empty_elements=True, pretty=True)
+    return xmltodict.unparse({'OME': filter_dict(ome)}, short_empty_elements=True, pretty=True)
 
 
 def get_omero_metadata_dict(omero_obj, parents=[]):
