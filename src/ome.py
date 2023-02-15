@@ -211,18 +211,18 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
             objective0 = objectives0[0]
             objective = {
                 '@ID': 'Objective:0',
-                'Manufacturer': objective0.getManufacturer(),
-                'Model': objective0.getModel(),
-                'LotNumber': objective0.getLotNumber(),
-                'SerialNumber': objective0.getSerialNumber(),
-                'NominalMagnification': objective0.getNominalMagnification(),
-                'CalibratedMagnification': objective0.getCalibratedMagnification(),
-                'Correction': objective0.getCorrection().getValue(),
-                'LensNa': objective0.getLensNA(),
-                'WorkingDistance': objective0.getWorkingDistance().getValue(),
-                'WorkingDistanceUnit': objective0.getWorkingDistance().getSymbol(),
-                'Iris': objective0.getIris(),
-                'Immersion': objective0.getImmersion().getValue()
+                '@Manufacturer': objective0.getManufacturer(),
+                '@Model': objective0.getModel(),
+                '@LotNumber': objective0.getLotNumber(),
+                '@SerialNumber': objective0.getSerialNumber(),
+                '@NominalMagnification': objective0.getNominalMagnification(),
+                '@CalibratedMagnification': objective0.getCalibratedMagnification(),
+                #'@Correction': objective0.getCorrection().getValue(),
+                '@LensNA': objective0.getLensNA(),
+                '@WorkingDistance': objective0.getWorkingDistance().getValue(),
+                '@WorkingDistanceUnit': objective0.getWorkingDistance().getSymbol(),
+                '@Iris': objective0.getIris(),
+                '@Immersion': objective0.getImmersion().getValue()
             }
             instrument['Objective'] = objective
         ome['Instrument'] = instrument
@@ -360,7 +360,7 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
             annotations[annotation_type] = []
         value = annotations0.getValue()
         if annotation_type == 'MapAnnotation':
-            value = {'M': value}
+            value = {'M': [{'@K': k, '#text': v} for k, v in value]}
         annotations[annotation_type].append({
             '@ID': f'Annotation:{len(annotations[annotation_type])}',
             '@Namespace': annotations0.getNs(),
