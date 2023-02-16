@@ -74,7 +74,8 @@ def extract_thumbnail(source: OmeSource, params: dict):
     output_filename = os.path.join(output_folder, f'{get_filetitle(source_ref)}_thumb.tiff')
     output_filename0 = os.path.join(output_folder, f'{get_filetitle(source_ref)}_channel0_thumb.tiff')
     if overwrite or (not os.path.exists(output_filename) and not os.path.exists(output_filename0)):
-        size = source.sizes[0]
+        size = source.get_size()
+        volumetric = (source.get_size_xyzct()[2] > 1)
 
         if target_size < 1:
             factor = target_size
@@ -82,13 +83,14 @@ def extract_thumbnail(source: OmeSource, params: dict):
             factor = np.max(np.divide(size, target_size))
         thumb_size = np.round(np.divide(size, factor)).astype(int)
         thumb = source.get_thumbnail(thumb_size)
+
         nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
-        if nchannels not in [1, 3]:
+        if nchannels not in [1, 3] and not volumetric:
             for channeli in range(nchannels):
                 output_filename = os.path.join(output_folder, f'{get_filetitle(source_ref)}_channel{channeli}_thumb.tiff')
-                cv.imwrite(output_filename, thumb[..., channeli])
+                save_tiff(output_filename, thumb[..., channeli])
         else:
-            cv.imwrite(output_filename, thumb)
+            save_tiff(output_filename, thumb)
 
 
 def convert(source: OmeSource, params: dict):
