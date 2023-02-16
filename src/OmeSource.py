@@ -27,6 +27,7 @@ class OmeSource:
     """pixel sizes for all pages"""
     channel_info: list
     """channel information for all channels"""
+    # TODO: make channel_info a (list of) dict
 
     def __init__(self):
         self.metadata = {}
@@ -37,12 +38,13 @@ class OmeSource:
         self.pixel_size = []
         self.channel_info = []
 
-    def _init_metadata(self, filename: str, source_mag: float = None, source_mag_required: bool = False):
+    def _init_metadata(self, source_reference: str, source_mag: float = None, source_mag_required: bool = False):
+        self.source_reference = source_reference
         self._find_metadata()
         if self.mag0 == 0 and source_mag is not None:
             self.mag0 = source_mag
         if self.mag0 == 0:
-            msg = f'{filename}: No source magnification in metadata or provided'
+            msg = f'{source_reference}: No source magnification in metadata or provided'
             if source_mag_required:
                 raise ValueError(msg)
             else:
@@ -53,12 +55,12 @@ class OmeSource:
 
     def _get_ome_metadate(self):
         # TODO: use objective settings to get matching mag instead
-        imetadata = ensure_list(self.metadata.get('Image', {}))[0]
-        pmetadata = imetadata.get('Pixels', {})
-        self.pixel_size = [(float(pmetadata.get('@PhysicalSizeX', 0)), pmetadata.get('@PhysicalSizeXUnit', 'µm')),
-                           (float(pmetadata.get('@PhysicalSizeY', 0)), pmetadata.get('@PhysicalSizeYUnit', 'µm')),
-                           (float(pmetadata.get('@PhysicalSizeZ', 0)), pmetadata.get('@PhysicalSizeZUnit', 'µm'))]
-        for channel in ensure_list(pmetadata.get('Channel', {})):
+        images = ensure_list(self.metadata.get('Image', {}))[0]
+        pixels = images.get('Pixels', {})
+        self.pixel_size = [(float(pixels.get('@PhysicalSizeX', 0)), pixels.get('@PhysicalSizeXUnit', 'µm')),
+                           (float(pixels.get('@PhysicalSizeY', 0)), pixels.get('@PhysicalSizeYUnit', 'µm')),
+                           (float(pixels.get('@PhysicalSizeZ', 0)), pixels.get('@PhysicalSizeZUnit', 'µm'))]
+        for channel in ensure_list(pixels.get('Channel', {})):
             self.channel_info.append((channel.get('@Name', ''), int(channel.get('@SamplesPerPixel', 1))))
         self.mag0 = float(self.metadata.get('Instrument', {}).get('Objective', {}).get('@NominalMagnification', 0))
 
@@ -83,10 +85,10 @@ class OmeSource:
 
     def _set_best_mag(self):
         if self.mag0 is not None and self.mag0 > 0 and self.target_mag is not None and self.target_mag > 0:
-            source_mag, self.best_page = get_best_mag(self.source_mags, self.target_mag)
+            source_mag, self.best_level = get_best_mag(self.source_mags, self.target_mag)
             self.best_factor = source_mag / self.target_mag
         else:
-            self.best_page = 0
+            self.best_level = 0
             self.best_factor = 1
 
     def get_mag(self) -> float:
@@ -130,7 +132,7 @@ class OmeSource:
 
     def get_size(self) -> tuple:
         # size at selected magnification
-        return np.divide(self.sizes[self.best_page], self.best_factor).astype(int)
+        return np.divide(self.sizes[self.best_level], self.best_factor).astype(int)
 
     def get_nchannels(self):
         return self.sizes_xyzct[0][3]
@@ -179,7 +181,7 @@ class OmeSource:
             ox1, oy1 = np.round(np.multiply([x1, y1], factor)).astype(int)
         else:
             ox0, oy0, ox1, oy1 = x0, y0, x1, y1
-        image0 = self._asarray_level(self.best_page, ox0, oy0, ox1, oy1)
+        image0 = self._asarray_level(self.best_level, ox0, oy0, ox1, oy1)
         if factor != 1:
             h, w = np.round(np.divide(image0.shape[0:2], factor)).astype(int)
             image = image_resize_fast(image0, (w, h))
@@ -212,6 +214,9 @@ class OmeSource:
 
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         raise NotImplementedError('Implement method in subclass')
+
+    def close(self):
+        pass
 
 
 def get_best_mag(mags: list, target_mag: float) -> tuple:

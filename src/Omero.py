@@ -1,18 +1,10 @@
-# TODO: refactor this class as OmeSource, so image export/conversion can be reused
-
 from __future__ import annotations
 import logging
-import os
-import numpy as np
 import omero
 from omero.gateway import BlitzGateway
 import omero.model
-from tqdm import tqdm
 from types import TracebackType
 
-from src.conversion import save_tiff
-from src.image_util import calc_pyramid, get_image_size_info, get_resolution_from_pixel_size
-from src.ome import create_ome_metadata_from_omero, create_ome_metadata, get_omero_metadata_dict
 from src.omero_credentials import decrypt_credentials
 from src.util import ensure_list, get_default
 
@@ -46,7 +38,7 @@ class Omero:
         self.conn = BlitzGateway(usr, pwd, host=self.params['input']['omero']['host'], secure=True)
         if not self.conn.connect():
             self._disconnect()
-            logging.error('Connection error')
+            logging.error('Omero connection error')
             raise ConnectionError
         self.conn.c.enableKeepAlive(60)
         self.connected = True
@@ -67,9 +59,14 @@ class Omero:
         dataset = self.conn.getObject('Dataset', dataset_id)
         return dataset
 
-    def _get_image_object(self, image_id: int) -> omero.gateway.ImageWrapper:
+    def get_image_object(self, image_id: int) -> omero.gateway.ImageWrapper:
         image_object = self.conn.getObject('Image', image_id)
         return image_object
+
+    def create_pixels_store(self, image_object):
+        pixels_store = self.conn.createRawPixelsStore()
+        pixels_store.setPixelsId(image_object.getPixelsId(), False, self.conn.SERVICE_OPTS)
+        return pixels_store
 
     def get_annotation_image_ids(self) -> list:
         input_omero = self.params['input'].get('omero', {})
@@ -114,153 +111,6 @@ class Omero:
         name = image_object.getName()
         annotations = self._get_image_annotations(image_object, target_labels)
         return name, annotations
-
-    def get_image_info(self, image_id: int) -> str:
-        image_object = self._get_image_object(image_id)
-        xyzct = self._get_size(image_object)
-        pixels = image_object.getPrimaryPixels()
-        pixels_type = pixels.getPixelsType()
-        pixel_type = pixels_type.getValue()
-        type_size_bytes = pixels_type.getBitSize() / 8
-        channel_info = []
-        for channel in image_object.getChannels():
-            channel_info.append((channel.getName(), 1))
-        image_info = f'{image_id} {image_object.getName()} ' \
-                     + get_image_size_info(xyzct, type_size_bytes, pixel_type, channel_info)
-        return image_info
-
-    def extract_thumbnail(self, image_id: int, outpath: str, target_size: float, overwrite: bool = True):
-        image_object = self._get_image_object(image_id)
-        filetitle = image_object.getName() + '.jpg'
-        output_filename = os.path.join(outpath, filetitle)
-        if overwrite or not os.path.exists(output_filename):
-            w, h, zs, cs, ts = self._get_size(image_object)
-            size = w, h
-
-            if target_size < 1:
-                factor = target_size
-            else:
-                factor = np.max(np.divide(size, target_size))
-            thumb_size = np.round(np.divide(size, factor)).astype(int)
-            try:
-                thumb_bytes = image_object.getThumbnail(thumb_size)
-                with open(output_filename, 'wb') as file:
-                    file.write(thumb_bytes)
-            except Exception as e:
-                logging.error(e)
-
-    def convert_images(self, image_ids: list, outpath: str, overwrite: bool = True):
-        # currently only ome-tiff supported
-        self._convert_images_to_ometiff(image_ids, outpath, overwrite=overwrite)
-
-    def _convert_images_to_ometiff(self, image_ids: list, outpath: str, overwrite: bool = True):
-        if not os.path.exists(outpath):
-            os.makedirs(outpath)
-        for image_id in tqdm(image_ids):
-            self._convert_image_to_ometiff(image_id, outpath, overwrite=overwrite)
-
-    def _convert_image_to_ometiff(self, image_id: int, outpath: str, overwrite: bool = True):
-        output = self.params['output']
-        image_object = self._get_image_object(image_id)
-        filetitle = image_object.getName() + '.ome.tiff'
-        output_filename = os.path.join(outpath, filetitle)
-        if overwrite or not os.path.exists(output_filename):
-            xyzct = self._get_size(image_object)
-            logging.info(f'{image_id} {image_object.getName()}')
-
-            npyramid_add = output.get('npyramid_add', 0)
-            pyramid_downsample = output.get('pyramid_downsample', 0)
-            pyramid_sizes_add = calc_pyramid(xyzct, npyramid_add, pyramid_downsample)
-            combine_rgb = output.get('combine_rgb', True)
-            channel_output = 'combine_rgb' if combine_rgb else ''
-
-            #metadata = get_omero_metadata_dict(image_object)
-            #xml_metadata = create_ome_metadata(metadata, output_filename, pyramid_sizes_add)
-
-            xml_metadata = create_ome_metadata_from_omero(image_object, filetitle, channel_output, pyramid_sizes_add)
-            #print(xml_metadata)
-
-            #pmetadata = metadata.images[0].pixels
-            #pixel_size = [(get_default(pmetadata.physical_size_x, 0), get_default(pmetadata.physical_size_x_unit.value, '')),
-            #              (get_default(pmetadata.physical_size_y, 0), get_default(pmetadata.physical_size_y_unit.value, '')),
-            #              (get_default(pmetadata.physical_size_z, 0), get_default(pmetadata.physical_size_z_unit.value, ''))]
-            pixel_size = []     # * will be done in OmeSource
-            resolution, resolution_unit = get_resolution_from_pixel_size(pixel_size)
-
-            image = self._get_omero_image(image_object)
-            if image is not None:
-                save_tiff(output_filename, image, xml_metadata=xml_metadata,
-                          resolution=resolution, resolution_unit=resolution_unit,
-                          tile_size=output.get('tile_size'),
-                          compression=output.get('compression'),
-                          pyramid_sizes_add=pyramid_sizes_add)
-
-    def _get_omero_image0(self, image_object: omero.gateway.ImageWrapper, pixels: omero.gateway.PixelsWrapper) -> np.ndarray:
-        w, h, zs, cs, ts = self._get_size(image_object)
-        read_size = 10240
-        ny = int(np.ceil(h / read_size))
-        nx = int(np.ceil(w / read_size))
-
-        dtype = np.dtype(pixels.getPixelsType().getValue()).type
-        image = np.zeros((h, w, cs), dtype=dtype)
-
-        for y in range(ny):
-            for x in range(nx):
-                sx, sy = x * read_size, y * read_size
-                tw, th = read_size, read_size
-                if sx + tw > w:
-                    tw = w - sx
-                if sy + th > h:
-                    th = h - sy
-                xywh = (sx, sy, tw, th)
-                tile_coords = [(0, c, 0, xywh) for c in range(cs)]
-                tile_gen = pixels.getTiles(tile_coords)
-                for c, tile in enumerate(tile_gen):
-                    image[sy:sy + th, sx:sx + tw, c] = tile
-        return image
-
-    def _get_omero_image(self, image_object: omero.gateway.ImageWrapper, read_size: int = 10240) -> np.ndarray:
-        w, h, zs, cs, ts = self._get_size(image_object)
-        pixels = image_object.getPrimaryPixels()
-        dtype = np.dtype(pixels.getPixelsType().getValue()).type
-        image = np.zeros((h, w, cs), dtype=dtype)
-
-        try:
-            pixels_store = self.conn.createRawPixelsStore()
-            pixels_id = image_object.getPixelsId()
-            pixels_store.setPixelsId(pixels_id, False, self.conn.SERVICE_OPTS)
-            ny = int(np.ceil(h / read_size))
-            nx = int(np.ceil(w / read_size))
-            for y in range(ny):
-                for x in range(nx):
-                    sx, sy = x * read_size, y * read_size
-                    tw, th = read_size, read_size
-                    if sx + tw > w:
-                        tw = w - sx
-                    if sy + th > h:
-                        th = h - sy
-                    for c in range(cs):
-                        tile0 = pixels_store.getTile(0, c, 0, sx, sy, tw, th)
-                        tile = np.frombuffer(tile0, dtype=dtype)
-                        tile.resize(th, tw)
-                        image[sy:sy + th, sx:sx + tw, c] = tile
-        except Exception as e:
-            logging.error(e)
-            image = None
-        finally:
-            pixels_store.close()
-        return image
-
-    def _get_size(self, image_object: omero.gateway.ImageWrapper) -> tuple:
-        xs, ys = image_object.getSizeX(), image_object.getSizeY()
-        zs, cs, ts = image_object.getSizeZ(), image_object.getSizeC(), image_object.getSizeT()
-        return xs, ys, zs, cs, ts
-
-    def _get_original_files(self, image_object: omero.gateway.ImageWrapper) -> list:
-        return image_object.getFileset().listFiles()
-
-    def _get_magnification(self, image_object: omero.gateway.ImageWrapper) -> float:
-        return image_object.getObjectiveSettings().getObjective().getNominalMagnification()
 
     def _get_image_annotations(self, image_object: omero.gateway.ImageWrapper, annotation_keys: list) -> dict:
         annotations = {}

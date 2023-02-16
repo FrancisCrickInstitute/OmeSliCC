@@ -46,8 +46,8 @@ output:
   thumbnail_size: 1000
   csv: resources/csv/labels.csv
 
-# actions can be: info, thumbnail, convert, labels
-actions: [convert, labels]
+# actions can be: info, thumbnail, convert
+actions: [convert]
 
 # Omero credentials
 credentials:
