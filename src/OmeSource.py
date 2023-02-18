@@ -145,13 +145,12 @@ class OmeSource:
         return [pixelsize[0] * conversion.get(pixelsize[1], 1) for pixelsize in self.get_pixelsize()]
 
     def get_shape(self) -> tuple:
-        size = self.get_size()
-        xyzct = self.sizes_xyzct[0]
+        xyzct = self.get_size_xyzct()
         n = xyzct[2] * xyzct[3]
         if n > 1:
-            shape = (size[1], size[0], n)
+            shape = (xyzct[1], xyzct[0], n)
         else:
-            shape = (size[1], size[0])
+            shape = (xyzct[1], xyzct[0])
         return shape
 
     def clone_empty(self) -> np.ndarray:

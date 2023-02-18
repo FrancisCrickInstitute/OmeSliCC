@@ -101,7 +101,6 @@ def convert(source: OmeSource, params: dict):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
-    source = create_source(source_ref, params)
     if 'zar' in output_format:
         convert_to_zarr(source, output_filename, output_params)
     else:

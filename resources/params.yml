@@ -1,7 +1,9 @@
 # input parameters - use either Source or Omero
 input:
-  # source - input folder or URL (pattern or list supported) - if used Omero will be ignored as input
+  # Use either 'source' or 'omero' - mutually exclusive
+  # source - input folder or URL (pattern or list supported) - mutually exclusive with omero
   #source: /source/
+  # omero - Omero source details - mutually exclusive with source
   omero:
     # host - Omero server address
     host: ssl://omero.server

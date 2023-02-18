@@ -6,7 +6,7 @@ import omero.model
 from types import TracebackType
 
 from src.omero_credentials import decrypt_credentials
-from src.util import ensure_list, get_default
+from src.util import ensure_list
 
 
 class Omero:
@@ -63,7 +63,7 @@ class Omero:
         image_object = self.conn.getObject('Image', image_id)
         return image_object
 
-    def create_pixels_store(self, image_object):
+    def create_pixels_store(self, image_object: omero.gateway.ImageWrapper) -> omero.gateway.ProxyObjectWrapper:
         pixels_store = self.conn.createRawPixelsStore()
         pixels_store.setPixelsId(image_object.getPixelsId(), False, self.conn.SERVICE_OPTS)
         return pixels_store
@@ -106,8 +106,8 @@ class Omero:
                 image_ids.append(image_object.getId())
         return image_ids
 
-    def _get_image_annotation(self, image_id: int, target_labels: list) -> tuple:
-        image_object = self._get_image_object(image_id)
+    def get_image_annotation(self, image_id: int, target_labels: list) -> tuple:
+        image_object = self.get_image_object(image_id)
         name = image_object.getName()
         annotations = self._get_image_annotations(image_object, target_labels)
         return name, annotations
