@@ -42,7 +42,7 @@ class OmeroLabelReader:
         input_labels = input.get('omero', {}).get('labels', [])
         logging.info(f'Matching images: {len(image_ids)}')
         for id in image_ids:
-            name, annotations = self.omero._get_image_annotation(id, input_labels)
+            name, annotations = self.omero.get_image_annotation(id, input_labels)
             image_names.append(name)
             image_annotations.append(annotations)
         df = pd.DataFrame(index=image_ids, data=image_annotations)

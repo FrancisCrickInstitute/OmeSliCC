@@ -13,8 +13,10 @@ from numcodecs import register_codec
 from numcodecs.blosc import Blosc
 from tifffile import TIFF, TiffWriter
 
+from src import Omero
 from src.BioSource import BioSource
 from src.OmeSource import OmeSource
+from src.OmeroSource import OmeroSource
 from src.PlainImageSource import PlainImageSource
 from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
@@ -26,28 +28,29 @@ register_codec(Jpeg2k)
 register_codec(JpegXr)
 
 
-def load_source(filename: str, params: dict) -> OmeSource:
+def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSource:
     source_mag = params['input'].get('mag')
     target_mag = params['output'].get('mag')
-    ext = os.path.splitext(filename)[1].lower()
-    if 'zarr' in ext:
-        source = ZarrSource(filename, source_mag=source_mag, target_mag=target_mag)
+    ext = os.path.splitext(source_ref)[1].lower()
+    if omero is not None:
+        source = OmeroSource(omero, int(source_ref), source_mag=source_mag, target_mag=target_mag)
+    elif 'zarr' in ext:
+        source = ZarrSource(source_ref, source_mag=source_mag, target_mag=target_mag)
     elif ext.lstrip('.') in TIFF.FILE_EXTENSIONS:
-        source = TiffSource(filename, source_mag=source_mag, target_mag=target_mag)
+        source = TiffSource(source_ref, source_mag=source_mag, target_mag=target_mag)
     elif ext in Image.registered_extensions().keys():
-        source = PlainImageSource(filename, source_mag=source_mag, target_mag=target_mag)
+        source = PlainImageSource(source_ref, source_mag=source_mag, target_mag=target_mag)
     else:
-        source = BioSource(filename, target_mag=target_mag)
+        source = BioSource(source_ref, target_mag=target_mag)
     return source
 
 
-def get_image_info(filename: str, params: dict) -> str:
-    source = load_source(filename, params)
+def get_image_info(source: OmeSource) -> str:
     xyzct = source.get_size_xyzct()
     pixel_nbytes = source.get_pixel_nbytes()
     pixel_type = source.get_pixel_type()
     channel_info = source.get_channel_info()
-    image_info = os.path.basename(filename) + '\n'
+    image_info = os.path.basename(source.source_reference) + '\n'
     image_info += get_image_size_info(xyzct, pixel_nbytes, pixel_type, channel_info)
     sizes = source.get_actual_size()
     if len(sizes) > 0:
@@ -59,7 +62,8 @@ def get_image_info(filename: str, params: dict) -> str:
     return image_info
 
 
-def extract_thumbnail(filename: str, params: dict):
+def extract_thumbnail(source: OmeSource, params: dict):
+    source_ref = source.source_reference
     output_params = params['output']
     output_folder = output_params['folder']
     target_size = output_params.get('thumbnail_size', 1000)
@@ -67,11 +71,11 @@ def extract_thumbnail(filename: str, params: dict):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    output_filename = os.path.join(output_folder, f'{get_filetitle(filename)}_thumb.tiff')
-    output_filename0 = os.path.join(output_folder, f'{get_filetitle(filename)}_channel0_thumb.tiff')
+    output_filename = os.path.join(output_folder, f'{get_filetitle(source_ref)}_thumb.tiff')
+    output_filename0 = os.path.join(output_folder, f'{get_filetitle(source_ref)}_channel0_thumb.tiff')
     if overwrite or (not os.path.exists(output_filename) and not os.path.exists(output_filename0)):
-        source = load_source(filename, params)
-        size = source.sizes[0]
+        size = source.get_size()
+        volumetric = (source.get_size_xyzct()[2] > 1)
 
         if target_size < 1:
             factor = target_size
@@ -79,23 +83,24 @@ def extract_thumbnail(filename: str, params: dict):
             factor = np.max(np.divide(size, target_size))
         thumb_size = np.round(np.divide(size, factor)).astype(int)
         thumb = source.get_thumbnail(thumb_size)
+
         nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
-        if nchannels not in [1, 3]:
+        if nchannels not in [1, 3] and not volumetric:
             for channeli in range(nchannels):
-                output_filename = os.path.join(output_folder, f'{get_filetitle(filename)}_channel{channeli}_thumb.tiff')
-                cv.imwrite(output_filename, thumb[..., channeli])
+                output_filename = os.path.join(output_folder, f'{get_filetitle(source_ref)}_channel{channeli}_thumb.tiff')
+                save_tiff(output_filename, thumb[..., channeli])
         else:
-            cv.imwrite(output_filename, thumb)
+            save_tiff(output_filename, thumb)
 
 
-def convert(filename: str, params: dict):
+def convert(source: OmeSource, params: dict):
+    source_ref = source.source_reference
     output_params = params['output']
     output_folder = output_params['folder']
     output_format = output_params['format']
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    output_filename = os.path.join(output_folder, get_filetitle(filename, remove_all_ext=True) + '.' + output_format)
-    source = load_source(filename, params)
+    output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
     if 'zar' in output_format:
         convert_to_zarr(source, output_filename, output_params)
     else:

@@ -7,8 +7,7 @@ import yaml
 from tqdm import tqdm
 
 from src.Omero import Omero
-from src.OmeroLabelReader import OmeroLabelReader
-from src.conversion import get_image_info, extract_thumbnail, convert
+from src.conversion import get_image_info, extract_thumbnail, convert, create_source
 from src.util import ensure_list
 from src.parameters import *
 from version import __version__
@@ -21,65 +20,49 @@ def run_actions(params: dict):
     params: parameters defining pipeline input, output and actions
     """
     input_params = params['input']
-    output_params = params['output']
-    input_source = input_params.get('source')
-    output_folder = output_params['folder']
-    thumbnail_size = output_params.get('thumbnail_size', 1000)
-    overwrite = output_params.get('overwrite', True)
-
+    source_ref = input_params.get('source')
     actions = ensure_list(params.get('actions'))
+    is_omero = input_params.get('omero') is not None
+    omero = None
 
-    if input_source is None:
-        with Omero(params) as omero:
-            image_ids = omero.get_annotation_image_ids()
-            for action0 in actions:
-                action = action0.lower()
-                logging.info(f'Starting {action}')
-                if 'info' in action:
-                    for image_id in image_ids:
-                        image_info = omero.get_image_info(image_id)
-                        logging.info(image_info)
-                elif 'thumb' in action:
-                    for image_id in image_ids:
-                        omero.extract_thumbnail(image_id, output_folder, target_size=thumbnail_size, overwrite=overwrite)
-                elif 'convert' in action:
-                    omero.convert_images(image_ids, output_folder, overwrite=overwrite)
-                elif 'label' in action:
-                    with OmeroLabelReader(params, omero=omero) as label_reader:
-                        label_reader.create_label_csv(image_ids)
-                logging.info(f'Done {action}')
+    if is_omero:
+        omero = Omero(params)
+        omero.init()
+        source_refs = omero.get_annotation_image_ids()
+    elif isinstance(source_ref, list):
+        # list of filenames
+        source_refs = source_ref
     else:
-        input_source = input_params['source']
-        if isinstance(input_source, list):
-            # list of filenames
-            sources = input_source
+        if validators.url(source_ref):
+            # URL
+            source_refs = [source_ref]
         else:
-            if validators.url(input_source):
-                # URL
-                sources = [input_source]
-            else:
-                # filename or path
-                input_path = input_source
-                if os.path.isdir(input_path) and not input_path.lower().endswith('.zarr'):
-                    input_path = os.path.join(input_path, '*')
-                sources = [file for file in glob.glob(input_path) if os.path.isfile(file) or file.lower().endswith('.zarr')]
-        if len(sources) > 0:
-            for action0 in actions:
-                action = action0.lower()
-                logging.info(f'Starting {action}')
-                for source in tqdm(sources):
-                    try:
-                        if 'info' in action:
-                            logging.info(get_image_info(source, params))
-                        elif 'thumb' in action:
-                            extract_thumbnail(source, params)
-                        elif 'convert' in action:
-                            convert(source, params)
-                    except Exception as e:
-                        logging.exception(e)
-                logging.info(f'Done {action}')
-        else:
-            logging.warning('No files to process')
+            # filename or path
+            input_path = source_ref
+            if os.path.isdir(input_path) and not input_path.lower().endswith('.zarr'):
+                input_path = os.path.join(input_path, '*')
+            source_refs = [file for file in glob.glob(input_path) if os.path.isfile(file) or file.lower().endswith('.zarr')]
+    if len(source_refs) > 0:
+        for action0 in actions:
+            action = action0.lower()
+            logging.info(f'Starting {action}')
+            for source_ref in tqdm(source_refs):
+                try:
+                    source = create_source(str(source_ref), params, omero)
+                    if 'info' in action:
+                        logging.info(get_image_info(source))
+                    elif 'thumb' in action:
+                        extract_thumbnail(source, params)
+                    elif 'convert' in action:
+                        convert(source, params)
+                    source.close()
+                except Exception as e:
+                    logging.exception(e)
+            logging.info(f'Done {action}')
+    else:
+        logging.warning('No files to process')
+    if is_omero:
+        omero.close()
 
     logging.info('Done')
 
