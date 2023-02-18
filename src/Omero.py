@@ -166,12 +166,11 @@ class Omero:
         output_filename = os.path.join(outpath, filetitle)
         if overwrite or not os.path.exists(output_filename):
             xyzct = self._get_size(image_object)
-            w, h, zs, cs, ts = xyzct
             logging.info(f'{image_id} {image_object.getName()}')
 
             npyramid_add = output.get('npyramid_add', 0)
             pyramid_downsample = output.get('pyramid_downsample', 0)
-            pyramid_sizes_add = calc_pyramid((w, h), npyramid_add, pyramid_downsample)
+            pyramid_sizes_add = calc_pyramid(xyzct, npyramid_add, pyramid_downsample)
             metadata = create_ome_metadata_from_omero(image_object, filetitle, pyramid_sizes_add)
             xml_metadata = metadata.to_xml()
             pmetadata = metadata.images[0].pixels
@@ -220,8 +219,7 @@ class Omero:
 
         try:
             pixels_store = self.conn.createRawPixelsStore()
-            pixels_id = image_object.getPixelsId()
-            pixels_store.setPixelsId(pixels_id, False, self.conn.SERVICE_OPTS)
+            pixels_store.setPixelsId(image_object.getPixelsId(), False, self.conn.SERVICE_OPTS)
             ny = int(np.ceil(h / read_size))
             nx = int(np.ceil(w / read_size))
             for y in range(ny):
