@@ -1,4 +1,6 @@
+import io
 import numpy as np
+import PIL.Image
 import omero.gateway
 
 from src import Omero
@@ -37,7 +39,6 @@ class OmeroSource(OmeSource):
             self.pixel_nbits.append(pixel_type.itemsize * 8)
 
         self._init_metadata(str(image_id), source_mag=source_mag, source_mag_required=source_mag_required)
-        self.pixels_store.setResolutionLevel(self.best_level)
 
     def _find_metadata(self):
         # TODO: use objective settings to get matching mag instead
@@ -53,12 +54,17 @@ class OmeroSource(OmeSource):
     def close(self):
         self.pixels_store.close()
 
+    def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:
+        image_bytes = self.image_object.getThumbnail(target_size)
+        image_stream = io.BytesIO(image_bytes)
+        image = np.array(PIL.Image.open(image_stream))
+        return image
+
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         pixels_store = self.pixels_store
-        pixels_store.setResolutionLevel(level)
-        tile_size = pixels_store.getTileSize()
+        #pixels_store.setResolutionLevel(level)  # order doesn't always seem consistent with getResolutionDescriptions()
         w, h = x1 - x0, y1 - y0
-        nchannels = self.sizes_xyzct[level][4]
+        nchannels = self.sizes_xyzct[level][3]
         image = np.zeros((h, w, nchannels), dtype=self.pixel_types[level])
         for c in range(nchannels):
             tile0 = pixels_store.getTile(0, c, 0, x0, y0, w, h)
@@ -69,47 +75,3 @@ class OmeroSource(OmeSource):
             return image[..., 0]
         else:
             return image
-
-    def _asarray_level0(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
-        pixels_store = self.pixels_store
-        pixels_store.setResolutionLevel(level)
-        width, height, _, nchannels, _ = self.sizes_xyzct[level]
-        if x1 > width:
-            x1 = width - x0
-        if y1 > height:
-            y1 = height - x0
-        tile_size = pixels_store.getTileSize()
-        tile_width, tile_height = tile_size
-        tile_x0, tile_y0 = x0 // tile_width, y0 // tile_height
-        tile_x1, tile_y1 = np.ceil([x1 / tile_width, y1 / tile_height]).astype(int)
-        w = (tile_x1 - tile_x0) * tile_width
-        h = (tile_y1 - tile_y0) * tile_height
-        out = np.zeros((h, w, nchannels), dtype=self.pixel_types[level])
-
-        tile_list = []
-        tile_locations = []
-        # TODO: test performance swapping order of channel (first or last)
-        for c in range(nchannels):
-            for y in range(tile_y0, tile_y1):
-                for x in range(tile_x0, tile_x1):
-                    tx, ty = x * tile_width, y * tile_height
-                    tw, th = tile_size
-                    if tx + tw > width:
-                        tw = width - tx
-                    if ty + th > height:
-                        th = height - ty
-                    tile_list.append((0, c, 0, tx, ty, tw, th))
-                    target_x = (x - tile_x0) * tile_width
-                    target_y = (y - tile_y0) * tile_height
-                    tile_locations.append((target_x, target_y, c))
-
-        for tile, (x, y, c) in zip(self.image_object.getTiles(tile_list)):
-            th, tw = tile.shape
-            # tile = np.frombuffer(tile0, dtype=image.dtype)
-            # image[..., c] = tile.resize(th, tw)
-            out[y:y + th, x:x + tw, c] = tile
-
-        target_y0 = y0 - tile_y0 * tile_height
-        target_x0 = x0 - tile_x0 * tile_width
-        image = out[target_y0: target_y0 + h, target_x0: target_x0 + w]
-        return image
