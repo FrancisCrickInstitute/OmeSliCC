@@ -289,3 +289,8 @@ def reverse_last_axis(image, reverse=True):
         return np.moveaxis(image, -1, 0)
     else:
         return image
+
+
+def save_image(image: np.ndarray, filename: str, output_params: dict):
+    compression = output_params.get('compression')
+    PIL.Image.fromarray(image).save(filename, compression=compression)

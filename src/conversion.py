@@ -1,16 +1,14 @@
 # https://pyquestions.com/how-to-save-a-very-large-numpy-array-as-an-image-loading-as-little-as-possible-into-memory
 # * TODO: fix Zarr support, extend to Ome.Zarr
 # * TODO: Add JPEGXR support for Zarr
-
+# TODO: use ome-zarr python package for reading/writing if supporting image compressors (Jpeg2k/xr)
 
 import os
 import numpy as np
 import zarr
-import cv2 as cv
 from PIL import Image
 from imagecodecs.numcodecs import Jpeg2k, JpegXr
 from numcodecs import register_codec
-from numcodecs.blosc import Blosc
 from tifffile import TIFF, TiffWriter
 
 from src import Omero
@@ -21,7 +19,7 @@ from src.PlainImageSource import PlainImageSource
 from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
 from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_unsigned_image, reverse_last_axis, \
-    get_resolution_from_pixel_size
+    get_resolution_from_pixel_size, save_image
 from src.util import get_filetitle
 
 register_codec(Jpeg2k)
@@ -93,7 +91,7 @@ def extract_thumbnail(source: OmeSource, params: dict):
             save_tiff(output_filename, thumb)
 
 
-def convert(source: OmeSource, params: dict):
+def convert_image(source: OmeSource, params: dict):
     source_ref = source.source_reference
     output_params = params['output']
     output_folder = output_params['folder']
@@ -101,80 +99,54 @@ def convert(source: OmeSource, params: dict):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
+    image = get_source_image(source)
     if 'zar' in output_format:
-        convert_to_zarr(source, output_filename, output_params)
+        save_image_as_zarr(source, image, output_filename, output_params, ome=('ome' in output_format))
+    elif 'tif' in output_format:
+        save_image_as_tiff(source, image, output_filename, output_params, ome=('ome' in output_format))
     else:
-        convert_to_tiff(source, output_filename, output_params, ome=('ome' in output_format))
+        save_image(image, output_filename, output_params)
 
 
-def convert_to_zarr0(input_filename: str, output_folder: str, patch_size: tuple = (256, 256)):
-    source = TiffSource(input_filename)
-    size = source.sizes[0]
-    width = size[0]
-    height = size[1]
-    compressor = Blosc(cname='zstd', clevel=3, shuffle=Blosc.BITSHUFFLE)    # clevel=9
-
-    output_filename = os.path.join(output_folder, get_filetitle(input_filename)) + '.zarr'
-    root = zarr.open_group(output_filename, mode='a')
-
-    nx = int(np.ceil(width / patch_size[0]))
-    ny = int(np.ceil(height / patch_size[1]))
-
-    # thumbnail
-    level = 1
-    label = str(level)
-    if label not in root.array_keys():
-        thumb = np.asarray(source.get_thumbnail((nx, ny)))
-        # ensure correct size in case thumb scaled using aspect ratio
-        if thumb.shape[1] < nx or thumb.shape[0] < ny:
-            if thumb.shape[1] < nx:
-                dx = nx - thumb.shape[1]
-            else:
-                dx = 0
-            if thumb.shape[0] < ny:
-                dy = ny - thumb.shape[0]
-            else:
-                dy = 0
-            thumb = np.pad(thumb, ((0, dy), (0, dx), (0, 0)), 'edge')
-        thumb = thumb[0:ny, 0:nx]
-        root.create_dataset(label, data=thumb,
-                            compressor=compressor)
-
-    # image
-    level = 0
-    label = str(level)
-    if label not in root.array_keys():
-        data = root.create_dataset(label, shape=(height, width, 3),
-                                   chunks=(patch_size[0], patch_size[1], None), dtype='uint8',
-                                   compressor=compressor)
-        for y in range(ny):
-            ys = y * patch_size[1]
-            h = patch_size[1]
-            if ys + h > height:
-                h = height - ys
-            for x in range(nx):
-                xs = x * patch_size[0]
-                w = patch_size[0]
-                if xs + w > width:
-                    w = width - xs
-                tile = source.asarray(xs, ys, xs + w, ys + h)
-                data[ys:ys+h, xs:xs+w] = tile
+def get_source_image(source: OmeSource, chunk_size=(10240, 10240)):
+    image = source.clone_empty()
+    for x0, y0, x1, y1, chunk in source.produce_chunks(chunk_size):
+        image[y0:y1, x0:x1] = chunk
+    return image
 
 
-def convert_to_zarr(source: OmeSource, output_filename: str, output_params: dict):
-    shape = source.get_shape()
-    dtype = source.get_pixel_type()
-    tile_size = output_params['tile_size']
+def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
+    tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     overwrite = output_params.get('overwrite', True)
-
     if overwrite or not os.path.exists(output_filename):
+        npyramid_add = output_params.get('npyramid_add', 0)
+        pyramid_downsample = output_params.get('pyramid_downsample')
+
         zarr_root = zarr.open_group(output_filename, mode='w')
-        zarr_root.create_dataset(str(0), shape=shape, chunks=(tile_size[0], tile_size[1], None), dtype=dtype,
-                                 compressor=None, filters=compression)
+        size = source.get_size()
+        scale = 1
+        datasets = []
+        for pathi in range(1 + npyramid_add):
+            new_size = np.multiply(size, scale)
+            image = image_resize(image, new_size)
+            zarr_root.create_dataset(str(pathi), shape=image.shape, chunks=tile_size,
+                                     dtype=image.dtype, compressor=None, filters=compression)
+            datasets.append({
+                'path': pathi,
+                'coordinateTransformations': [{'scale': [1, 1, 1, new_size[1], new_size[0]]}]
+            })
+            scale /= pyramid_downsample
+
+        if ome:
+            # metadata
+            zarr_root.attrs['multiscales'] = [{
+                'version': '0.4',
+                'datasets': datasets
+            }]
 
 
-def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict, ome: bool = False):
+def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     split_channel_files = output_params.get('split_channel_files')
@@ -192,12 +164,6 @@ def convert_to_tiff(source: OmeSource, output_filename: str, output_params: dict
 
     output_filename0 = output_filename.replace(output_format, '').rstrip('.') + f'_channel0.{output_format}'
     if overwrite or (not os.path.exists(output_filename) and not os.path.exists(output_filename0)):
-        image = source.clone_empty()
-        # get source image chunks
-        chunk_size = (10240, 10240)
-        for x0, y0, x1, y1, chunk in source.produce_chunks(chunk_size):
-            image[y0:y1, x0:x1] = chunk
-
         nfiles = source.get_nchannels() if split_channel_files else 1
         for i in range(nfiles):
             if nfiles > 1:

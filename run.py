@@ -7,7 +7,7 @@ import yaml
 from tqdm import tqdm
 
 from src.Omero import Omero
-from src.conversion import get_image_info, extract_thumbnail, convert, create_source
+from src.conversion import create_source, get_image_info, extract_thumbnail, convert_image
 from src.util import ensure_list
 from src.parameters import *
 from version import __version__
@@ -54,7 +54,7 @@ def run_actions(params: dict):
                     elif 'thumb' in action:
                         extract_thumbnail(source, params)
                     elif 'convert' in action:
-                        convert(source, params)
+                        convert_image(source, params)
                     source.close()
                 except Exception as e:
                     logging.exception(e)
