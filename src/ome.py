@@ -4,7 +4,6 @@ if TYPE_CHECKING:
     from src.OmeSource import OmeSource
 
 import Ice
-import inspect
 import os
 import omero.gateway
 import omero.model
@@ -186,9 +185,9 @@ def create_ome_metadata(source: OmeSource,
 
 
 def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
-                        output_filename: str,
-                        channel_output: str = '',
-                        pyramid_sizes_add: list = None) -> str:
+                                   output_filename: str,
+                                   channel_output: str = '',
+                                   pyramid_sizes_add: list = None) -> str:
 
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
@@ -383,46 +382,70 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
     return xmltodict.unparse({'OME': filter_dict(ome)}, short_empty_elements=True, pretty=True)
 
 
-def get_omero_metadata_dict(omero_obj, parents=[]):
-    #TODO: add Omero annotations
-    # This *almost works, but gives some unloaded exceptions that can't be overcome
-    dct = {}
-    level = len(parents)
+def get_omero_metadata_dict(image_object):
+    # semi-automatically extract metadata dict (currently unused)
+    ome = get_omero_metadata_dict_it(image_object)
+    ome['Image'] = {
+        '@ID': 'Image:0',
+        '@Name': ome.pop('Name'),
+        '@AcquisitionDate': ome.pop('AcquisitionDate'),
+        'ObjectiveSettings': ome.pop('ObjectiveSettings'),
+        'StageLabel': ome.pop('StageLabel'),
+        'Pixels': ome.pop('Pixels')
+    }
+    annotations = {}
+    for annotations0 in image_object.listAnnotations():
+        annotation_type = annotations0.OMERO_TYPE.__name__
+        if annotation_type.endswith('I'):
+            annotation_type = annotation_type[:-1]
+        if annotation_type not in annotations:
+            annotations[annotation_type] = []
+        value = annotations0.getValue()
+        if annotation_type == 'MapAnnotation':
+            value = {'M': [{'@K': k, '#text': v} for k, v in value]}
+        annotations[annotation_type].append({
+            '@ID': f'Annotation:{len(annotations[annotation_type])}',
+            '@Namespace': annotations0.getNs(),
+            'Value': value
+        })
+    ome['StructuredAnnotations'] = annotations
+    return ome
 
+
+def get_omero_metadata_dict_it(omero_obj, parents=[]):
+    # recursively extract metadata dict (currently unused)
+    metadata = {}
     if isinstance(omero_obj, omero.gateway.BlitzObjectWrapper):
         obj = omero_obj._obj
     else:
         obj = omero_obj
     for field in obj._field_info._fields:
         name = field[0].capitalize() + field[1:]
-        if field != 'details' \
-                and not ('Pixels' in parents and name == 'Image') \
+        if field != 'details' and field != 'relatedTo' \
+                and not (name == 'Image' or name == 'Images' or name in parents) \
                 and not ('ObjectiveSettings' in parents and name == 'Objective'):
-            if hasattr(omero_obj, 'get' + name):
-                method = getattr(omero_obj, 'get' + name)
-                try:
-                    if len(inspect.getfullargspec(method)[0]) > 2:
-                        value0 = method(0)
+            try:
+                if hasattr(omero_obj, 'get' + name):
+                    if name == 'Pixels':
+                        value0 = omero_obj.getPrimaryPixels()
                     else:
-                        value0 = method()
-                except:
-                    value0 = None
-                if value0 is not None:
-                    data = []
-                    for value in ensure_list(value0):
-                        if isinstance(value, omero.gateway.BlitzObjectWrapper) or isinstance(value, omero.model.IObject):
-                            print('  ' * level + '+', name)
-                            data.append(get_omero_metadata_dict(value, parents + [name]))
-                        elif isinstance(value, Ice.Object):
-                            if field != 'value':
-                                print('  ' * level + ' ', name)
-                            data.append(value.getValue())
-                        else:
-                            if field != 'value':
-                                print('  ' * level + ' ', name)
-                            data.append(value)
-                    if len(data) > 0:
-                        if len(data) == 1:
-                            data = data[0]
-                        dct[name] = data
-    return dct
+                        value0 = getattr(omero_obj, 'get' + name)()
+                    if value0 is not None:
+                        data = []
+                        for value in ensure_list(value0):
+                            if isinstance(value, omero.gateway.BlitzObjectWrapper) or isinstance(value, Ice.Object):
+                                if hasattr(value, 'getValue'):
+                                    while hasattr(value, 'getValue'):
+                                        value = value.getValue()
+                                else:
+                                    value = get_omero_metadata_dict_it(value, parents + [name])
+                                data.append(value)
+                            else:
+                                data.append(value)
+                        if len(data) > 0:
+                            if len(data) == 1:
+                                data = data[0]
+                            metadata[name] = data
+            except:
+                pass
+    return metadata

@@ -5,6 +5,7 @@ import omero.gateway
 
 from src import Omero
 from src.OmeSource import OmeSource
+from src.ome import create_ome_metadata_from_omero
 from src.util import get_default
 
 
@@ -42,6 +43,7 @@ class OmeroSource(OmeSource):
 
     def _find_metadata(self):
         # TODO: use objective settings to get matching mag instead
+        #metadata = get_omero_metadata_dict(self.image_object)
         image_object = self.image_object
         self.pixel_size = [(get_default(image_object.getPixelSizeX(), 0), 'µm'),
                            (get_default(image_object.getPixelSizeY(), 0), 'µm'),
@@ -51,8 +53,8 @@ class OmeroSource(OmeSource):
             self.channel_info.append((channel.getName(), channell.getSamplesPerPixel()))
         self.mag0 = image_object.getInstrument().getObjectives()[0].getNominalMagnification()
 
-    def close(self):
-        self.pixels_store.close()
+    def create_xml_metadata(self, output_filename: str, channel_output: str = '', pyramid_sizes_add: list = None) -> str:
+        return create_ome_metadata_from_omero(self.image_object, output_filename, channel_output=channel_output, pyramid_sizes_add=pyramid_sizes_add)
 
     def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:
         image_bytes = self.image_object.getThumbnail(target_size)
@@ -75,3 +77,6 @@ class OmeroSource(OmeSource):
             return image[..., 0]
         else:
             return image
+
+    def close(self):
+        self.pixels_store.close()

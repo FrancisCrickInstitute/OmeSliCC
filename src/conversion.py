@@ -176,8 +176,8 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
 
             if ome:
                 metadata = None
-                xml_metadata = source.get_xml_metadata(output_filename1, channel_output=channel_output,
-                                                       pyramid_sizes_add=pyramid_sizes_add)
+                xml_metadata = source.create_xml_metadata(output_filename1, channel_output=channel_output,
+                                                          pyramid_sizes_add=pyramid_sizes_add)
                 #print(xml_metadata)
             else:
                 metadata = source.get_metadata()

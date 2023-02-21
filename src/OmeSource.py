@@ -205,7 +205,7 @@ class OmeSource:
     def get_metadata(self) -> dict:
         return self.metadata
 
-    def get_xml_metadata(self, output_filename: str, channel_output: str = '', pyramid_sizes_add: list = None) -> str:
+    def create_xml_metadata(self, output_filename: str, channel_output: str = '', pyramid_sizes_add: list = None) -> str:
         return create_ome_metadata(self, output_filename, channel_output=channel_output, pyramid_sizes_add=pyramid_sizes_add)
 
     def _find_metadata(self):
