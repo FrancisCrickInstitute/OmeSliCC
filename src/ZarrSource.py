@@ -14,11 +14,12 @@ class ZarrSource(OmeSource):
     levels: list
     """list of all image arrays for different sizes"""
 
-    def __init__(self, filename: str, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False):
+    def __init__(self, filename: str,
+                 source_pixel_size: list = None,
+                 target_pixel_size: list = None,
+                 source_info_required: bool = False):
+
         super().__init__()
-        self.filename = filename
-        self.mag0 = source_mag
-        self.target_mag = target_mag
 
         try:
             root = zarr.open_group(filename, mode='r')
@@ -41,9 +42,13 @@ class ZarrSource(OmeSource):
                 self.sizes.append((xyzct[0], xyzct[1]))
                 self.pixel_types.append(data.dtype)
                 self.pixel_nbits.append(data.dtype.itemsize * 8)
-        except GroupNotFoundError:
-            raise FileNotFoundError(f'File error {filename}')
-        self._init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
+        except GroupNotFoundError as e:
+            raise FileNotFoundError(f'Read error: {e}')
+
+        self._init_metadata(filename,
+                            source_pixel_size=source_pixel_size,
+                            target_pixel_size=target_pixel_size,
+                            source_info_required=source_info_required)
 
     def _find_metadata(self):
         pixel_size = []
@@ -60,9 +65,9 @@ class ZarrSource(OmeSource):
                     scale1 = coordinateTransformations[0].get('scale', [0, 0, 0, 0, 0])
             if 'z' in axes:
                 pixel_size = [
-                    (scale1[axes.index('x')] / size_xyzct[0], units[axes.index('x')]),
-                    (scale1[axes.index('y')] / size_xyzct[1], units[axes.index('y')]),
-                    (scale1[axes.index('z')] / size_xyzct[2], units[axes.index('z')])]
+                    (scale1[axes.index('x')], units[axes.index('x')]),
+                    (scale1[axes.index('y')], units[axes.index('y')]),
+                    (scale1[axes.index('z')], units[axes.index('z')])]
             else:
                 pixel_size = [(1, ''), (1, ''), (1, '')]
         for data in self.metadata.values():
@@ -73,9 +78,9 @@ class ZarrSource(OmeSource):
                     if samples_per_pixel < 1:
                         samples_per_pixel = 1
                     channel_info.append((channel.get('label', ''), samples_per_pixel))
-        self.pixel_size = pixel_size
+        self.source_pixel_size = pixel_size
         self.channel_info = channel_info
-        self.mag0 = 0
+        self.source_mag = 0
 
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         # move channels to back (tczyx -> yxc)

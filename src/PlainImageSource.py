@@ -19,12 +19,15 @@ class PlainImageSource(OmeSource):
     arrays: list
     """list of all image arrays for different sizes"""
 
-    def __init__(self, filename: str, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False,
+    def __init__(self,
+                 filename: str,
+                 source_pixel_size: float = None,
+                 target_pixel_size: float = None,
+                 source_info_required: bool = False,
                  executor: ThreadPoolExecutor = None):
+
         super().__init__()
-        self.filename = filename
-        self.mag0 = source_mag
-        self.target_mag = target_mag
+        self.source_pixel_size = source_pixel_size
         self.loaded = False
         self.arrays = []
 
@@ -43,7 +46,11 @@ class PlainImageSource(OmeSource):
         pixelinfo = pilmode_to_pixelinfo(self.image.mode)
         self.pixel_types = [pixelinfo[0]]
         self.pixel_nbits = [pixelinfo[1]]
-        self._init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
+
+        self._init_metadata(filename,
+                            source_pixel_size=source_pixel_size,
+                            target_pixel_size=target_pixel_size,
+                            source_info_required=source_info_required)
 
     def _find_metadata(self):
         self.pixel_size = []
@@ -57,7 +64,7 @@ class PlainImageSource(OmeSource):
             res0 = res0[0] / res0[1]
         self.pixel_size.append((1 / res0, pixel_size_unit))
         self.channel_info = []
-        self.mag0 = self.metadata.get('Mag', 0)
+        self.source_mag = self.metadata.get('Mag', 0)
 
     def load(self):
         self.unload()

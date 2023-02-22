@@ -13,33 +13,33 @@ from tifffile import TIFF, TiffWriter
 
 from src import Omero
 from src.BioSource import BioSource
-from src.OmeSource import OmeSource
+from src.OmeSource import OmeSource, get_resolution_from_pixel_size
 from src.OmeroSource import OmeroSource
 from src.PlainImageSource import PlainImageSource
 from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
 from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_unsigned_image, reverse_last_axis, \
-    get_resolution_from_pixel_size, save_image
-from src.util import get_filetitle
+    save_image
+from src.util import get_filetitle, split_value_unit_list
 
 register_codec(Jpeg2k)
 register_codec(JpegXr)
 
 
 def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSource:
-    source_mag = params['input'].get('mag')
-    target_mag = params['output'].get('mag')
+    source_pixel_size = split_value_unit_list(params['input'].get('pixel_size'))
+    target_pixel_size = split_value_unit_list(params['output'].get('pixel_size'))
     ext = os.path.splitext(source_ref)[1].lower()
     if omero is not None:
-        source = OmeroSource(omero, int(source_ref), source_mag=source_mag, target_mag=target_mag)
+        source = OmeroSource(omero, int(source_ref), source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     elif 'zarr' in ext:
-        source = ZarrSource(source_ref, source_mag=source_mag, target_mag=target_mag)
+        source = ZarrSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     elif ext.lstrip('.') in TIFF.FILE_EXTENSIONS:
-        source = TiffSource(source_ref, source_mag=source_mag, target_mag=target_mag)
+        source = TiffSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     elif ext in Image.registered_extensions().keys():
-        source = PlainImageSource(source_ref, source_mag=source_mag, target_mag=target_mag)
+        source = PlainImageSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     else:
-        source = BioSource(source_ref, target_mag=target_mag)
+        source = BioSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     return source
 
 
@@ -50,9 +50,9 @@ def get_image_info(source: OmeSource) -> str:
     channel_info = source.get_channel_info()
     image_info = os.path.basename(source.source_reference) + '\n'
     image_info += get_image_size_info(xyzct, pixel_nbytes, pixel_type, channel_info)
-    sizes = source.get_actual_size()
+    sizes = source.get_physical_size()
     if len(sizes) > 0:
-        image_info += '\nActual size:'
+        image_info += '\nPhysical size:'
         infos = []
         for size in sizes:
             infos.append(f' {size[0]:.3f} {size[1]}')
@@ -132,9 +132,10 @@ def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: st
             image = image_resize(image, new_size)
             zarr_root.create_dataset(str(pathi), shape=image.shape, chunks=tile_size,
                                      dtype=image.dtype, compressor=None, filters=compression)
+            # TODO: replace with pixel sizes, add units:
             datasets.append({
                 'path': pathi,
-                'coordinateTransformations': [{'scale': [1, 1, 1, new_size[1], new_size[0]]}]
+                'coordinateTransformations': [{'scale': [1, 1, 1, 1 / scale, 1 / scale]}]
             })
             scale /= pyramid_downsample
 
@@ -182,7 +183,7 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
             else:
                 metadata = source.get_metadata()
                 xml_metadata = None
-            resolution, resolution_unit = get_resolution_from_pixel_size(source.pixel_size, source.best_factor)
+            resolution, resolution_unit = get_resolution_from_pixel_size(source.get_pixel_size())
 
             save_tiff(output_filename1, image1, metadata=metadata, xml_metadata=xml_metadata,
                       resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size,

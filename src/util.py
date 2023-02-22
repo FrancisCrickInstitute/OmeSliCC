@@ -122,3 +122,61 @@ def get_filetitle(filename: str, remove_all_ext: bool = False) -> str:
         return filebase.split('.')[0]
     else:
         return os.path.splitext(filebase)[0]
+
+
+def split_num_text(num_text):
+    num_texts = []
+    block = ''
+    is_num0 = None
+
+    for c in num_text:
+        is_num = (c.isnumeric() or c == '.')
+        if is_num0 is not None and is_num != is_num0:
+            num_texts.append(block)
+            block = ''
+        block += c
+        is_num0 = is_num
+    if block != '':
+        num_texts.append(block)
+
+    num_texts2 = []
+    for block in num_texts:
+        block = block.strip()
+        try:
+            block = float(block)
+        except:
+            pass
+        if block not in [' ', ',', '|']:
+            num_texts2.append(block)
+    return num_texts2
+
+
+def split_value_unit_list(num_text):
+    value_units = []
+    items = split_num_text(num_text)
+    if isinstance(items[-1], str):
+        def_unit = items[-1]
+    else:
+        def_unit = ''
+
+    i = 0
+    while i < len(items):
+        value = items[i]
+        if i + 1 < len(items):
+            unit = items[i + 1]
+        else:
+            unit = ''
+        if not isinstance(value, str):
+            if isinstance(unit, str):
+                i += 1
+            else:
+                unit = def_unit
+            value_units.append((value, unit))
+        i += 1
+    return value_units
+
+
+def get_value_units_um(value_units0: list):
+    conversions = {'nm': 1e-3, 'µm': 1, 'mm': 1e3, 'cm': 1e4, 'm': 1e6}
+    value_units = [value_unit[0] * conversions.get(value_unit[1], 1) for value_unit in value_units0]
+    return value_units

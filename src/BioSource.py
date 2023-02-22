@@ -15,10 +15,13 @@ class BioSource(OmeSource):
     indexes: list
     """list of relevant series indexes"""
 
-    def __init__(self, filename: str, target_mag: float = None, source_mag_required: bool = False):
+    def __init__(self,
+                 filename: str,
+                 source_pixel_size: list = None,
+                 target_pixel_size: list = None,
+                 source_info_required: bool = False):
+
         super().__init__()
-        self.filename = filename
-        self.target_mag = target_mag
 
         open_javabridge()
 
@@ -39,7 +42,11 @@ class BioSource(OmeSource):
                 self.sizes_xyzct.append((pmetadata.SizeX, pmetadata.SizeY, pmetadata.SizeZ, pmetadata.SizeC, pmetadata.SizeT))
                 self.pixel_types.append(dtype)
                 self.pixel_nbits.append(dtype.itemsize * 8)
-        self._init_metadata(filename, source_mag_required=source_mag_required)
+
+        self._init_metadata(filename,
+                            source_pixel_size=source_pixel_size,
+                            target_pixel_size=target_pixel_size,
+                            source_info_required=source_info_required)
 
     def _find_metadata(self):
         self._get_ome_metadate()

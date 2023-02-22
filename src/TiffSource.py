@@ -31,11 +31,14 @@ class TiffSource(OmeSource):
     executor: ThreadPoolExecutor
     """ThreadPoolExecutor to be used for threaded operations"""
 
-    def __init__(self, filename: str, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False,
+    def __init__(self,
+                 filename: str,
+                 source_pixel_size: list = None,
+                 target_pixel_size: list = None,
+                 source_info_required: bool = False,
                  executor: ThreadPoolExecutor = None):
+
         super().__init__()
-        self.filename = filename
-        self.target_mag = target_mag
         self.loaded = False
         self.decompressed = False
         self.data = bytes()
@@ -87,7 +90,11 @@ class TiffSource(OmeSource):
             self.pixel_nbits.append(bitspersample)
 
         self.fh = tiff.filehandle
-        self._init_metadata(filename, source_mag=source_mag, source_mag_required=source_mag_required)
+
+        self._init_metadata(filename,
+                            source_pixel_size=source_pixel_size,
+                            target_pixel_size=target_pixel_size,
+                            source_info_required=source_info_required)
 
     def _find_metadata(self):
         pixel_size = []

@@ -74,7 +74,7 @@ if __name__ == '__main__':
                         default=PARAMETER_FILE)
 
     args = parser.parse_args()
-    with open(args.params, 'r') as file:
+    with open(args.params, 'r', encoding='utf8') as file:
         params = yaml.safe_load(file)
 
     log_params = params['log']

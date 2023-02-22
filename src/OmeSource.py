@@ -3,7 +3,7 @@ import numpy as np
 
 from src.image_util import image_resize_fast, image_resize, precise_resize
 from src.ome import create_ome_metadata
-from src.util import check_round_significants, ensure_list
+from src.util import check_round_significants, ensure_list, get_value_units_um
 
 
 class OmeSource:
@@ -11,10 +11,12 @@ class OmeSource:
 
     metadata: dict
     """metadata dictionary"""
-    mag0: float
-    """original source magnification"""
-    target_mag: float
-    """target magnification"""
+    source_pixel_size: list
+    """original source pixel size"""
+    target_pixel_size: list
+    """target pixel size"""
+    target_scale: list
+    """target (pixel size) scale"""
     sizes: list
     """x/y size pairs for all pages"""
     sizes_xyzct: list
@@ -38,79 +40,90 @@ class OmeSource:
         self.pixel_size = []
         self.channel_info = []
 
-    def _init_metadata(self, source_reference: str, source_mag: float = None, source_mag_required: bool = False):
+    def _init_metadata(self,
+                       source_reference: str,
+                       source_pixel_size: list = None,
+                       target_pixel_size: list = None,
+                       source_info_required: bool = False):
+
         self.source_reference = source_reference
+        self.target_pixel_size = target_pixel_size
         self._find_metadata()
-        if self.mag0 == 0 and source_mag is not None:
-            self.mag0 = source_mag
-        if self.mag0 == 0:
-            msg = f'{source_reference}: No source magnification in metadata or provided'
-            if source_mag_required:
+        if self.source_pixel_size == 0 and source_pixel_size is not None:
+            self.source_pixel_size = source_pixel_size
+        if self.source_pixel_size == 0:
+            msg = f'{source_reference}: No source pixel size in metadata or provided'
+            if source_info_required:
                 raise ValueError(msg)
             else:
                 logging.warning(msg)
-        self._fix_pixelsize()
-        self._set_mags()
-        self._set_best_mag()
+        self._init_sizes()
 
     def _get_ome_metadate(self):
         # TODO: use objective settings to get matching mag instead
         images = ensure_list(self.metadata.get('Image', {}))[0]
         pixels = images.get('Pixels', {})
-        self.pixel_size = [(float(pixels.get('@PhysicalSizeX', 0)), pixels.get('@PhysicalSizeXUnit', 'µm')),
-                           (float(pixels.get('@PhysicalSizeY', 0)), pixels.get('@PhysicalSizeYUnit', 'µm')),
-                           (float(pixels.get('@PhysicalSizeZ', 0)), pixels.get('@PhysicalSizeZUnit', 'µm'))]
+        self.source_pixel_size = [(float(pixels.get('@PhysicalSizeX', 0)), pixels.get('@PhysicalSizeXUnit', 'µm')),
+                                  (float(pixels.get('@PhysicalSizeY', 0)), pixels.get('@PhysicalSizeYUnit', 'µm')),
+                                  (float(pixels.get('@PhysicalSizeZ', 0)), pixels.get('@PhysicalSizeZUnit', 'µm'))]
         for channel in ensure_list(pixels.get('Channel', {})):
             self.channel_info.append((channel.get('@Name', ''), int(channel.get('@SamplesPerPixel', 1))))
-        self.mag0 = float(self.metadata.get('Instrument', {}).get('Objective', {}).get('@NominalMagnification', 0))
+        self.source_mag = float(self.metadata.get('Instrument', {}).get('Objective', {}).get('@NominalMagnification', 0))
 
-    def _fix_pixelsize(self):
+    def _init_sizes(self):
+        self.scales = [np.mean(np.divide(self.sizes[0], size)) for size in self.sizes]
+
+        # normalise source pixel sizes
         standard_units = {'nano': 'nm', 'micro': 'µm', 'milli': 'mm', 'centi': 'cm'}
         pixel_size = []
-        for pixel_size0 in self.pixel_size:
+        for pixel_size0 in self.source_pixel_size:
             pixel_size1 = check_round_significants(pixel_size0[0], 6)
             unit1 = pixel_size0[1]
             for standard_unit in standard_units:
                 if unit1.lower().startswith(standard_unit):
                     unit1 = standard_units[standard_unit]
             pixel_size.append((pixel_size1, unit1))
+        if len(pixel_size) < 2:
+            pixel_size.append(pixel_size[0])
         self.pixel_size = pixel_size
 
-    def _set_mags(self):
-        self.source_mags = [self.mag0]
+        if self.target_pixel_size is None:
+            self.target_pixel_size = self.source_pixel_size
+
+        if len(self.target_pixel_size) < 2:
+            self.target_pixel_size.append(self.target_pixel_size[0])
+
+        # set source mags
+        self.source_mags = [self.source_mag]
         for i, size in enumerate(self.sizes):
             if i > 0:
-                mag = self.mag0 * np.mean(np.divide(size, self.sizes[0]))
+                mag = self.source_mag * np.mean(np.divide(size, self.sizes[0]))
                 self.source_mags.append(check_round_significants(mag, 3))
 
-    def _set_best_mag(self):
-        if self.mag0 is not None and self.mag0 > 0 and self.target_mag is not None and self.target_mag > 0:
-            source_mag, self.best_level = get_best_mag(self.source_mags, self.target_mag)
-            self.best_factor = source_mag / self.target_mag
-        else:
-            self.best_level = 0
-            self.best_factor = 1
+        target_scale = []
+        for source_pixel_size1, target_pixel_size1 in \
+                zip(get_value_units_um(self.source_pixel_size), get_value_units_um(self.target_pixel_size)):
+            target_scale.append(np.divide(target_pixel_size1, source_pixel_size1))
+        self.target_scale = target_scale
+
+        best_scale, self.best_level = get_best_scale(self.scales, float(np.mean(target_scale)))
+        self.best_factor = np.divide(target_scale, best_scale)
+
+    def get_pixel_size(self) -> list:
+        return self.target_pixel_size
 
     def get_mag(self) -> float:
-        if self.target_mag is not None:
-            return self.target_mag
-        else:
-            return self.source_mags[0]
+        # get effective mag at target pixel size
+        return check_round_significants(self.source_mag / np.mean(self.target_scale), 3)
 
-    def get_max_mag(self) -> float:
-        return np.max(self.source_mags)
-
-    def get_actual_size(self) -> list:
-        actual_size = []
-        for size, pixel_size in zip(self.get_size_xyzct(), self.pixel_size):
-            actual_size.append((np.multiply(size, pixel_size[0]), pixel_size[1]))
-        return actual_size
+    def get_physical_size(self) -> tuple:
+        physical_size = []
+        for size, pixel_size in zip(self.get_size_xyzct(), self.get_pixel_size()):
+            physical_size.append((np.multiply(size, pixel_size[0]), pixel_size[1]))
+        return tuple(physical_size)
 
     def get_pixel_type(self, level: int = 0) -> np.dtype:
         return self.pixel_types[level]
-
-    def get_pixel_nbits(self, level: int = 0) -> int:
-        return self.pixel_nbits[level]
 
     def get_pixel_nbytes(self, level: int = 0) -> int:
         return self.pixel_nbits[level] // 8
@@ -131,7 +144,7 @@ class OmeSource:
         return tuple(xyzct)
 
     def get_size(self) -> tuple:
-        # size at selected magnification
+        # size at target pixel size
         return np.divide(self.sizes[self.best_level], self.best_factor).astype(int)
 
     def get_nchannels(self):
@@ -141,8 +154,7 @@ class OmeSource:
         return self.pixel_size
 
     def get_pixelsize_micrometer(self):
-        conversion = {'nm': 1e-3, 'µm': 1, 'mm': 1e3, 'cm': 1e4}
-        return [pixelsize[0] * conversion.get(pixelsize[1], 1) for pixelsize in self.get_pixelsize()]
+        return get_value_units_um(self.pixel_size)
 
     def get_shape(self) -> tuple:
         xyzct = self.get_size_xyzct()
@@ -175,13 +187,13 @@ class OmeSource:
         w0 = x1 - x0
         h0 = y1 - y0
         factor = self.best_factor
-        if factor != 1:
+        if np.mean(factor) != 1:
             ox0, oy0 = np.round(np.multiply([x0, y0], factor)).astype(int)
             ox1, oy1 = np.round(np.multiply([x1, y1], factor)).astype(int)
         else:
             ox0, oy0, ox1, oy1 = x0, y0, x1, y1
         image0 = self._asarray_level(self.best_level, ox0, oy0, ox1, oy1)
-        if factor != 1:
+        if np.mean(factor) != 1:
             h, w = np.round(np.divide(image0.shape[0:2], factor)).astype(int)
             image = image_resize_fast(image0, (w, h))
         else:
@@ -218,19 +230,47 @@ class OmeSource:
         pass
 
 
-def get_best_mag(mags: list, target_mag: float) -> tuple:
-    # find smallest mag larger/equal to target mag
-    best_mag = None
-    best_index = 0
-    best_scale = 0
-    for index, mag in enumerate(mags):
-        if mag > 0:
-            scale = target_mag / mag
-            if 1 >= scale > best_scale or best_scale == 0:
-                best_index = index
-                best_mag = mag
-                best_scale = scale
-    return best_mag, best_index
+def get_resolution_from_pixel_size(pixel_size: list) -> tuple:
+    conversions = {
+        'cm': (1, 'centimeter'),
+        'mm': (1, 'millimeter'),
+        'µm': (1, 'micrometer'),
+        'nm': (1000, 'micrometer'),
+        'nanometer': (1000, 'micrometer'),
+    }
+    resolutions = []
+    resolutions_unit = None
+    if len(pixel_size) > 0:
+        units = []
+        for size, unit in pixel_size:
+            if size != 0 and size != 1:
+                resolution = 1 / size
+                resolutions.append(resolution)
+                if unit != '':
+                    units.append(unit)
+        if len(units) > 0:
+            resolutions_unit = units[0]
+            if resolutions_unit in conversions:
+                conversion = conversions[resolutions_unit]
+                resolutions = list(np.multiply(resolutions, conversion[0]))
+                resolutions_unit = conversion[1]
+    if len(resolutions) == 0:
+        resolutions = None
+    return resolutions, resolutions_unit
+
+
+def get_best_scale(scales: list, target_scale: float) -> tuple:
+    # find smallest scale larger/equal to target scale
+    best_factor = None
+    best_scale = 1
+    best_level = 0
+    for level, scale in enumerate(scales):
+        factor = target_scale / scale
+        if best_factor is None or 1 <= factor < best_factor:
+            best_factor = factor
+            best_scale = scale
+            best_level = level
+    return best_scale, best_level
 
 
 def get_best_size(sizes: list, target_size: tuple) -> tuple:

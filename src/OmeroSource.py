@@ -21,13 +21,17 @@ class OmeroSource(OmeSource):
     pixels_store: omero.gateway.ProxyObjectWrapper
     """Raw pixels store object"""
 
-    def __init__(self, omero: Omero, image_id: int, source_mag: float = None, target_mag: float = None, source_mag_required: bool = False):
+    def __init__(self,
+                 omero: Omero,
+                 image_id: int,
+                 source_pixel_size: list = None,
+                 target_pixel_size: list = None,
+                 source_info_required: bool = False):
+
         super().__init__()
         self.omero = omero
-        self.image_id = image_id
         image_object = self.omero.get_image_object(image_id)
         self.image_object = image_object
-        self.target_mag = target_mag
 
         zsize = get_default(image_object.getPixelSizeZ(), 1)
         nchannels = np.sum([channel.getLogicalChannel().getSamplesPerPixel() for channel in image_object.getChannels()])
@@ -39,7 +43,10 @@ class OmeroSource(OmeSource):
             self.pixel_types.append(pixel_type)
             self.pixel_nbits.append(pixel_type.itemsize * 8)
 
-        self._init_metadata(str(image_id), source_mag=source_mag, source_mag_required=source_mag_required)
+        self._init_metadata(str(image_id),
+                            source_pixel_size=source_pixel_size,
+                            target_pixel_size=target_pixel_size,
+                            source_info_required=source_info_required)
 
     def _find_metadata(self):
         # TODO: use objective settings to get matching mag instead
@@ -51,10 +58,11 @@ class OmeroSource(OmeSource):
         for channel in image_object.getChannels():
             channell = channel.getLogicalChannel()
             self.channel_info.append((channel.getName(), channell.getSamplesPerPixel()))
-        self.mag0 = image_object.getInstrument().getObjectives()[0].getNominalMagnification()
+        self.source_mag = image_object.getInstrument().getObjectives()[0].getNominalMagnification()
 
     def create_xml_metadata(self, output_filename: str, channel_output: str = '', pyramid_sizes_add: list = None) -> str:
-        return create_ome_metadata_from_omero(self.image_object, output_filename, channel_output=channel_output, pyramid_sizes_add=pyramid_sizes_add)
+        return create_ome_metadata_from_omero(self, self.image_object, output_filename, channel_output=channel_output,
+                                              pyramid_sizes_add=pyramid_sizes_add)
 
     def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:
         image_bytes = self.image_object.getThumbnail(target_size)

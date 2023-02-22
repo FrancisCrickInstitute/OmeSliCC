@@ -48,7 +48,7 @@ def create_ome_metadata(source: OmeSource,
         if objective is None:
             objective = {'@ID': 'Objective:0'}
             instrument['Objective'] = objective
-            objective['@NominalMagnification'] = mag
+        objective['@NominalMagnification'] = mag
         ome['Instrument'] = instrument
 
     # currently only supporting single image
@@ -102,14 +102,12 @@ def create_ome_metadata(source: OmeSource,
 
                 channeli += 1
 
-        xyzct = source.get_size_xyzct()
-        pixel_size = source.pixel_size
-
         image = {
             '@ID': f'Image:{imagei}',
             '@Name': file_title,
         }
 
+        xyzct = source.get_size_xyzct()
         pixels = {
             '@ID': f'Pixels:{imagei}',
             '@SizeX': xyzct[0],
@@ -122,9 +120,8 @@ def create_ome_metadata(source: OmeSource,
             'Channel': channels,
             'TiffData': {'UUID': {'@FileName': file_name, '#text': uuid}},
         }
-        if len(planes) > 0:
-            pixels['Plane'] = planes
 
+        pixel_size = source.get_pixel_size()
         if len(pixel_size) > 0 and pixel_size[0][0] != 0:
             pixels['@PhysicalSizeX'] = pixel_size[0][0]
         if len(pixel_size) > 1 and pixel_size[1][0] != 0:
@@ -137,6 +134,9 @@ def create_ome_metadata(source: OmeSource,
             pixels['@PhysicalSizeYUnit'] = pixel_size[1][1]
         if len(pixel_size) > 2 and pixel_size[2][1] != '':
             pixels['@PhysicalSizeZUnit'] = pixel_size[2][1]
+
+        if len(planes) > 0:
+            pixels['Plane'] = planes
 
         if 'AcquisitionDate' in image0:
             image['AcquisitionDate'] = image0['AcquisitionDate']
@@ -184,7 +184,8 @@ def create_ome_metadata(source: OmeSource,
     return xmltodict.unparse({'OME': ome}, short_empty_elements=True, pretty=True)
 
 
-def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
+def create_ome_metadata_from_omero(source: OmeSource,
+                                   image_object: omero.gateway.ImageWrapper,
                                    output_filename: str,
                                    channel_output: str = '',
                                    pyramid_sizes_add: list = None) -> str:
@@ -214,8 +215,8 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
                 '@Model': objective0.getModel(),
                 '@LotNumber': objective0.getLotNumber(),
                 '@SerialNumber': objective0.getSerialNumber(),
-                '@NominalMagnification': objective0.getNominalMagnification(),
-                '@CalibratedMagnification': objective0.getCalibratedMagnification(),
+                '@NominalMagnification': source.get_mag(),
+                '@CalibratedMagnification': source.get_mag(),
                 #'@Correction': objective0.getCorrection().getValue(),
                 '@LensNA': objective0.getLensNA(),
                 '@WorkingDistance': objective0.getWorkingDistance().getValue(),
@@ -316,24 +317,33 @@ def create_ome_metadata_from_omero(image_object: omero.gateway.ImageWrapper,
             'Description': image_object.getDescription(),
         }
 
+        xyzct = source.get_size_xyzct()
         pixels = {
             '@ID': f'Pixels:{imagei}',
-            '@SizeX': image_object.getSizeX(),
-            '@SizeY': image_object.getSizeY(),
-            '@SizeZ': image_object.getSizeZ(),
+            '@SizeX': xyzct[0],
+            '@SizeY': xyzct[1],
+            '@SizeZ': xyzct[2],
             '@SizeC': nchannels,
-            '@SizeT': image_object.getSizeT(),
-            '@PhysicalSizeX': image_object.getPixelSizeX(),   # get size in default unit (micron)
-            '@PhysicalSizeY': image_object.getPixelSizeY(),   # get size in default unit (micron)
-            '@PhysicalSizeZ': image_object.getPixelSizeZ(),   # get size in default unit (micron)
-            '@PhysicalSizeXUnit': 'µm',
-            '@PhysicalSizeYUnit': 'µm',
-            '@PhysicalSizeZUnit': 'µm',
-            '@Type': image_object.getPixelsType(),
+            '@SizeT': xyzct[4],
+            '@Type': str(ensure_unsigned_type(source.get_pixel_type())),
             '@DimensionOrder': 'XYZCT',
             'Channel': channels,
             'TiffData': {'UUID': {'@FileName': file_name, '#text': uuid}},
         }
+        pixel_size = source.get_pixel_size()
+        if len(pixel_size) > 0 and pixel_size[0][0] != 0:
+            pixels['@PhysicalSizeX'] = pixel_size[0][0]
+        if len(pixel_size) > 1 and pixel_size[1][0] != 0:
+            pixels['@PhysicalSizeY'] = pixel_size[1][0]
+        if len(pixel_size) > 2 and pixel_size[2][0] != 0:
+            pixels['@PhysicalSizeZ'] = pixel_size[2][0]
+        if len(pixel_size) > 0 and pixel_size[0][1] != '':
+            pixels['@PhysicalSizeXUnit'] = pixel_size[0][1]
+        if len(pixel_size) > 1 and pixel_size[1][1] != '':
+            pixels['@PhysicalSizeYUnit'] = pixel_size[1][1]
+        if len(pixel_size) > 2 and pixel_size[2][1] != '':
+            pixels['@PhysicalSizeZUnit'] = pixel_size[2][1]
+
         if len(planes) > 0:
             pixels['Plane'] = planes
 
