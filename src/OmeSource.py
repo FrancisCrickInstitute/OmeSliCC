@@ -103,7 +103,8 @@ class OmeSource:
         target_scale = []
         for source_pixel_size1, target_pixel_size1 in \
                 zip(get_value_units_um(self.source_pixel_size), get_value_units_um(self.target_pixel_size)):
-            target_scale.append(np.divide(target_pixel_size1, source_pixel_size1))
+            if source_pixel_size1 != 0:
+                target_scale.append(np.divide(target_pixel_size1, source_pixel_size1))
         self.target_scale = target_scale
 
         best_scale, self.best_level = get_best_scale(self.scales, float(np.mean(target_scale)))

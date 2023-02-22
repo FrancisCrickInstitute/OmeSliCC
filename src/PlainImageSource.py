@@ -21,13 +21,12 @@ class PlainImageSource(OmeSource):
 
     def __init__(self,
                  filename: str,
-                 source_pixel_size: float = None,
-                 target_pixel_size: float = None,
+                 source_pixel_size: list = None,
+                 target_pixel_size: list = None,
                  source_info_required: bool = False,
                  executor: ThreadPoolExecutor = None):
 
         super().__init__()
-        self.source_pixel_size = source_pixel_size
         self.loaded = False
         self.arrays = []
 

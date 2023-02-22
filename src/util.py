@@ -124,12 +124,14 @@ def get_filetitle(filename: str, remove_all_ext: bool = False) -> str:
         return os.path.splitext(filebase)[0]
 
 
-def split_num_text(num_text):
+def split_num_text(text):
     num_texts = []
     block = ''
     is_num0 = None
+    if text is None:
+        return None
 
-    for c in num_text:
+    for c in text:
         is_num = (c.isnumeric() or c == '.')
         if is_num0 is not None and is_num != is_num0:
             num_texts.append(block)
@@ -151,9 +153,12 @@ def split_num_text(num_text):
     return num_texts2
 
 
-def split_value_unit_list(num_text):
+def split_value_unit_list(text):
     value_units = []
-    items = split_num_text(num_text)
+    if text is None:
+        return None
+
+    items = split_num_text(text)
     if isinstance(items[-1], str):
         def_unit = items[-1]
     else:
