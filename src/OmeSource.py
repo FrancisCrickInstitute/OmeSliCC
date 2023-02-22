@@ -152,10 +152,10 @@ class OmeSource:
         return self.sizes_xyzct[0][3]
 
     def get_pixelsize(self):
-        return self.pixel_size
+        return self.target_pixel_size
 
     def get_pixelsize_micrometer(self):
-        return get_value_units_um(self.pixel_size)
+        return get_value_units_um(self.get_pixelsize())
 
     def get_shape(self) -> tuple:
         xyzct = self.get_size_xyzct()

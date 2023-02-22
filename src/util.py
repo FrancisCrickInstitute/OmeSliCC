@@ -183,5 +183,8 @@ def split_value_unit_list(text):
 
 def get_value_units_um(value_units0: list):
     conversions = {'nm': 1e-3, 'µm': 1, 'mm': 1e3, 'cm': 1e4, 'm': 1e6}
+    if value_units0 is None:
+        return None
+
     value_units = [value_unit[0] * conversions.get(value_unit[1], 1) for value_unit in value_units0]
     return value_units
