@@ -63,6 +63,10 @@ class PlainImageSource(OmeSource):
             res0 = res0[0] / res0[1]
         self.pixel_size.append((1 / res0, pixel_size_unit))
         self.channel_info = []
+        channels = self.image.getbands()
+        nchannels = len(channels)
+        for channel in channels:
+            self.channel_info.append((channel, self.pixel_nbits[0] // 8 // nchannels))
         self.source_mag = self.metadata.get('Mag', 0)
 
     def load(self):

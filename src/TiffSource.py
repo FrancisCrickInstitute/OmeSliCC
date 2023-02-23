@@ -148,7 +148,7 @@ class TiffSource(OmeSource):
                 mag = metadata.get('AppMag', 0)
         self.pixel_size = pixel_size
         self.channel_info = channel_info
-        self.mag0 = mag
+        self.source_mag = mag
 
     def load(self, decompress: bool = False):
         self.fh.seek(0)

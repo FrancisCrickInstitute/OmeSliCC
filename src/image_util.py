@@ -71,9 +71,22 @@ def get_image_size_info(xyzct: tuple, pixel_nbytes: int, pixel_type: np.dtype, c
 
 
 def pilmode_to_pixelinfo(mode: str) -> tuple:
-    pixelinfo = (np.uint8, 8)
-    mode_types = {'I': (np.uint32, 32), 'F': (np.float32, 32)}
-    if mode in mode_types:
+    pixelinfo = (np.uint8, 8, 1)
+    mode_types = {
+        'I': (np.uint32, 32, 1),
+        'F': (np.float32, 32, 1),
+        'RGB': (np.uint8, 24, 3),
+        'RGBA': (np.uint8, 32, 4),
+        'CMYK': (np.uint8, 32, 4),
+        'YCbCr': (np.uint8, 24, 3),
+        'LAB': (np.uint8, 24, 3),
+        'HSV': (np.uint8, 24, 3),
+    }
+    if '16' in mode:
+        pixelinfo = (np.uint16, 16, 1)
+    elif '32' in mode:
+        pixelinfo = (np.uint32, 32, 1)
+    elif mode in mode_types:
         pixelinfo = mode_types[mode]
     pixelinfo = (np.dtype(pixelinfo[0]), pixelinfo[1])
     return pixelinfo
@@ -95,7 +108,11 @@ def calc_pyramid(xyzct: tuple, npyramid_add: int = 0, pyramid_downsample: float 
 
 
 def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
-    return cv.resize(image, target_size, interpolation=cv.INTER_AREA)
+    if (len(image.shape) > 2 and image.shape[2] > 4) or image.dtype.kind == 'i':
+        new_image = image_resize(image, target_size)
+    else:
+        new_image = cv.resize(image, target_size, interpolation=cv.INTER_AREA)
+    return new_image
 
 
 def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:

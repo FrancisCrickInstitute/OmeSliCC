@@ -3,7 +3,7 @@ import numpy as np
 
 from src.image_util import image_resize_fast, image_resize, precise_resize
 from src.ome import create_ome_metadata
-from src.util import check_round_significants, ensure_list, get_value_units_um
+from src.util import check_round_significants, ensure_list, get_value_units_micrometer
 
 
 class OmeSource:
@@ -25,19 +25,19 @@ class OmeSource:
     """pixel types for all pages"""
     pixel_nbits: list
     """#bits for all pages"""
-    pixel_size: list
-    """pixel sizes for all pages"""
     channel_info: list
     """channel information for all channels"""
     # TODO: make channel_info a (list of) dict
 
     def __init__(self):
         self.metadata = {}
+        self.source_pixel_size = []
+        self.target_pixel_size = []
+        self.target_scale = []
         self.sizes = []
         self.sizes_xyzct = []
         self.pixel_types = []
         self.pixel_nbits = []
-        self.pixel_size = []
         self.channel_info = []
 
     def _init_metadata(self,
@@ -49,9 +49,11 @@ class OmeSource:
         self.source_reference = source_reference
         self.target_pixel_size = target_pixel_size
         self._find_metadata()
-        if self.source_pixel_size == 0 and source_pixel_size is not None:
+        if (len(self.source_pixel_size) == 0
+                or self.source_pixel_size[0][0] == 0) \
+                and source_pixel_size is not None:
             self.source_pixel_size = source_pixel_size
-        if self.source_pixel_size == 0:
+        if len(self.source_pixel_size) == 0:
             msg = f'{source_reference}: No source pixel size in metadata or provided'
             if source_info_required:
                 raise ValueError(msg)
@@ -83,14 +85,14 @@ class OmeSource:
                 if unit1.lower().startswith(standard_unit):
                     unit1 = standard_units[standard_unit]
             pixel_size.append((pixel_size1, unit1))
-        if len(pixel_size) < 2:
+        if 0 < len(pixel_size) < 2:
             pixel_size.append(pixel_size[0])
-        self.pixel_size = pixel_size
+        self.source_pixel_size = pixel_size
 
         if self.target_pixel_size is None:
             self.target_pixel_size = self.source_pixel_size
 
-        if len(self.target_pixel_size) < 2:
+        if 0 < len(self.target_pixel_size) < 2:
             self.target_pixel_size.append(self.target_pixel_size[0])
 
         # set source mags
@@ -102,20 +104,27 @@ class OmeSource:
 
         target_scale = []
         for source_pixel_size1, target_pixel_size1 in \
-                zip(get_value_units_um(self.source_pixel_size), get_value_units_um(self.target_pixel_size)):
+                zip(get_value_units_micrometer(self.source_pixel_size), get_value_units_micrometer(self.target_pixel_size)):
             if source_pixel_size1 != 0:
                 target_scale.append(np.divide(target_pixel_size1, source_pixel_size1))
         self.target_scale = target_scale
 
-        best_scale, self.best_level = get_best_scale(self.scales, float(np.mean(target_scale)))
-        self.best_factor = np.divide(target_scale, best_scale)
+        if len(target_scale) > 0:
+            best_scale, self.best_level = get_best_scale(self.scales, float(np.mean(target_scale)))
+            self.best_factor = np.divide(target_scale, best_scale)
+        else:
+            self.best_level = 0
+            self.best_factor = [1]
 
     def get_pixel_size(self) -> list:
         return self.target_pixel_size
 
     def get_mag(self) -> float:
         # get effective mag at target pixel size
-        return check_round_significants(self.source_mag / np.mean(self.target_scale), 3)
+        if len(self.target_scale) > 0:
+            return check_round_significants(self.source_mag / np.mean(self.target_scale), 3)
+        else:
+            return self.source_mag
 
     def get_physical_size(self) -> tuple:
         physical_size = []
@@ -132,6 +141,10 @@ class OmeSource:
     def get_channel_info(self) -> list:
         return self.channel_info
 
+    def get_size(self) -> tuple:
+        # size at target pixel size
+        return np.divide(self.sizes[self.best_level], self.best_factor[0:2]).astype(int)
+
     def get_size_xyzct(self) -> tuple:
         xyzct = list(self.sizes_xyzct[0])
         n_same_size = len([size for size in self.sizes_xyzct[1:] if list(size) == xyzct]) + 1
@@ -144,10 +157,6 @@ class OmeSource:
         xyzct[0:2] = size
         return tuple(xyzct)
 
-    def get_size(self) -> tuple:
-        # size at target pixel size
-        return np.divide(self.sizes[self.best_level], self.best_factor).astype(int)
-
     def get_nchannels(self):
         return self.sizes_xyzct[0][3]
 
@@ -155,7 +164,7 @@ class OmeSource:
         return self.target_pixel_size
 
     def get_pixelsize_micrometer(self):
-        return get_value_units_um(self.get_pixelsize())
+        return get_value_units_micrometer(self.get_pixelsize())
 
     def get_shape(self) -> tuple:
         xyzct = self.get_size_xyzct()

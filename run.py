@@ -54,6 +54,7 @@ def run_actions(params: dict):
                     elif 'thumb' in action:
                         extract_thumbnail(source, params)
                     elif 'convert' in action:
+                        print(str(source_ref))
                         convert_image(source, params)
                     source.close()
                 except Exception as e:

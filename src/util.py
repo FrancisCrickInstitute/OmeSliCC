@@ -181,8 +181,8 @@ def split_value_unit_list(text):
     return value_units
 
 
-def get_value_units_um(value_units0: list):
-    conversions = {'nm': 1e-3, 'µm': 1, 'mm': 1e3, 'cm': 1e4, 'm': 1e6}
+def get_value_units_micrometer(value_units0: list):
+    conversions = {'nm': 1e-3, 'µm': 1, 'um': 1, 'mm': 1e3, 'cm': 1e4, 'm': 1e6}
     if value_units0 is None:
         return None
 
