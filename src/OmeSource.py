@@ -116,9 +116,6 @@ class OmeSource:
             self.best_level = 0
             self.best_factor = [1]
 
-    def get_pixel_size(self) -> list:
-        return self.target_pixel_size
-
     def get_mag(self) -> float:
         # get effective mag at target pixel size
         if len(self.target_scale) > 0:
@@ -160,11 +157,11 @@ class OmeSource:
     def get_nchannels(self):
         return self.sizes_xyzct[0][3]
 
-    def get_pixelsize(self):
+    def get_pixel_size(self) -> list:
         return self.target_pixel_size
 
-    def get_pixelsize_micrometer(self):
-        return get_value_units_micrometer(self.get_pixelsize())
+    def get_pixel_size_micrometer(self):
+        return get_value_units_micrometer(self.get_pixel_size())
 
     def get_shape(self) -> tuple:
         xyzct = self.get_size_xyzct()

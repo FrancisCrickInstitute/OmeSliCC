@@ -37,11 +37,14 @@ class OmeroSource(OmeSource):
         nchannels = np.sum([channel.getLogicalChannel().getSamplesPerPixel() for channel in image_object.getChannels()])
         pixel_type = np.dtype(image_object.getPixelsType())
         self.pixels_store = self.omero.create_pixels_store(self.image_object)
+        # Omero API issue - only supporting largest (default) pyramid size
+        # TODO: remove break if resolution levels correctly selectable
         for resolution in self.pixels_store.getResolutionDescriptions():
             self.sizes.append((resolution.sizeX, resolution.sizeY))
             self.sizes_xyzct.append((resolution.sizeX, resolution.sizeY, zsize, nchannels, 1))
             self.pixel_types.append(pixel_type)
             self.pixel_nbits.append(pixel_type.itemsize * 8)
+            break   # break after first pyramid size
 
         self._init_metadata(str(image_id),
                             source_pixel_size=source_pixel_size,
