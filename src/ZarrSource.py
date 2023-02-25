@@ -25,19 +25,26 @@ class ZarrSource(OmeSource):
             root = zarr.open_group(filename, mode='r')
             self.metadata = root.attrs.asdict()
 
-            keys = []
+            paths = []
+            dimension_order = 'tczyx'
             if 'multiscales' in self.metadata:
                 for scale in self.metadata.get('multiscales', []):
                     for index, dataset in enumerate(scale.get('datasets', [])):
-                        keys.append(dataset.get('path', index))
+                        paths.append(dataset.get('path', str(index)))
+                    dimension_order = ''.join([axis.get('name') for axis in scale.get('axes', [])])
             else:
-                keys = root.array_keys()
+                paths = root.array_keys()
+            self.dimension_order = dimension_order
 
             self.levels = []
-            for key in keys:
-                data = root.get(str(key))
+            for path in paths:
+                data = root.get(path)
                 self.levels.append(data)
-                xyzct = np.flip(data.shape)
+
+                xyzct = [1, 1, 1, 1, 1]
+                for i, n in enumerate(data.shape):
+                    xyzct_index = 'xyzct'.index(dimension_order[i])
+                    xyzct[xyzct_index] = n
                 self.sizes_xyzct.append(xyzct)
                 self.sizes.append((xyzct[0], xyzct[1]))
                 self.pixel_types.append(data.dtype)
@@ -53,7 +60,6 @@ class ZarrSource(OmeSource):
     def _find_metadata(self):
         pixel_size = []
         channel_info = []
-        size_xyzct = self.sizes_xyzct[0]
         for scale in self.metadata.get('multiscales', []):
             axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
             units = [axis.get('unit', '') for axis in scale.get('axes', [])]
@@ -62,7 +68,7 @@ class ZarrSource(OmeSource):
             if datasets is not None:
                 coordinateTransformations = datasets[0].get('coordinateTransformations')
                 if coordinateTransformations is not None:
-                    scale1 = coordinateTransformations[0].get('scale', [0, 0, 0, 0, 0])
+                    scale1 = coordinateTransformations[0].get('scale', scale1)
             if 'z' in axes:
                 pixel_size = [
                     (scale1[axes.index('x')], units[axes.index('x')]),
@@ -78,16 +84,21 @@ class ZarrSource(OmeSource):
                     if samples_per_pixel < 1:
                         samples_per_pixel = 1
                     channel_info.append((channel.get('label', ''), samples_per_pixel))
+        if len(channel_info) == 0:
+            nchannels = self.sizes_xyzct[0][3]
+            channel_info = [('', nchannels)]
         self.source_pixel_size = pixel_size
         self.channel_info = channel_info
         self.source_mag = 0
 
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
-        # move channels to back (tczyx -> yxc)
+        size_xyzct = self.sizes_xyzct[level]
         if x1 < 0 or y1 < 0:
-            x1, y1 = self.sizes[level]
-        out = self.levels[level][0, :, 0, y0:y1, x0:x1]
-        if len(out.shape) > 2:
-            return np.moveaxis(out, 0, -1)  # move axis 0 (channel) to end
+            x1, y1, _, _, _ = size_xyzct
+        if self.dimension_order.endswith('yx'):
+            image = self.levels[level][..., y0:y1, x0:x1].squeeze()
+            if len(image.shape) > 2:
+                image = np.moveaxis(image, 0, -1)  # move axis 0 (channel/z) to end
         else:
-            return out
+            image = self.levels[level][y0:y1, x0:x1].squeeze()
+        return image

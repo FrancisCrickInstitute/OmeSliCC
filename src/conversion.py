@@ -7,7 +7,7 @@ import os
 import numpy as np
 import zarr
 from PIL import Image
-from imagecodecs.numcodecs import Jpeg2k, JpegXr
+from imagecodecs.numcodecs import Jpeg2k, JpegXr, JpegXl
 from numcodecs import register_codec
 from tifffile import TIFF, TiffWriter
 
@@ -20,10 +20,11 @@ from src.TiffSource import TiffSource
 from src.ZarrSource import ZarrSource
 from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_unsigned_image, reverse_last_axis, \
     save_image
-from src.util import get_filetitle, split_value_unit_list
+from src.util import get_filetitle, split_value_unit_list, ensure_list
 
 register_codec(Jpeg2k)
 register_codec(JpegXr)
+register_codec(JpegXl)
 
 
 def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSource:
@@ -65,30 +66,28 @@ def extract_thumbnail(source: OmeSource, params: dict):
     output_params = params['output']
     output_folder = output_params['folder']
     target_size = output_params.get('thumbnail_size', 1000)
-    overwrite = output_params.get('overwrite', True)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     output_filename = os.path.join(output_folder, f'{get_filetitle(source_ref)}_thumb.tiff')
     output_filename0 = os.path.join(output_folder, f'{get_filetitle(source_ref)}_channel0_thumb.tiff')
-    if overwrite or (not os.path.exists(output_filename) and not os.path.exists(output_filename0)):
-        size = source.get_size()
-        volumetric = (source.get_size_xyzct()[2] > 1)
+    size = source.get_size()
+    volumetric = (source.get_size_xyzct()[2] > 1)
 
-        if target_size < 1:
-            factor = target_size
-        else:
-            factor = np.max(np.divide(size, target_size))
-        thumb_size = np.round(np.divide(size, factor)).astype(int)
-        thumb = source.get_thumbnail(thumb_size)
+    if target_size < 1:
+        factor = target_size
+    else:
+        factor = np.max(np.divide(size, target_size))
+    thumb_size = np.round(np.divide(size, factor)).astype(int)
+    thumb = source.get_thumbnail(thumb_size)
 
-        nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
-        if nchannels not in [1, 3] and not volumetric:
-            for channeli in range(nchannels):
-                output_filename = os.path.join(output_folder, f'{get_filetitle(source_ref)}_channel{channeli}_thumb.tiff')
-                save_tiff(output_filename, thumb[..., channeli])
-        else:
-            save_tiff(output_filename, thumb)
+    nchannels = thumb.shape[2] if len(thumb.shape) > 2 else 1
+    if nchannels not in [1, 3] and not volumetric:
+        for channeli in range(nchannels):
+            output_filename = os.path.join(output_folder, f'{get_filetitle(source_ref)}_channel{channeli}_thumb.tiff')
+            save_tiff(output_filename, thumb[..., channeli])
+    else:
+        save_tiff(output_filename, thumb)
 
 
 def convert_image(source: OmeSource, params: dict):
@@ -96,16 +95,19 @@ def convert_image(source: OmeSource, params: dict):
     output_params = params['output']
     output_folder = output_params['folder']
     output_format = output_params['format']
+    ome = ('ome' in output_format)
+    overwrite = output_params.get('overwrite', True)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
-    image = get_source_image(source)
-    if 'zar' in output_format:
-        save_image_as_zarr(source, image, output_filename, output_params, ome=('ome' in output_format))
-    elif 'tif' in output_format:
-        save_image_as_tiff(source, image, output_filename, output_params, ome=('ome' in output_format))
-    else:
-        save_image(image, output_filename, output_params)
+    if overwrite or not os.path.exists(output_filename):
+        image = get_source_image(source)
+        if 'zar' in output_format:
+            save_image_as_zarr(source, image, output_filename, output_params, ome=ome)
+        elif 'tif' in output_format:
+            save_image_as_tiff(source, image, output_filename, output_params, ome=ome)
+        else:
+            save_image(image, output_filename, output_params)
 
 
 def get_source_image(source: OmeSource, chunk_size=(10240, 10240)):
@@ -116,35 +118,85 @@ def get_source_image(source: OmeSource, chunk_size=(10240, 10240)):
 
 
 def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
+    # ome-zarr: https://ngff.openmicroscopy.org/latest/
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
-    overwrite = output_params.get('overwrite', True)
-    if overwrite or not os.path.exists(output_filename):
-        npyramid_add = output_params.get('npyramid_add', 0)
-        pyramid_downsample = output_params.get('pyramid_downsample')
+    npyramid_add = output_params.get('npyramid_add', 0)
+    pyramid_downsample = output_params.get('pyramid_downsample')
+    size_xyzct = source.get_size_xyzct()
 
-        zarr_root = zarr.open_group(output_filename, mode='w')
-        size = source.get_size()
-        scale = 1
-        datasets = []
-        for pathi in range(1 + npyramid_add):
+    compression = ensure_list(compression)
+    compression_type = compression[0].lower()
+    if len(compression) > 1:
+        level = int(compression[1])
+    else:
+        level = None
+    if '2k' in compression_type or '2000' in compression_type:
+        compressor = None
+        compression_filters = [Jpeg2k(level)]
+    elif 'jpegxr' in compression_type:
+        compressor = None
+        compression_filters = [JpegXr(level)]
+    elif 'jpegxl' in compression_type:
+        compressor = None
+        compression_filters = [JpegXl(level)]
+    else:
+        compressor = compression
+        compression_filters = None
+
+    zarr_root = zarr.open_group(output_filename, mode='w')
+    size = source.get_size()
+    pixel_size = source.get_pixel_size()
+    scale = 1
+    datasets = []
+    for pathi in range(1 + npyramid_add):
+        if scale != 1:
             new_size = np.multiply(size, scale)
             image = image_resize(image, new_size)
-            zarr_root.create_dataset(str(pathi), shape=image.shape, chunks=tile_size,
-                                     dtype=image.dtype, compressor=None, filters=compression)
-            # TODO: replace with pixel sizes, add units:
-            datasets.append({
-                'path': pathi,
-                'coordinateTransformations': [{'scale': [1, 1, 1, 1 / scale, 1 / scale]}]
-            })
-            scale /= pyramid_downsample
+        out = zarr_root.create_dataset(str(pathi), shape=image.shape, chunks=tile_size,
+                                       dtype=image.dtype, compressor=compressor, filters=compression_filters)
+        out[...] = image
+        pixel_size_x = pixel_size[0][0]
+        pixel_size_y = pixel_size[1][0]
+        pixel_size_z = pixel_size[2][0]
+        datasets.append({
+            'path': pathi,
+            'coordinateTransformations': [{'type': 'scale', 'scale': [1, 1, pixel_size_z, pixel_size_y / scale, pixel_size_x / scale]}]
+        })
+        scale /= pyramid_downsample
 
-        if ome:
-            # metadata
-            zarr_root.attrs['multiscales'] = [{
-                'version': '0.4',
-                'datasets': datasets
-            }]
+    if ome:
+        # metadata
+        axes = []
+        dimension_order = 'yx'
+        _, _, z, c, t = size_xyzct
+        if c > 1:
+            dimension_order += 'c'
+        if z > 1:
+            dimension_order += 'z'
+        if t > 1:
+            dimension_order += 't'
+        for dimension in dimension_order:
+            unit1 = None
+            if dimension == 't':
+                type1 = 'time'
+                unit1 = 'millisecond'
+            elif dimension == 'c':
+                type1 = 'channel'
+            else:
+                type1 = 'space'
+                unit1 = pixel_size['xyz'.index(dimension)][1]
+            axis = {'name': dimension, 'type': type1}
+            if unit1 is not None and unit1 != '':
+                axis['unit'] = unit1
+            axes.append(axis)
+
+        zarr_root.attrs['multiscales'] = [{
+            'version': '0.4',
+            'axes': axes,
+            'name': get_filetitle(source.source_reference),
+            'datasets': datasets
+        }]
 
 
 def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
@@ -153,7 +205,6 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
     split_channel_files = output_params.get('split_channel_files')
     output_format = output_params['format']
     combine_rgb = output_params.get('combine_rgb', True)
-    overwrite = output_params.get('overwrite', True)
     channel_output = 'combine_rgb' if combine_rgb else ''
 
     npyramid_add = output_params.get('npyramid_add', 0)
@@ -163,31 +214,29 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
     else:
         pyramid_sizes_add = None
 
-    output_filename0 = output_filename.replace(output_format, '').rstrip('.') + f'_channel0.{output_format}'
-    if overwrite or (not os.path.exists(output_filename) and not os.path.exists(output_filename0)):
-        nfiles = source.get_nchannels() if split_channel_files else 1
-        for i in range(nfiles):
-            if nfiles > 1:
-                image1 = image[..., i]
-                output_filename1 = output_filename.replace(output_format, '').rstrip('.') + f'_channel{i}.{output_format}'
-                channel_output = str(i)
-            else:
-                image1 = image
-                output_filename1 = output_filename
+    nfiles = source.get_nchannels() if split_channel_files else 1
+    for i in range(nfiles):
+        if nfiles > 1:
+            image1 = image[..., i]
+            output_filename1 = output_filename.replace(output_format, '').rstrip('.') + f'_channel{i}.{output_format}'
+            channel_output = str(i)
+        else:
+            image1 = image
+            output_filename1 = output_filename
 
-            if ome:
-                metadata = None
-                xml_metadata = source.create_xml_metadata(output_filename1, channel_output=channel_output,
-                                                          pyramid_sizes_add=pyramid_sizes_add)
-                #print(xml_metadata)
-            else:
-                metadata = source.get_metadata()
-                xml_metadata = None
-            resolution, resolution_unit = get_resolution_from_pixel_size(source.get_pixel_size())
+        if ome:
+            metadata = None
+            xml_metadata = source.create_xml_metadata(output_filename1, channel_output=channel_output,
+                                                      pyramid_sizes_add=pyramid_sizes_add)
+            #print(xml_metadata)
+        else:
+            metadata = source.get_metadata()
+            xml_metadata = None
+        resolution, resolution_unit = get_resolution_from_pixel_size(source.get_pixel_size())
 
-            save_tiff(output_filename1, image1, metadata=metadata, xml_metadata=xml_metadata,
-                      resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size,
-                      compression=compression, combine_rgb=combine_rgb, pyramid_sizes_add=pyramid_sizes_add)
+        save_tiff(output_filename1, image1, metadata=metadata, xml_metadata=xml_metadata,
+                  resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size,
+                  compression=compression, combine_rgb=combine_rgb, pyramid_sizes_add=pyramid_sizes_add)
 
 
 def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metadata: str = None,
