@@ -53,6 +53,7 @@ class TiffSource(OmeSource):
         tiff = TiffFile(filename)
         if tiff.is_ome and tiff.ome_metadata is not None:
             xml_metadata = tiff.ome_metadata
+            #self.metadata = tifffile.xml2dict(xml_metadata)
             self.metadata = xmltodict.parse(xml_metadata)
             if 'OME' in self.metadata:
                 self.metadata = self.metadata['OME']
@@ -77,9 +78,7 @@ class TiffSource(OmeSource):
                 height = shape[0]
                 depth = 1
                 bitspersample = page.dtype.itemsize * 8
-            nchannels = 1
-            if len(shape) > 2:
-                nchannels = shape[2]
+            nchannels = shape[2] if len(shape) > 2 else 1
             if tiff.is_ome and npages == 3:
                 nchannels *= npages
             else:
@@ -136,8 +135,9 @@ class TiffSource(OmeSource):
             if res0 != 0:
                 pixel_size.insert(1, (1 / res0, pixel_size_unit))
         if len(channel_info) == 0:
+            nchannels = self.sizes_xyzct[0][3]
             channel_info = [(str(metadata.get('PhotometricInterpretation', '')).lower().split('.')[-1],
-                            metadata.get('SamplesPerPixel', 1))]
+                            metadata.get('SamplesPerPixel', nchannels))]
         if mag == 0:
             mag = metadata.get('Mag', 0)
         # from description
@@ -146,9 +146,9 @@ class TiffSource(OmeSource):
             mag = metadata.get('Mag', 0)
             if mag == 0:
                 mag = metadata.get('AppMag', 0)
-        self.pixel_size = pixel_size
-        self.channel_info = channel_info
+        self.source_pixel_size = pixel_size
         self.source_mag = mag
+        self.channel_info = channel_info
 
     def load(self, decompress: bool = False):
         self.fh.seek(0)

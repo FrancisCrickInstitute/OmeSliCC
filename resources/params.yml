@@ -34,8 +34,6 @@ output:
   overwrite: True
   # combine_rgb - combine rgb channels
   combine_rgb: True
-  # split_channel_files - optional split channels into separate files
-  #split_channel_files: True
   # tile_size - size for optional tiling
   tile_size: [256, 256]
   # compression - optional compression format/level

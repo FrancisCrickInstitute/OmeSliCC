@@ -68,9 +68,8 @@ def create_ome_metadata(source: OmeSource,
         planes0 = ensure_list(pixels0.get('Plane', []))
 
         combine_rgb = ('combine' in channel_output.lower())
-        split_channel_files = channel_output.isnumeric()
         channel_info = source.channel_info
-        nchannels = sum([info[1] for info in channel_info]) if not split_channel_files else 1
+        nchannels = sum([info[1] for info in channel_info])
         if combine_rgb and len(channel_info) == 3:
             channel_info = [(channel_info[0][0], nchannels)]
         elif not combine_rgb and len(channel_info) < nchannels:
@@ -79,28 +78,23 @@ def create_ome_metadata(source: OmeSource,
         channeli = 0
 
         for channeli0, info in enumerate(channel_info):
-            if not split_channel_files or channeli0 == int(channel_output):
-                channel = channels0[channeli0].copy() if channeli0 < len(channels0) else {}
-                color = channel.get('Color')
-                channel['@ID'] = f'Channel:{imagei}:{channeli}'
-                if info[0] != '':
-                    channel['@Name'] = info[0]
-                channel['@SamplesPerPixel'] = info[1] if not split_channel_files else 1
-                if color is not None:
-                    channel['@Color'] = color
-                channels.append(channel)
+            channel = channels0[channeli0].copy() if channeli0 < len(channels0) else {}
+            color = channel.get('Color')
+            channel['@ID'] = f'Channel:{imagei}:{channeli}'
+            if info[0] != '':
+                channel['@Name'] = info[0]
+            channel['@SamplesPerPixel'] = info[1]
+            if color is not None:
+                channel['@Color'] = color
+            channels.append(channel)
 
-                for plane0 in planes0:
-                    plane = plane0.copy()
-                    plane_channel0 = plane0.get('@TheC')
-                    if split_channel_files:
-                        if int(plane_channel0) == int(channel_output):
-                            plane['@TheC'] = channeli
-                            planes.append(plane)
-                    elif plane_channel0 is None or int(plane_channel0) == channeli0:
-                        planes.append(plane)
+            for plane0 in planes0:
+                plane = plane0.copy()
+                plane_channel0 = plane0.get('@TheC')
+                if plane_channel0 is None or int(plane_channel0) == channeli0:
+                    planes.append(plane)
 
-                channeli += 1
+            channeli += 1
 
         image = {
             '@ID': f'Image:{imagei}',
@@ -256,7 +250,6 @@ def create_ome_metadata_from_omero(source: OmeSource,
                 })
 
         combine_rgb = ('combine' in channel_output.lower())
-        split_channel_files = channel_output.isnumeric()
         channelso = image_object.getChannels()
         channels0 = []
         for channelo in channelso:
@@ -279,7 +272,7 @@ def create_ome_metadata_from_omero(source: OmeSource,
                 'LightPath': light_path,
             }
             channels0.append(channel0)
-        nchannels = sum([channel0['@SamplesPerPixel'] for channel0 in channels0]) if not split_channel_files else 1
+        nchannels = sum([channel0['@SamplesPerPixel'] for channel0 in channels0])
         if combine_rgb and len(channels0) == 3:
             channels0 = channels0[0:1]
             channels0[0]['@SamplesPerPixel'] = nchannels
@@ -291,24 +284,17 @@ def create_ome_metadata_from_omero(source: OmeSource,
         channeli = 0
 
         for channeli0, channel0 in enumerate(channels0):
-            if not split_channel_files or channeli0 == int(channel_output):
-                channel = channels0[channeli0] if channeli0 < len(channels0) else {}
-                channel['@ID'] = f'Channel:{imagei}:{channeli}'
-                if split_channel_files:
-                    channel['@SamplesPerPixel'] = 1
-                channels.append(channel)
+            channel = channels0[channeli0] if channeli0 < len(channels0) else {}
+            channel['@ID'] = f'Channel:{imagei}:{channeli}'
+            channels.append(channel)
 
-                for plane0 in planes:
-                    plane = plane0.copy()
-                    plane_channel0 = plane0.get('@TheC')
-                    if split_channel_files:
-                        if int(plane_channel0) == int(channel_output):
-                            plane['@TheC'] = channeli
-                            planes.append(plane)
-                    elif plane_channel0 is None or int(plane_channel0) == channeli0:
-                        planes.append(plane)
+            for plane0 in planes:
+                plane = plane0.copy()
+                plane_channel0 = plane0.get('@TheC')
+                if plane_channel0 is None or int(plane_channel0) == channeli0:
+                    planes.append(plane)
 
-                channeli += 1
+            channeli += 1
 
         image = {
             '@ID': f'Image:{imagei}',

@@ -1,3 +1,13 @@
+#### Version 0.4.0
+- Improved support for ome.zarr / NGFF
+- (ome.)zarr lossless/lossy image compression
+- Independent import/export improving import/export image support
+- Use pixel size instead of magnification for scaling
+- Use optimal Omero pixel source pyramid resolution
+- Many metadata fixes
+- Removed channel split support as no use cases
+- Label extraction no longer in image pipeline, use separate script instead
+
 #### Version 0.3.3
 - Omero class OmeroSource now in line with OmeSource functionality
 - OME metadata now fully implemented using xmltodict

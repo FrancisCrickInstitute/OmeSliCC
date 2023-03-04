@@ -53,7 +53,7 @@ class OmeSource:
                 or self.source_pixel_size[0][0] == 0) \
                 and source_pixel_size is not None:
             self.source_pixel_size = source_pixel_size
-        if len(self.source_pixel_size) == 0:
+        if len(self.source_pixel_size) == 0 or self.source_pixel_size[0][0] == 0:
             msg = f'{source_reference}: No source pixel size in metadata or provided'
             if source_info_required:
                 raise ValueError(msg)
@@ -62,15 +62,19 @@ class OmeSource:
         self._init_sizes()
 
     def _get_ome_metadate(self):
-        # TODO: use objective settings to get matching mag instead
         images = ensure_list(self.metadata.get('Image', {}))[0]
         pixels = images.get('Pixels', {})
         self.source_pixel_size = [(float(pixels.get('@PhysicalSizeX', 0)), pixels.get('@PhysicalSizeXUnit', 'µm')),
                                   (float(pixels.get('@PhysicalSizeY', 0)), pixels.get('@PhysicalSizeYUnit', 'µm')),
                                   (float(pixels.get('@PhysicalSizeZ', 0)), pixels.get('@PhysicalSizeZUnit', 'µm'))]
-        for channel in ensure_list(pixels.get('Channel', {})):
+        self.source_mag = 0
+        objective_id = images.get('ObjectiveSettings', {}).get('@ID', '')
+        for objective in ensure_list(self.metadata.get('Instrument', {}).get('Objective', [])):
+            if objective.get('@ID', '') == objective_id:
+                self.source_mag = float(objective.get('@NominalMagnification', 0))
+        nchannels = self.sizes_xyzct[0][3]
+        for channel in ensure_list(pixels.get('Channel', [{}] * nchannels)):
             self.channel_info.append((channel.get('@Name', ''), int(channel.get('@SamplesPerPixel', 1))))
-        self.source_mag = float(self.metadata.get('Instrument', {}).get('Objective', {}).get('@NominalMagnification', 0))
 
     def _init_sizes(self):
         self.scales = [np.mean(np.divide(self.sizes[0], size)) for size in self.sizes]

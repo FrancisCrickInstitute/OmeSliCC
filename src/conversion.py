@@ -7,8 +7,7 @@ import os
 import numpy as np
 import zarr
 from PIL import Image
-from imagecodecs.numcodecs import Jpeg2k, JpegXr, JpegXl
-from numcodecs import register_codec
+from imagecodecs.numcodecs import Lzw, Jpeg2k, JpegXr, JpegXl
 from tifffile import TIFF, TiffWriter
 
 from src import Omero
@@ -21,10 +20,6 @@ from src.ZarrSource import ZarrSource
 from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_unsigned_image, reverse_last_axis, \
     save_image
 from src.util import get_filetitle, split_value_unit_list, ensure_list
-
-register_codec(Jpeg2k)
-register_codec(JpegXr)
-register_codec(JpegXl)
 
 
 def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSource:
@@ -131,18 +126,18 @@ def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: st
         level = int(compression[1])
     else:
         level = None
-    if '2k' in compression_type or '2000' in compression_type:
-        compressor = None
+    compressor = None
+    compression_filters = None
+    if 'lzw' in compression_type:
+        compression_filters = [Lzw()]
+    elif '2k' in compression_type or '2000' in compression_type:
         compression_filters = [Jpeg2k(level)]
     elif 'jpegxr' in compression_type:
-        compressor = None
         compression_filters = [JpegXr(level)]
     elif 'jpegxl' in compression_type:
-        compressor = None
         compression_filters = [JpegXl(level)]
     else:
         compressor = compression
-        compression_filters = None
 
     zarr_root = zarr.open_group(output_filename, mode='w')
     size = source.get_size()
@@ -202,7 +197,6 @@ def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: st
 def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
-    split_channel_files = output_params.get('split_channel_files')
     output_format = output_params['format']
     combine_rgb = output_params.get('combine_rgb', True)
     channel_output = 'combine_rgb' if combine_rgb else ''
@@ -214,29 +208,19 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
     else:
         pyramid_sizes_add = None
 
-    nfiles = source.get_nchannels() if split_channel_files else 1
-    for i in range(nfiles):
-        if nfiles > 1:
-            image1 = image[..., i]
-            output_filename1 = output_filename.replace(output_format, '').rstrip('.') + f'_channel{i}.{output_format}'
-            channel_output = str(i)
-        else:
-            image1 = image
-            output_filename1 = output_filename
+    if ome:
+        metadata = None
+        xml_metadata = source.create_xml_metadata(output_filename, channel_output=channel_output,
+                                                  pyramid_sizes_add=pyramid_sizes_add)
+        #print(xml_metadata)
+    else:
+        metadata = source.get_metadata()
+        xml_metadata = None
+    resolution, resolution_unit = get_resolution_from_pixel_size(source.get_pixel_size())
 
-        if ome:
-            metadata = None
-            xml_metadata = source.create_xml_metadata(output_filename1, channel_output=channel_output,
-                                                      pyramid_sizes_add=pyramid_sizes_add)
-            #print(xml_metadata)
-        else:
-            metadata = source.get_metadata()
-            xml_metadata = None
-        resolution, resolution_unit = get_resolution_from_pixel_size(source.get_pixel_size())
-
-        save_tiff(output_filename1, image1, metadata=metadata, xml_metadata=xml_metadata,
-                  resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size,
-                  compression=compression, combine_rgb=combine_rgb, pyramid_sizes_add=pyramid_sizes_add)
+    save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata,
+              resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size,
+              compression=compression, combine_rgb=combine_rgb, pyramid_sizes_add=pyramid_sizes_add)
 
 
 def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metadata: str = None,

@@ -1,3 +1,5 @@
+from imagecodecs.numcodecs import Lzw, Jpeg2k, JpegXr, JpegXl
+from numcodecs import register_codec
 import PIL.Image
 import numpy as np
 import cv2 as cv
@@ -8,6 +10,13 @@ import imagecodecs
 from tifffile import TiffFile
 
 from src.util import tags_to_dict, print_dict, print_hbytes
+
+
+# required for auto decoding Zarr
+register_codec(Lzw)
+register_codec(Jpeg2k)
+register_codec(JpegXr)
+register_codec(JpegXl)
 
 
 def check_versions():

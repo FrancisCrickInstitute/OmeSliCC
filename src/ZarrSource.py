@@ -31,7 +31,9 @@ class ZarrSource(OmeSource):
                 for scale in self.metadata.get('multiscales', []):
                     for index, dataset in enumerate(scale.get('datasets', [])):
                         paths.append(dataset.get('path', str(index)))
-                    dimension_order = ''.join([axis.get('name') for axis in scale.get('axes', [])])
+                    axes = scale.get('axes', [])
+                    if len(axes) > 0:
+                        dimension_order = ''.join([axis.get('name') for axis in axes])
             else:
                 paths = root.array_keys()
             self.dimension_order = dimension_order

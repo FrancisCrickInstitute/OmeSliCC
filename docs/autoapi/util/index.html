@@ -52,25 +52,37 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#util.ensure_list" title="util.ensure_list"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ensure_list</span></code></a>(→ list)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#util.tags_to_dict" title="util.tags_to_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tags_to_dict</span></code></a>(→ dict)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#util.filter_dict" title="util.filter_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">filter_dict</span></code></a>(dict0)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#util.desc_to_dict" title="util.desc_to_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">desc_to_dict</span></code></a>(→ dict)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#util.tags_to_dict" title="util.tags_to_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tags_to_dict</span></code></a>(→ dict)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#util.print_dict" title="util.print_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_dict</span></code></a>(dct[, compact, indent])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#util.desc_to_dict" title="util.desc_to_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">desc_to_dict</span></code></a>(→ dict)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#util.print_hbytes" title="util.print_hbytes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_hbytes</span></code></a>(→ str)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#util.print_dict" title="util.print_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_dict</span></code></a>(dct[, compact, indent])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#util.check_round_significants" title="util.check_round_significants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_round_significants</span></code></a>(→ float)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#util.print_hbytes" title="util.print_hbytes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_hbytes</span></code></a>(→ str)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#util.round_significants" title="util.round_significants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">round_significants</span></code></a>(→ float)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#util.check_round_significants" title="util.check_round_significants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_round_significants</span></code></a>(→ float)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#util.get_filetitle" title="util.get_filetitle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_filetitle</span></code></a>(→ str)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#util.round_significants" title="util.round_significants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">round_significants</span></code></a>(→ float)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#util.get_filetitle" title="util.get_filetitle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_filetitle</span></code></a>(→ str)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#util.split_num_text" title="util.split_num_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">split_num_text</span></code></a>(text)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#util.split_value_unit_list" title="util.split_value_unit_list"><code class="xref py py-obj docutils literal notranslate"><span class="pre">split_value_unit_list</span></code></a>(text)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#util.get_value_units_micrometer" title="util.get_value_units_micrometer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_value_units_micrometer</span></code></a>(value_units0)</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -83,6 +95,11 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="util.ensure_list">
 <span class="sig-prename descclassname"><span class="pre">util.</span></span><span class="sig-name descname"><span class="pre">ensure_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#util.ensure_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="util.filter_dict">
+<span class="sig-prename descclassname"><span class="pre">util.</span></span><span class="sig-name descname"><span class="pre">filter_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dict0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#util.filter_dict" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -120,6 +137,21 @@
 <span class="sig-prename descclassname"><span class="pre">util.</span></span><span class="sig-name descname"><span class="pre">get_filetitle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_all_ext</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#util.get_filetitle" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="util.split_num_text">
+<span class="sig-prename descclassname"><span class="pre">util.</span></span><span class="sig-name descname"><span class="pre">split_num_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#util.split_num_text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="util.split_value_unit_list">
+<span class="sig-prename descclassname"><span class="pre">util.</span></span><span class="sig-name descname"><span class="pre">split_value_unit_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#util.split_value_unit_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="util.get_value_units_micrometer">
+<span class="sig-prename descclassname"><span class="pre">util.</span></span><span class="sig-name descname"><span class="pre">get_value_units_micrometer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value_units0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#util.get_value_units_micrometer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </section>
 </section>
 </section>
@@ -139,6 +171,7 @@
 <li><a class="reference internal" href="#functions">Functions</a><ul>
 <li><a class="reference internal" href="#util.get_default"><code class="docutils literal notranslate"><span class="pre">get_default()</span></code></a></li>
 <li><a class="reference internal" href="#util.ensure_list"><code class="docutils literal notranslate"><span class="pre">ensure_list()</span></code></a></li>
+<li><a class="reference internal" href="#util.filter_dict"><code class="docutils literal notranslate"><span class="pre">filter_dict()</span></code></a></li>
 <li><a class="reference internal" href="#util.tags_to_dict"><code class="docutils literal notranslate"><span class="pre">tags_to_dict()</span></code></a></li>
 <li><a class="reference internal" href="#util.desc_to_dict"><code class="docutils literal notranslate"><span class="pre">desc_to_dict()</span></code></a></li>
 <li><a class="reference internal" href="#util.print_dict"><code class="docutils literal notranslate"><span class="pre">print_dict()</span></code></a></li>
@@ -146,8 +179,12 @@
 <li><a class="reference internal" href="#util.check_round_significants"><code class="docutils literal notranslate"><span class="pre">check_round_significants()</span></code></a></li>
 <li><a class="reference internal" href="#util.round_significants"><code class="docutils literal notranslate"><span class="pre">round_significants()</span></code></a></li>
 <li><a class="reference internal" href="#util.get_filetitle"><code class="docutils literal notranslate"><span class="pre">get_filetitle()</span></code></a></li>
+<li><a class="reference internal" href="#util.split_num_text"><code class="docutils literal notranslate"><span class="pre">split_num_text()</span></code></a></li>
+<li><a class="reference internal" href="#util.split_value_unit_list"><code class="docutils literal notranslate"><span class="pre">split_value_unit_list()</span></code></a></li>
+<li><a class="reference internal" href="#util.get_value_units_micrometer"><code class="docutils literal notranslate"><span class="pre">get_value_units_micrometer()</span></code></a></li>
 <li><a class="reference internal" href="#util.get_default">get_default</a></li>
 <li><a class="reference internal" href="#util.ensure_list">ensure_list</a></li>
+<li><a class="reference internal" href="#util.filter_dict">filter_dict</a></li>
 <li><a class="reference internal" href="#util.tags_to_dict">tags_to_dict</a></li>
 <li><a class="reference internal" href="#util.desc_to_dict">desc_to_dict</a></li>
 <li><a class="reference internal" href="#util.print_dict">print_dict</a></li>
@@ -155,6 +192,9 @@
 <li><a class="reference internal" href="#util.check_round_significants">check_round_significants</a></li>
 <li><a class="reference internal" href="#util.round_significants">round_significants</a></li>
 <li><a class="reference internal" href="#util.get_filetitle">get_filetitle</a></li>
+<li><a class="reference internal" href="#util.split_num_text">split_num_text</a></li>
+<li><a class="reference internal" href="#util.split_value_unit_list">split_value_unit_list</a></li>
+<li><a class="reference internal" href="#util.get_value_units_micrometer">get_value_units_micrometer</a></li>
 </ul>
 </li>
 </ul>

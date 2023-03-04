@@ -9,11 +9,10 @@ For support and discussion, please use the [Image.sc forum](https://forum.image.
 
 ## Main features
 
-- Import WSI files: Omero, Ome.tiff, Tiff, basic image formats, Zarr*, Ome Zarr*
-- Export images: Ome.tiff, Zarr*, Ome Zarr*, thumbnails
-- Image scaling using target magnification
-- Channel operations: split channels
-- Export meta-data: Ome.tiff, csv
+- Import WSI files: Omero, Ome.Tiff, Tiff, Zarr *, Ome.Zarr/NGFF *, common slide formats, common image formats
+- Export images: Tiff, Ome.Tiff, Zarr *, Ome.Zarr *, common image formats, thumbnails
+- Zarr image compression (lossless/lossy)
+- Image scaling using target pixel size
 - Omero credentials helper
 
 *Zarr currently partially implemented. Also see [OME NGFF](https://ngff.openmicroscopy.org)
@@ -40,14 +39,13 @@ The main sections are:
     - info: show input file information
 	- thumbnail: extract image thumbnail
 	- convert: convert to desired image output
-	- labels: extract Omero metadata
 
 To encode credentials for Omero access:
 ```
 python encode_omero_credentials.py --params path/to/params.yml
 ```
 
-To extract Omero label metadata to text file use the 'labels' action, or use:
+To extract Omero label metadata to text file:
 ```
 python extract_omero_labels.py --params path/to/params.yml
 ```

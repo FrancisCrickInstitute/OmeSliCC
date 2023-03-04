@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>OmeroSource &#8212; OmeSliCC  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nature.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">OmeSliCC  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><code class="xref py py-mod docutils literal notranslate"><span class="pre">OmeroSource</span></code></a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-OmeroSource">
+<span id="omerosource"></span><h1><a class="reference internal" href="#module-OmeroSource" title="OmeroSource"><code class="xref py py-mod docutils literal notranslate"><span class="pre">OmeroSource</span></code></a><a class="headerlink" href="#module-OmeroSource" title="Permalink to this heading">¶</a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this heading">¶</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#OmeroSource.OmeroSource" title="OmeroSource.OmeroSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OmeroSource</span></code></a></p></td>
+<td><p>Omero image source</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">OmeroSource.</span></span><span class="sig-name descname"><span class="pre">OmeroSource</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">omero</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">src.Omero</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_pixel_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_pixel_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_info_required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#OmeroSource.OmeroSource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">src.OmeSource.OmeSource</span></code></p>
+<p>Omero image source</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource.omero">
+<span class="sig-name descname"><span class="pre">omero</span></span><em class="property"><span class="w"> </span><span class="pre">:src.Omero</span></em><a class="headerlink" href="#OmeroSource.OmeroSource.omero" title="Permalink to this definition">¶</a></dt>
+<dd><p>Omero instance</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource.image_id">
+<span class="sig-name descname"><span class="pre">image_id</span></span><em class="property"><span class="w"> </span><span class="pre">:int</span></em><a class="headerlink" href="#OmeroSource.OmeroSource.image_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Omero image id</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource.image_object">
+<span class="sig-name descname"><span class="pre">image_object</span></span><em class="property"><span class="w"> </span><span class="pre">:OmeroSource.omero</span></em><a class="headerlink" href="#OmeroSource.OmeroSource.image_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Omero image object</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource.pixels_store">
+<span class="sig-name descname"><span class="pre">pixels_store</span></span><em class="property"><span class="w"> </span><span class="pre">:OmeroSource.omero</span></em><a class="headerlink" href="#OmeroSource.OmeroSource.pixels_store" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raw pixels store object</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource.pixels_store_pyramid_order">
+<span class="sig-name descname"><span class="pre">pixels_store_pyramid_order</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeroSource.OmeroSource.pixels_store_pyramid_order" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raw pixels store pyramid sizes order (pixel store level order not guaranteed)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource._find_metadata">
+<span class="sig-name descname"><span class="pre">_find_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#OmeroSource.OmeroSource._find_metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource.create_xml_metadata">
+<span class="sig-name descname"><span class="pre">create_xml_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pyramid_sizes_add</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#OmeroSource.OmeroSource.create_xml_metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource.get_thumbnail">
+<span class="sig-name descname"><span class="pre">get_thumbnail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precise</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#OmeroSource.OmeroSource.get_thumbnail" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource._asarray_level">
+<span class="sig-name descname"><span class="pre">_asarray_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#OmeroSource.OmeroSource._asarray_level" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="OmeroSource.OmeroSource.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#OmeroSource.OmeroSource.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">OmeroSource</span></code></a><ul>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#classes">Classes</a><ul>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource"><code class="docutils literal notranslate"><span class="pre">OmeroSource</span></code></a><ul>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.omero"><code class="docutils literal notranslate"><span class="pre">OmeroSource.omero</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.image_id"><code class="docutils literal notranslate"><span class="pre">OmeroSource.image_id</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.image_object"><code class="docutils literal notranslate"><span class="pre">OmeroSource.image_object</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.pixels_store"><code class="docutils literal notranslate"><span class="pre">OmeroSource.pixels_store</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.pixels_store_pyramid_order"><code class="docutils literal notranslate"><span class="pre">OmeroSource.pixels_store_pyramid_order</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource._find_metadata"><code class="docutils literal notranslate"><span class="pre">OmeroSource._find_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.create_xml_metadata"><code class="docutils literal notranslate"><span class="pre">OmeroSource.create_xml_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.get_thumbnail"><code class="docutils literal notranslate"><span class="pre">OmeroSource.get_thumbnail()</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource._asarray_level"><code class="docutils literal notranslate"><span class="pre">OmeroSource._asarray_level()</span></code></a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.close"><code class="docutils literal notranslate"><span class="pre">OmeroSource.close()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource">OmeroSource</a><ul>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.omero">omero</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.image_id">image_id</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.image_object">image_object</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.pixels_store">pixels_store</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.pixels_store_pyramid_order">pixels_store_pyramid_order</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource._find_metadata">_find_metadata</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.create_xml_metadata">create_xml_metadata</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.get_thumbnail">get_thumbnail</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource._asarray_level">_asarray_level</a></li>
+<li><a class="reference internal" href="#OmeroSource.OmeroSource.close">close</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/autoapi/OmeroSource/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">OmeSliCC  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><code class="xref py py-mod docutils literal notranslate"><span class="pre">OmeroSource</span></code></a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Francis Crick Institute.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+    </div>
+  </body>
+</html>
