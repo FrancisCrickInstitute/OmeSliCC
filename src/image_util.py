@@ -116,6 +116,18 @@ def calc_pyramid(xyzct: tuple, npyramid_add: int = 0, pyramid_downsample: float 
     return sizes_add
 
 
+def image_reshape(image: np.ndarray, target_size: tuple) -> np.ndarray:
+    tw, th = target_size
+    sh, sw = image.shape[0:2]
+    if sw < tw or sh < th:
+        dw = max(tw - sw, 0)
+        dh = max(th - sh, 0)
+        image = np.pad(image, ((0, dh), (0, dw), (0, 0)), 'edge')
+    if tw < sw or th < sh:
+        image = image[0:th, 0:tw]
+    return image
+
+
 def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
     if (len(image.shape) > 2 and image.shape[2] > 4) or image.dtype.kind == 'i':
         new_image = image_resize(image, target_size)

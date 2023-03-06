@@ -109,9 +109,10 @@ class TiffSource(OmeSource):
             return
 
         # from imageJ metadata
-        if len(pixel_size) == 0 and self.metadata is not None:
+        pixel_size_z = None
+        if len(pixel_size) == 0 and self.metadata is not None and 'spacing' in self.metadata:
             pixel_size_unit = self.metadata.get('unit', '')
-            pixel_size.append((self.metadata.get('spacing', 0), pixel_size_unit))
+            pixel_size_z = (self.metadata['spacing'], pixel_size_unit)
         if mag == 0 and self.metadata is not None:
             mag = self.metadata.get('Mag', 0)
         # from page TAGS
@@ -124,16 +125,18 @@ class TiffSource(OmeSource):
                 pixel_size_unit = pixel_size_unit.lower()
                 if pixel_size_unit == 'none':
                     pixel_size_unit = ''
-            res0 = metadata.get('XResolution', 1)
-            if isinstance(res0, tuple):
-                res0 = res0[0] / res0[1]
-            if res0 != 0:
-                pixel_size.insert(0, (1 / res0, pixel_size_unit))
-            res0 = metadata.get('YResolution', 1)
-            if isinstance(res0, tuple):
-                res0 = res0[0] / res0[1]
-            if res0 != 0:
-                pixel_size.insert(1, (1 / res0, pixel_size_unit))
+            res0 = metadata.get('XResolution')
+            if res0 is not None:
+                if isinstance(res0, tuple):
+                    res0 = res0[0] / res0[1]
+                if res0 != 0:
+                    pixel_size.append((1 / res0, pixel_size_unit))
+            res0 = metadata.get('YResolution')
+            if res0 is not None:
+                if isinstance(res0, tuple):
+                    res0 = res0[0] / res0[1]
+                if res0 != 0:
+                    pixel_size.append((1 / res0, pixel_size_unit))
         if len(channel_info) == 0:
             nchannels = self.sizes_xyzct[0][3]
             channel_info = [(str(metadata.get('PhotometricInterpretation', '')).lower().split('.')[-1],
@@ -141,11 +144,15 @@ class TiffSource(OmeSource):
         if mag == 0:
             mag = metadata.get('Mag', 0)
         # from description
-        if not page.is_ome and mag == 0:
+        if not page.is_ome:
             metadata = desc_to_dict(page.description)
-            mag = metadata.get('Mag', 0)
             if mag == 0:
-                mag = metadata.get('AppMag', 0)
+                mag = metadata.get('Mag', metadata.get('AppMag', 0))
+            if len(pixel_size) < 2 and 'MPP' in metadata:
+                pixel_size.append((metadata['MPP'], 'µm'))
+                pixel_size.append((metadata['MPP'], 'µm'))
+        if pixel_size_z is not None and len(pixel_size) == 2:
+            pixel_size.append(pixel_size_z)
         self.source_pixel_size = pixel_size
         self.source_mag = mag
         self.channel_info = channel_info

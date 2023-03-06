@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 
-from src.image_util import image_resize_fast, image_resize, precise_resize
+from src.image_util import image_resize_fast, image_resize, precise_resize, image_reshape
 from src.ome import create_ome_metadata
 from src.util import check_round_significants, ensure_list, get_value_units_micrometer
 
@@ -209,10 +209,8 @@ class OmeSource:
             image = image_resize_fast(image0, (w, h))
         else:
             image = image0
-        w = image.shape[1]
-        h = image.shape[0]
-        if (h, w) != (h0, w0):
-            image = np.pad(image, ((0, h0 - h), (0, w0 - w), (0, 0)), 'edge')
+        if image.shape[0:2] != (h0, w0):
+            image = image_reshape(image, (w0, h0))
         return image
 
     def produce_chunks(self, chunk_size: tuple) -> tuple:

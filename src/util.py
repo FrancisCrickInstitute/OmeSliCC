@@ -52,8 +52,8 @@ def desc_to_dict(desc: str) -> dict:
             item_sep = ':'
         if item_sep in item:
             items = item.split(item_sep)
-            key = items[0]
-            value = items[1]
+            key = items[0].strip()
+            value = items[1].strip()
             try:
                 if '.' in value:
                     value = float(value)
