@@ -129,27 +129,37 @@ def image_reshape(image: np.ndarray, target_size: tuple) -> np.ndarray:
 
 
 def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
-    if (len(image.shape) > 2 and image.shape[2] > 4) or image.dtype.kind == 'i':
+    shape = image.shape
+    if (len(shape) > 2 and shape[2] > 4) or image.dtype.kind == 'i':
         new_image = image_resize(image, target_size)
     else:
-        new_image = cv.resize(image, target_size, interpolation=cv.INTER_AREA)
+        if np.mean(np.divide(np.flip(shape[0:2]), target_size)) < 1:
+            interpolation = cv.INTER_CUBIC
+        else:
+            interpolation = cv.INTER_AREA
+        new_image = cv.resize(image, target_size, interpolation=interpolation)
     return new_image
 
 
 def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
     if not isinstance(image, np.ndarray):
         image = image.asarray()
+    shape = image.shape
+    if np.mean(np.divide(np.flip(shape[0:2]), target_size0)) < 1:
+        interpolation = cv.INTER_CUBIC
+    else:
+        interpolation = cv.INTER_AREA
     dtype0 = image.dtype
     image = ensure_unsigned_image(image)
     target_size = tuple(np.clip(np.int0(np.round(target_size0)), 1, None))
-    if len(image.shape) > 2 and image.shape[2] > 4:
+    if len(shape) > 2 and shape[2] > 4:
         # volumetric
-        target_shape = (target_size[1], target_size[0], image.shape[2])
+        target_shape = (target_size[1], target_size[0], shape[2])
         new_image = np.zeros(target_shape, dtype=image.dtype)
         for z in range(target_shape[2]):
-            new_image[..., z] = cv.resize(image[..., z], target_size, interpolation=cv.INTER_AREA)
+            new_image[..., z] = cv.resize(image[..., z], target_size, interpolation=interpolation)
     else:
-        new_image = cv.resize(image, target_size, interpolation=cv.INTER_AREA)
+        new_image = cv.resize(image, target_size, interpolation=interpolation)
     new_image = convert_image_sign_type(new_image, dtype0)
     return new_image
 
@@ -300,6 +310,6 @@ def reverse_last_axis(image, reverse=True):
         return image
 
 
-def save_image(image: np.ndarray, filename: str, output_params: dict):
+def save_image(image: np.ndarray, filename: str, output_params: dict = {}):
     compression = output_params.get('compression')
     PIL.Image.fromarray(image).save(filename, compression=compression)

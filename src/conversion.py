@@ -197,7 +197,6 @@ def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: st
 def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
-    output_format = output_params['format']
     combine_rgb = output_params.get('combine_rgb', True)
     channel_output = 'combine_rgb' if combine_rgb else ''
 
