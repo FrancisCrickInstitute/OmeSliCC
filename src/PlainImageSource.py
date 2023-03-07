@@ -54,14 +54,18 @@ class PlainImageSource(OmeSource):
     def _find_metadata(self):
         self.source_pixel_size = []
         pixel_size_unit = self.metadata.get('unit', '')
-        res0 = self.metadata.get('XResolution', 1)
-        if isinstance(res0, tuple):
-            res0 = res0[0] / res0[1]
-        self.source_pixel_size.append((1 / res0, pixel_size_unit))
-        res0 = self.metadata.get('YResolution', 1)
-        if isinstance(res0, tuple):
-            res0 = res0[0] / res0[1]
-        self.source_pixel_size.append((1 / res0, pixel_size_unit))
+        res0 = self.metadata.get('XResolution')
+        if res0 is not None:
+            if isinstance(res0, tuple):
+                res0 = res0[0] / res0[1]
+            if res0 != 0:
+                self.source_pixel_size.append((1 / res0, pixel_size_unit))
+        res0 = self.metadata.get('YResolution')
+        if res0 is not None:
+            if isinstance(res0, tuple):
+                res0 = res0[0] / res0[1]
+            if res0 != 0:
+                self.source_pixel_size.append((1 / res0, pixel_size_unit))
         self.source_mag = self.metadata.get('Mag', 0)
         self.channel_info = []
         channels = self.image.getbands()

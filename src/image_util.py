@@ -35,11 +35,10 @@ def show_image_gray(image: np.ndarray):
 
 
 def ensure_unsigned_type(dtype: np.dtype) -> np.dtype:
-    if dtype.kind == 'i':
-        unsigned_type = np.dtype(f'u{dtype.itemsize}')
-        return unsigned_type
-    else:
-        return dtype
+    new_dtype = dtype
+    if dtype.kind == 'i' or dtype.byteorder == '>' or dtype.byteorder == '<':
+        new_dtype = np.dtype(f'u{dtype.itemsize}')
+    return new_dtype
 
 
 def ensure_unsigned_image(image0: np.ndarray) -> np.ndarray:
@@ -112,7 +111,8 @@ def calc_pyramid(xyzct: tuple, npyramid_add: int = 0, pyramid_downsample: float 
     scale = 1
     for _ in range(npyramid_add):
         scale /= pyramid_downsample
-        sizes_add.append(np.round(np.multiply(size, scale)).astype(int))
+        scaled_size = np.maximum(np.round(np.multiply(size, scale)).astype(int), 1)
+        sizes_add.append(scaled_size)
     return sizes_add
 
 
@@ -122,7 +122,10 @@ def image_reshape(image: np.ndarray, target_size: tuple) -> np.ndarray:
     if sw < tw or sh < th:
         dw = max(tw - sw, 0)
         dh = max(th - sh, 0)
-        image = np.pad(image, ((0, dh), (0, dw), (0, 0)), 'edge')
+        padding = [(0, dh), (0, dw)]
+        if len(image.shape) == 3:
+            padding += [(0, 0)]
+        image = np.pad(image, padding, 'edge')
     if tw < sw or th < sh:
         image = image[0:th, 0:tw]
     return image
@@ -130,7 +133,8 @@ def image_reshape(image: np.ndarray, target_size: tuple) -> np.ndarray:
 
 def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
     shape = image.shape
-    if (len(shape) > 2 and shape[2] > 4) or image.dtype.kind == 'i':
+    if (len(shape) > 2 and shape[2] > 4) or image.dtype.kind == 'i' \
+            or image.dtype.byteorder == '>' or image.dtype.byteorder == '<':
         new_image = image_resize(image, target_size)
     else:
         if np.mean(np.divide(np.flip(shape[0:2]), target_size)) < 1:
@@ -151,7 +155,7 @@ def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
         interpolation = cv.INTER_AREA
     dtype0 = image.dtype
     image = ensure_unsigned_image(image)
-    target_size = tuple(np.clip(np.int0(np.round(target_size0)), 1, None))
+    target_size = tuple(np.maximum(np.round(target_size0).astype(int), 1))
     if len(shape) > 2 and shape[2] > 4:
         # volumetric
         target_shape = (target_size[1], target_size[0], shape[2])

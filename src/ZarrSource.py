@@ -1,4 +1,3 @@
-import math
 import numpy as np
 import zarr
 from zarr.errors import GroupNotFoundError
@@ -77,15 +76,11 @@ class ZarrSource(OmeSource):
                     (scale1[axes.index('y')], units[axes.index('y')]),
                     (scale1[axes.index('z')], units[axes.index('z')])]
             else:
-                pixel_size = [(1, ''), (1, ''), (1, '')]
+                pixel_size = [(0, ''), (0, ''), (0, '')]
         for data in self.metadata.values():
             if isinstance(data, dict):
                 for channel in data.get('channels', []):
-                    max_val = channel.get('window', {}).get('max', 0)
-                    samples_per_pixel = int(math.log(max_val + 1, 256))
-                    if samples_per_pixel < 1:
-                        samples_per_pixel = 1
-                    channel_info.append((channel.get('label', ''), samples_per_pixel))
+                    channel_info.append((channel.get('label', ''), 1))
         if len(channel_info) == 0:
             nchannels = self.sizes_xyzct[0][3]
             channel_info = [('', nchannels)]
