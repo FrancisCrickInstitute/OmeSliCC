@@ -30,7 +30,8 @@ def create_ome_metadata(source: OmeSource,
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
 
-    ome = source.get_metadata().copy()
+    is_ome = 'ome' in os.path.splitext(source.source_reference)[1]
+    ome = source.get_metadata().copy() if is_ome else {}
     ome['@xmlns'] = OME_URI
     ome['@xmlns:xsi'] = OME_XSI
     ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
