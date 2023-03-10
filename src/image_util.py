@@ -172,12 +172,11 @@ def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
     h, w = np.ceil(image.shape[0:2] * scale).astype(int)
     new_image = np.zeros((h, w, image.shape[2]), dtype=np.float32)
     step_size = 1 / scale
-    totn = np.round(step_size[0]) * np.round(step_size[1])
     for y in range(h):
         for x in range(w):
             y0, y1 = np.round([y * step_size[1], (y + 1) * step_size[1]]).astype(int)
             x0, x1 = np.round([x * step_size[0], (x + 1) * step_size[0]]).astype(int)
-            value = np.sum(image[y0:y1, x0:x1], axis=(0, 1)) / totn
+            value = np.mean(image[y0:y1, x0:x1], axis=(0, 1))
             new_image[y, x] = value
     return new_image
 
