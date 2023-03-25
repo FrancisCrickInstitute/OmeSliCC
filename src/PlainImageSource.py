@@ -4,6 +4,7 @@ from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
 from src.OmeSource import OmeSource
+from src.XmlDict import XmlDict
 from src.image_util import pilmode_to_pixelinfo, get_pil_metadata
 
 Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents loading large images)
@@ -67,11 +68,8 @@ class PlainImageSource(OmeSource):
             if res0 != 0:
                 self.source_pixel_size.append((1 / res0, pixel_size_unit))
         self.source_mag = self.metadata.get('Mag', 0)
-        self.channel_info = []
-        channels = self.image.getbands()
-        nchannels = len(channels)
-        for channel in channels:
-            self.channel_info.append((channel, self.pixel_nbits[0] // 8 // nchannels))
+        nchannels = len(self.image.getbands())
+        self.channels = [XmlDict({'@Name': '', '@SamplesPerPixel': nchannels})]
 
     def load(self):
         self.unload()

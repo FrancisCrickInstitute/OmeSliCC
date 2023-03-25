@@ -7,6 +7,7 @@ from src import Omero
 from src.OmeSource import OmeSource
 from src.ome import create_ome_metadata_from_omero
 from src.util import get_default
+from src.XmlDict import XmlDict
 
 
 class OmeroSource(OmeSource):
@@ -66,12 +67,14 @@ class OmeroSource(OmeSource):
                                   (get_default(image_object.getPixelSizeY(), 0), 'µm'),
                                   (get_default(image_object.getPixelSizeZ(), 0), 'µm')]
         self.source_mag = image_object.getObjectiveSettings().getObjective().getNominalMagnification()
+        self.channels = []
         for channel in image_object.getChannels():
-            channell = channel.getLogicalChannel()
-            self.channel_info.append((channel.getName(), channell.getSamplesPerPixel()))
+            channel = XmlDict({'@Name': channel.getName(), '@Color': channel.getColor().getInt(),
+                               '@SamplesPerPixel': channel.getLogicalChannel().getSamplesPerPixel()})
+            self.channels.append(channel)
 
-    def create_xml_metadata(self, output_filename: str, channel_output: str = '', pyramid_sizes_add: list = None) -> str:
-        return create_ome_metadata_from_omero(self, self.image_object, output_filename, channel_output=channel_output,
+    def create_xml_metadata(self, output_filename: str, combine_rgb: bool = True, pyramid_sizes_add: list = None) -> str:
+        return create_ome_metadata_from_omero(self, self.image_object, output_filename, combine_rgb=combine_rgb,
                                               pyramid_sizes_add=pyramid_sizes_add)
 
     def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:

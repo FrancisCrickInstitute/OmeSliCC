@@ -43,9 +43,9 @@ def get_image_info(source: OmeSource) -> str:
     xyzct = source.get_size_xyzct()
     pixel_nbytes = source.get_pixel_nbytes()
     pixel_type = source.get_pixel_type()
-    channel_info = source.get_channel_info()
+    channels = source.get_channels()
     image_info = os.path.basename(source.source_reference) + '\n'
-    image_info += get_image_size_info(xyzct, pixel_nbytes, pixel_type, channel_info)
+    image_info += get_image_size_info(xyzct, pixel_nbytes, pixel_type, channels)
     sizes = source.get_physical_size()
     if len(sizes) > 0:
         image_info += '\nPhysical size:'
@@ -196,7 +196,6 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     combine_rgb = output_params.get('combine_rgb', True)
-    channel_output = 'combine_rgb' if combine_rgb else ''
 
     npyramid_add = output_params.get('npyramid_add', 0)
     pyramid_downsample = output_params.get('pyramid_downsample')
@@ -207,7 +206,7 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
 
     if ome:
         metadata = None
-        xml_metadata = source.create_xml_metadata(output_filename, channel_output=channel_output,
+        xml_metadata = source.create_xml_metadata(output_filename, combine_rgb=combine_rgb,
                                                   pyramid_sizes_add=pyramid_sizes_add)
         #print(xml_metadata)
     else:

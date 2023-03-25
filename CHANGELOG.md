@@ -1,3 +1,7 @@
+#### Version 0.4.1
+- Use dictionary to internally store richer channel information
+- Ome metadata fixes
+
 #### Version 0.4.0
 - Improved support for ome.zarr / NGFF
 - (ome.)zarr lossless/lossy image compression

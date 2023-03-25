@@ -8,10 +8,10 @@ import os
 import omero.gateway
 import omero.model
 from uuid import uuid4
-import xmltodict
 
 from src.image_util import ensure_unsigned_type
 from src.util import get_filetitle, ensure_list, filter_dict
+from src.XmlDict import dict2xml, XmlDict
 from version import __version__
 
 
@@ -23,15 +23,14 @@ OME_SCHEMA_LOC = f"{OME_URI} {OME_URI}/ome.xsd"
 
 def create_ome_metadata(source: OmeSource,
                         output_filename: str,
-                        channel_output: str = '',
+                        combine_rgb: bool = True,
                         pyramid_sizes_add: list = None) -> str:
 
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
 
-    is_ome = 'ome' in os.path.splitext(source.source_reference)[1]
-    ome = source.get_metadata().copy() if is_ome else {}
+    ome = source.get_metadata().copy() if source.has_ome_metadata else XmlDict()
     ome['@xmlns'] = OME_URI
     ome['@xmlns:xsi'] = OME_XSI
     ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
@@ -57,45 +56,27 @@ def create_ome_metadata(source: OmeSource,
 
     images = []
     for imagei in range(nimages):
-        channels = []
-        planes = []
-
         images0 = ensure_list(ome.get('Image', []))
         if len(images0) > 0:
             image0 = images0[imagei]
         else:
             image0 = {}
         pixels0 = image0.get('Pixels', {})
-        planes0 = ensure_list(pixels0.get('Plane', []))
 
-        combine_rgb = ('combine' in channel_output.lower())
-        channel_info = source.channel_info
-        nchannels = sum([info[1] for info in channel_info])
-        if combine_rgb and len(channel_info) == 3:
-            channel_info = [(channel_info[0][0], nchannels)]
-        elif not combine_rgb and len(channel_info) < nchannels:
-            channel_info = [(channel_info[0][0], 1) for _ in range(nchannels)]
-        channels0 = ensure_list(pixels0.get('Channel', []))
-        channeli = 0
+        channels = source.get_channels().copy()
+        nchannels = source.get_size_xyzct()[3]
+        if combine_rgb and len(channels) == 3:
+            channel = channels[0].copy()
+            channel['@SamplesPerPixel'] = nchannels
+            channel.pop('Color', None)
+            channels = [channel]
+        elif not combine_rgb and len(channels) < nchannels:
+            channel = channels[0].copy()
+            channel['@SamplesPerPixel'] = 1
+            channels = [channel] * nchannels
 
-        for channeli0, info in enumerate(channel_info):
-            channel = channels0[channeli0].copy() if channeli0 < len(channels0) else {}
-            color = channel.get('Color')
+        for channeli, channel in enumerate(channels):
             channel['@ID'] = f'Channel:{imagei}:{channeli}'
-            if info[0] != '':
-                channel['@Name'] = info[0]
-            channel['@SamplesPerPixel'] = info[1]
-            if color is not None:
-                channel['@Color'] = color
-            channels.append(channel)
-
-            for plane0 in planes0:
-                plane = plane0.copy()
-                plane_channel0 = plane0.get('@TheC')
-                if plane_channel0 is None or int(plane_channel0) == channeli0:
-                    planes.append(plane)
-
-            channeli += 1
 
         image = {
             '@ID': f'Image:{imagei}',
@@ -130,6 +111,7 @@ def create_ome_metadata(source: OmeSource,
         if len(pixel_size) > 2 and pixel_size[2][1] != '':
             pixels['@PhysicalSizeZUnit'] = pixel_size[2][1]
 
+        planes = ensure_list(pixels0.get('Plane', []))
         if len(planes) > 0:
             pixels['Plane'] = planes
 
@@ -139,11 +121,11 @@ def create_ome_metadata(source: OmeSource,
             image['Description'] = image0['Description']
         # Set image refs
         if experimenter is not None:
-            image['ExperimenterRef'] = {'@ID': experimenter['@ID']}
+            image['ExperimenterRef'] = {'@ID': experimenter['ID']}
         if instrument is not None:
-            image['InstrumentRef'] = {'@ID': instrument['@ID']}
+            image['InstrumentRef'] = {'@ID': instrument['ID']}
         if objective is not None:
-            image['ObjectiveSettings'] = {'@ID': objective['@ID']}
+            image['ObjectiveSettings'] = {'@ID': objective['ID']}
         # (end image refs)
         if 'StageLabel' in image0:
             image['StageLabel'] = image0['StageLabel']
@@ -158,7 +140,7 @@ def create_ome_metadata(source: OmeSource,
     # filter source pyramid sizes
     map_annotations0 = ensure_list(ome['StructuredAnnotations'].get('MapAnnotation', []))
     map_annotations = [annotation for annotation in map_annotations0
-                       if 'resolution' not in annotation.get('@ID', '').lower()]
+                       if 'resolution' not in annotation.get('ID', '').lower()]
     # add pyramid sizes
     if pyramid_sizes_add is not None:
         key_value_map = {'M': [{'@K': i + 1, '#text': f'{" ".join([str(size) for size in pyramid_size])}'}
@@ -173,23 +155,23 @@ def create_ome_metadata(source: OmeSource,
     # filter original metadata elements
     xml_annotations0 = ensure_list(ome.get('StructuredAnnotations', {}).get('XMLAnnotation', []))
     xml_annotations = [annotation for annotation in xml_annotations0
-                       if 'originalmetadata' not in annotation.get('@Namespace', '').lower()]
+                       if 'originalmetadata' not in annotation.get('Namespace', '').lower()]
     ome['StructuredAnnotations']['XMLAnnotation'] = xml_annotations
 
-    return xmltodict.unparse({'OME': ome}, short_empty_elements=True, pretty=True)
+    return dict2xml({'OME': ome})
 
 
 def create_ome_metadata_from_omero(source: OmeSource,
                                    image_object: omero.gateway.ImageWrapper,
                                    output_filename: str,
-                                   channel_output: str = '',
+                                   combine_rgb: bool = True,
                                    pyramid_sizes_add: list = None) -> str:
 
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
 
-    ome = {}
+    ome = XmlDict()
     ome['@xmlns'] = OME_URI
     ome['@xmlns:xsi'] = OME_XSI
     ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
@@ -212,13 +194,17 @@ def create_ome_metadata_from_omero(source: OmeSource,
                 '@SerialNumber': objective0.getSerialNumber(),
                 '@NominalMagnification': source.get_mag(),
                 '@CalibratedMagnification': source.get_mag(),
-                #'@Correction': objective0.getCorrection().getValue(),
                 '@LensNA': objective0.getLensNA(),
                 '@WorkingDistance': objective0.getWorkingDistance().getValue(),
                 '@WorkingDistanceUnit': objective0.getWorkingDistance().getSymbol(),
                 '@Iris': objective0.getIris(),
-                '@Immersion': objective0.getImmersion().getValue()
             }
+            correction = objective0.getCorrection().getValue()
+            if correction is not None and correction.lower() not in ['', 'unknown']:
+                objective['@Correction'] = correction
+            immersion = objective0.getImmersion().getValue()
+            if immersion is not None and immersion.lower() not in ['', 'unknown']:
+                objective['@Immersion'] = immersion
             instrument['Objective'] = objective
         ome['Instrument'] = instrument
 
@@ -232,11 +218,10 @@ def create_ome_metadata_from_omero(source: OmeSource,
 
         pixels0 = image_object.getPrimaryPixels()
 
-        planes0 = []
         stage0 = image_object.getStageLabel()
         if stage0 is not None:
             for plane0 in pixels0.copyPlaneInfo():
-                planes0.append({
+                planes.append({
                     '@TheC': plane0.getTheC(),
                     '@TheT': plane0.getTheT(),
                     '@TheZ': plane0.getTheZ(),
@@ -250,52 +235,38 @@ def create_ome_metadata_from_omero(source: OmeSource,
                     'PositionZUnit': stage0.getPositionZ().getSymbol(),
                 })
 
-        combine_rgb = ('combine' in channel_output.lower())
         channelso = image_object.getChannels()
-        channels0 = []
-        for channelo in channelso:
+        for channeli, channelo in enumerate(channelso):
             channell = channelo.getLogicalChannel()
             light_path = channell.getLightPath()
             if light_path is None:
                 light_path = {}
-            channel0 = {
+            channel = {
+                '@ID': f'Channel:{imagei}:{channeli}',
                 '@Name': channelo.getName(),
                 '@Color': channelo.getColor().getInt(),
-                '@Lut': channelo.getLut(),
                 '@EmissionWave': channelo.getEmissionWave(),
                 '@ExcitationWave': channelo.getExcitationWave(),
+                '@PockelCellSetting': channelo.getPockelCellSetting(),
                 '@Fluor': channell.getFluor(),
-                '@Otf': channell.getOtf(),
-                '@PhotometricInterpretation': channell.getPhotometricInterpretation(),
                 '@ContrastMethod': channell.getContrastMethod(),
                 '@PinHoleSize': channell.getPinHoleSize(),
                 '@SamplesPerPixel': channell.getSamplesPerPixel(),
+                '@NDFilter': channell.getNdFilter(),
                 'LightPath': light_path,
             }
-            channels0.append(channel0)
-        nchannels = sum([channel0['@SamplesPerPixel'] for channel0 in channels0])
-        if combine_rgb and len(channels0) == 3:
-            channels0 = channels0[0:1]
-            channels0[0]['@SamplesPerPixel'] = nchannels
-            channels0[0].pop('Color', None)
-        elif not combine_rgb and len(channels0) < nchannels:
-            channel1 = channels0[0].copy()
-            channel1['@SamplesPerPixel'] = 1
-            channels0 = [channel0 for channel0 in range(nchannels)]
-        channeli = 0
-
-        for channeli0, channel0 in enumerate(channels0):
-            channel = channels0[channeli0] if channeli0 < len(channels0) else {}
-            channel['@ID'] = f'Channel:{imagei}:{channeli}'
             channels.append(channel)
 
-            for plane0 in planes:
-                plane = plane0.copy()
-                plane_channel0 = plane0.get('@TheC')
-                if plane_channel0 is None or int(plane_channel0) == channeli0:
-                    planes.append(plane)
-
-            channeli += 1
+        nchannels = source.get_size_xyzct()[3]
+        if combine_rgb and len(channels) == 3:
+            channel = channels[0].copy()
+            channel['@SamplesPerPixel'] = nchannels
+            channel.pop('Color', None)
+            channels = [channel]
+        elif not combine_rgb and len(channels) < nchannels:
+            channel = channels[0].copy()
+            channel['@SamplesPerPixel'] = 1
+            channels = [channel] * nchannels
 
         image = {
             '@ID': f'Image:{imagei}',
@@ -376,7 +347,7 @@ def create_ome_metadata_from_omero(source: OmeSource,
 
     ome['StructuredAnnotations'] = annotations
 
-    return xmltodict.unparse({'OME': filter_dict(ome)}, short_empty_elements=True, pretty=True)
+    return dict2xml({'OME': filter_dict(ome)})
 
 
 def get_omero_metadata_dict(image_object):

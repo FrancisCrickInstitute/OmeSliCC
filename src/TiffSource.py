@@ -4,10 +4,10 @@
 import os
 from enum import Enum
 import numpy as np
-import xmltodict
 from tifffile import TiffFile, TiffPage
 from concurrent.futures import ThreadPoolExecutor
 
+from src import XmlDict
 from src.OmeSource import OmeSource
 from src.image_util import get_tiff_pages
 from src.util import tags_to_dict, desc_to_dict
@@ -53,10 +53,10 @@ class TiffSource(OmeSource):
         tiff = TiffFile(filename)
         if tiff.is_ome and tiff.ome_metadata is not None:
             xml_metadata = tiff.ome_metadata
-            #self.metadata = tifffile.xml2dict(xml_metadata)
-            self.metadata = xmltodict.parse(xml_metadata)
+            self.metadata = XmlDict.xml2dict(xml_metadata)
             if 'OME' in self.metadata:
                 self.metadata = self.metadata['OME']
+                self.has_ome_metadata = True
         elif tiff.is_imagej:
             self.metadata = tiff.imagej_metadata
 
@@ -98,7 +98,7 @@ class TiffSource(OmeSource):
     def _find_metadata(self):
         pixel_size = []
         pixel_size_unit = ''
-        channel_info = []
+        channels = []
         mag = 0
         page = self.pages[0]
         if isinstance(page, list):
@@ -137,10 +137,10 @@ class TiffSource(OmeSource):
                     res0 = res0[0] / res0[1]
                 if res0 != 0:
                     pixel_size.append((1 / res0, pixel_size_unit))
-        if len(channel_info) == 0:
+        if len(channels) == 0:
             nchannels = self.sizes_xyzct[0][3]
-            channel_info = [(str(metadata.get('PhotometricInterpretation', '')).lower().split('.')[-1],
-                            metadata.get('SamplesPerPixel', nchannels))]
+            photometric = str(metadata.get('PhotometricInterpretation', '')).lower().split('.')[-1]
+            channels = [XmlDict.XmlDict({'@Name': photometric, '@SamplesPerPixel': nchannels})]
         if mag == 0:
             mag = metadata.get('Mag', 0)
         # from description
@@ -155,7 +155,7 @@ class TiffSource(OmeSource):
             pixel_size.append(pixel_size_z)
         self.source_pixel_size = pixel_size
         self.source_mag = mag
-        self.channel_info = channel_info
+        self.channels = channels
 
     def load(self, decompress: bool = False):
         self.fh.seek(0)

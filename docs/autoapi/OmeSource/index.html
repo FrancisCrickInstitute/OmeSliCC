@@ -78,6 +78,12 @@
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="OmeSource.OmeSource.has_ome_metadata">
+<span class="sig-name descname"><span class="pre">has_ome_metadata</span></span><em class="property"><span class="w"> </span><span class="pre">:bool</span></em><a class="headerlink" href="#OmeSource.OmeSource.has_ome_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>has ome metadata</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="OmeSource.OmeSource.source_pixel_size">
 <span class="sig-name descname"><span class="pre">source_pixel_size</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.source_pixel_size" title="Permalink to this definition">¶</a></dt>
 <dd><p>original source pixel size</p>
@@ -120,9 +126,9 @@
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="OmeSource.OmeSource.channel_info">
-<span class="sig-name descname"><span class="pre">channel_info</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.channel_info" title="Permalink to this definition">¶</a></dt>
-<dd><p>channel information for all channels</p>
+<dt class="sig sig-object py" id="OmeSource.OmeSource.channels">
+<span class="sig-name descname"><span class="pre">channels</span></span><em class="property"><span class="w"> </span><span class="pre">:list</span></em><a class="headerlink" href="#OmeSource.OmeSource.channels" title="Permalink to this definition">¶</a></dt>
+<dd><p>channel information for all image channels</p>
 </dd></dl>
 
 <dl class="py method">
@@ -161,8 +167,8 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="OmeSource.OmeSource.get_channel_info">
-<span class="sig-name descname"><span class="pre">get_channel_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_channel_info" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="OmeSource.OmeSource.get_channels">
+<span class="sig-name descname"><span class="pre">get_channels</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.get_channels" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -222,7 +228,7 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="OmeSource.OmeSource.create_xml_metadata">
-<span class="sig-name descname"><span class="pre">create_xml_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pyramid_sizes_add</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.create_xml_metadata" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_xml_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">combine_rgb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pyramid_sizes_add</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#OmeSource.OmeSource.create_xml_metadata" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -277,6 +283,7 @@
 <li><a class="reference internal" href="#functions">Functions</a><ul>
 <li><a class="reference internal" href="#OmeSource.OmeSource"><code class="docutils literal notranslate"><span class="pre">OmeSource</span></code></a><ul>
 <li><a class="reference internal" href="#OmeSource.OmeSource.metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource.metadata</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.has_ome_metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource.has_ome_metadata</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.source_pixel_size"><code class="docutils literal notranslate"><span class="pre">OmeSource.source_pixel_size</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.target_pixel_size"><code class="docutils literal notranslate"><span class="pre">OmeSource.target_pixel_size</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.target_scale"><code class="docutils literal notranslate"><span class="pre">OmeSource.target_scale</span></code></a></li>
@@ -284,7 +291,7 @@
 <li><a class="reference internal" href="#OmeSource.OmeSource.sizes_xyzct"><code class="docutils literal notranslate"><span class="pre">OmeSource.sizes_xyzct</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.pixel_types"><code class="docutils literal notranslate"><span class="pre">OmeSource.pixel_types</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.pixel_nbits"><code class="docutils literal notranslate"><span class="pre">OmeSource.pixel_nbits</span></code></a></li>
-<li><a class="reference internal" href="#OmeSource.OmeSource.channel_info"><code class="docutils literal notranslate"><span class="pre">OmeSource.channel_info</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.channels"><code class="docutils literal notranslate"><span class="pre">OmeSource.channels</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource._init_metadata"><code class="docutils literal notranslate"><span class="pre">OmeSource._init_metadata()</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource._get_ome_metadate"><code class="docutils literal notranslate"><span class="pre">OmeSource._get_ome_metadate()</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource._init_sizes"><code class="docutils literal notranslate"><span class="pre">OmeSource._init_sizes()</span></code></a></li>
@@ -292,7 +299,7 @@
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_physical_size"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_physical_size()</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_type"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_pixel_type()</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_nbytes"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_pixel_nbytes()</span></code></a></li>
-<li><a class="reference internal" href="#OmeSource.OmeSource.get_channel_info"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_channel_info()</span></code></a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_channels"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_channels()</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_size"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_size()</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_size_xyzct"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_size_xyzct()</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_nchannels"><code class="docutils literal notranslate"><span class="pre">OmeSource.get_nchannels()</span></code></a></li>
@@ -315,6 +322,7 @@
 <li><a class="reference internal" href="#OmeSource.get_best_size"><code class="docutils literal notranslate"><span class="pre">get_best_size()</span></code></a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource">OmeSource</a><ul>
 <li><a class="reference internal" href="#OmeSource.OmeSource.metadata">metadata</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.has_ome_metadata">has_ome_metadata</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.source_pixel_size">source_pixel_size</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.target_pixel_size">target_pixel_size</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.target_scale">target_scale</a></li>
@@ -322,7 +330,7 @@
 <li><a class="reference internal" href="#OmeSource.OmeSource.sizes_xyzct">sizes_xyzct</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.pixel_types">pixel_types</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.pixel_nbits">pixel_nbits</a></li>
-<li><a class="reference internal" href="#OmeSource.OmeSource.channel_info">channel_info</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.channels">channels</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource._init_metadata">_init_metadata</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource._get_ome_metadate">_get_ome_metadate</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource._init_sizes">_init_sizes</a></li>
@@ -330,7 +338,7 @@
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_physical_size">get_physical_size</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_type">get_pixel_type</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_pixel_nbytes">get_pixel_nbytes</a></li>
-<li><a class="reference internal" href="#OmeSource.OmeSource.get_channel_info">get_channel_info</a></li>
+<li><a class="reference internal" href="#OmeSource.OmeSource.get_channels">get_channels</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_size">get_size</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_size_xyzct">get_size_xyzct</a></li>
 <li><a class="reference internal" href="#OmeSource.OmeSource.get_nchannels">get_nchannels</a></li>

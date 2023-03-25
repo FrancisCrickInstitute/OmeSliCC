@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 
+from src.XmlDict import XmlDict
 from src.image_util import image_resize_fast, image_resize, precise_resize, image_reshape
 from src.ome import create_ome_metadata
 from src.util import check_round_significants, ensure_list, get_value_units_micrometer
@@ -11,6 +12,8 @@ class OmeSource:
 
     metadata: dict
     """metadata dictionary"""
+    has_ome_metadata: bool
+    """has ome metadata"""
     source_pixel_size: list
     """original source pixel size"""
     target_pixel_size: list
@@ -25,12 +28,12 @@ class OmeSource:
     """pixel types for all pages"""
     pixel_nbits: list
     """#bits for all pages"""
-    channel_info: list
-    """channel information for all channels"""
-    # TODO: make channel_info a (list of) dict
+    channels: list
+    """channel information for all image channels"""
 
     def __init__(self):
         self.metadata = {}
+        self.has_ome_metadata = False
         self.source_pixel_size = []
         self.target_pixel_size = []
         self.target_scale = []
@@ -38,7 +41,7 @@ class OmeSource:
         self.sizes_xyzct = []
         self.pixel_types = []
         self.pixel_nbits = []
-        self.channel_info = []
+        self.channels = []
 
     def _init_metadata(self,
                        source_reference: str,
@@ -64,17 +67,26 @@ class OmeSource:
     def _get_ome_metadate(self):
         images = ensure_list(self.metadata.get('Image', {}))[0]
         pixels = images.get('Pixels', {})
-        self.source_pixel_size = [(float(pixels.get('@PhysicalSizeX', 0)), pixels.get('@PhysicalSizeXUnit', 'µm')),
-                                  (float(pixels.get('@PhysicalSizeY', 0)), pixels.get('@PhysicalSizeYUnit', 'µm')),
-                                  (float(pixels.get('@PhysicalSizeZ', 0)), pixels.get('@PhysicalSizeZUnit', 'µm'))]
+        self.source_pixel_size = [(float(pixels.get('PhysicalSizeX', 0)), pixels.get('PhysicalSizeXUnit', 'µm')),
+                                  (float(pixels.get('PhysicalSizeY', 0)), pixels.get('PhysicalSizeYUnit', 'µm')),
+                                  (float(pixels.get('PhysicalSizeZ', 0)), pixels.get('PhysicalSizeZUnit', 'µm'))]
         self.source_mag = 0
-        objective_id = images.get('ObjectiveSettings', {}).get('@ID', '')
+        objective_id = images.get('ObjectiveSettings', {}).get('ID', '')
         for objective in ensure_list(self.metadata.get('Instrument', {}).get('Objective', [])):
-            if objective.get('@ID', '') == objective_id:
-                self.source_mag = float(objective.get('@NominalMagnification', 0))
+            if objective.get('ID', '') == objective_id:
+                self.source_mag = float(objective.get('NominalMagnification', 0))
         nchannels = self.sizes_xyzct[0][3]
-        for channel in ensure_list(pixels.get('Channel', [{}] * nchannels)):
-            self.channel_info.append((channel.get('@Name', ''), int(channel.get('@SamplesPerPixel', 1))))
+        channels = []
+        for channel0 in ensure_list(pixels.get('Channel', [])):
+            channel = channel0.copy()
+            channel['@SamplesPerPixel'] = int(channel['SamplesPerPixel'])
+            channels.append(channel)
+        if len(channels) == 0:
+            if nchannels == 3:
+                channels = [XmlDict({'@Name': '', '@SamplesPerPixel': nchannels})]
+            else:
+                channels = [XmlDict({'@Name': '', '@SamplesPerPixel': 1})] * nchannels
+        self.channels = channels
 
     def _init_sizes(self):
         self.scales = [np.mean(np.divide(self.sizes[0], size)) for size in self.sizes]
@@ -139,8 +151,8 @@ class OmeSource:
     def get_pixel_nbytes(self, level: int = 0) -> int:
         return self.pixel_nbits[level] // 8
 
-    def get_channel_info(self) -> list:
-        return self.channel_info
+    def get_channels(self) -> list:
+        return self.channels
 
     def get_size(self) -> tuple:
         # size at target pixel size
@@ -226,8 +238,8 @@ class OmeSource:
     def get_metadata(self) -> dict:
         return self.metadata
 
-    def create_xml_metadata(self, output_filename: str, channel_output: str = '', pyramid_sizes_add: list = None) -> str:
-        return create_ome_metadata(self, output_filename, channel_output=channel_output, pyramid_sizes_add=pyramid_sizes_add)
+    def create_xml_metadata(self, output_filename: str, combine_rgb: bool = True, pyramid_sizes_add: list = None) -> str:
+        return create_ome_metadata(self, output_filename, combine_rgb=combine_rgb, pyramid_sizes_add=pyramid_sizes_add)
 
     def _find_metadata(self):
         raise NotImplementedError('Implement method in subclass')

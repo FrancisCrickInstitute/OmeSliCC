@@ -3,6 +3,7 @@ import zarr
 from zarr.errors import GroupNotFoundError
 
 from src.OmeSource import OmeSource
+from src.XmlDict import XmlDict
 
 
 class ZarrSource(OmeSource):
@@ -60,7 +61,7 @@ class ZarrSource(OmeSource):
 
     def _find_metadata(self):
         pixel_size = []
-        channel_info = []
+        channels = []
         for scale in self.metadata.get('multiscales', []):
             axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
             units = [axis.get('unit', '') for axis in scale.get('axes', [])]
@@ -77,15 +78,22 @@ class ZarrSource(OmeSource):
                     (scale1[axes.index('z')], units[axes.index('z')])]
             else:
                 pixel_size = [(0, ''), (0, ''), (0, '')]
+        nchannels = self.sizes_xyzct[0][3]
         for data in self.metadata.values():
             if isinstance(data, dict):
-                for channel in data.get('channels', []):
-                    channel_info.append((channel.get('label', ''), 1))
-        if len(channel_info) == 0:
-            nchannels = self.sizes_xyzct[0][3]
-            channel_info = [('', nchannels)]
+                n = len(data.get('channels', []))
+                for channel0 in data.get('channels', []):
+                    channel = XmlDict({'@Name': channel0.get('label'), '@SamplesPerPixel': nchannels // n})
+                    if 'color' in channel0:
+                        channel['@Color'] = channel0['color']
+                    channels.append(channel)
+        if len(channels) == 0:
+            if nchannels == 3:
+                channels = [XmlDict({'@Name': '', '@SamplesPerPixel': nchannels})]
+            else:
+                channels = [XmlDict({'@Name': '', '@SamplesPerPixel': 1})] * nchannels
         self.source_pixel_size = pixel_size
-        self.channel_info = channel_info
+        self.channels = channels
         self.source_mag = 0
 
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:

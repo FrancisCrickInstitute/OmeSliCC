@@ -9,6 +9,7 @@ from PIL.ExifTags import TAGS
 import imagecodecs
 from tifffile import TiffFile
 
+from src.XmlDict import XmlDict
 from src.util import tags_to_dict, print_dict, print_hbytes
 
 
@@ -65,16 +66,16 @@ def convert_image_sign_type(image0: np.ndarray, dtype: np.dtype) -> np.ndarray:
     return image
 
 
-def get_image_size_info(xyzct: tuple, pixel_nbytes: int, pixel_type: np.dtype, channel_info: list) -> str:
+def get_image_size_info(xyzct: tuple, pixel_nbytes: int, pixel_type: np.dtype, channels: list) -> str:
     w, h, zs, cs, ts = xyzct
     size = print_hbytes(np.int64(pixel_nbytes) * w * h * zs * cs * ts)
-    if (len(channel_info) == 1 and channel_info[0][1] == 3) or len(channel_info) == 3:
-        channel_infos = 'rgb'
+    if cs == 3:
+        channel_info = 'rgb'
     else:
-        channel_infos = ','.join([channel[0] for channel in channel_info])
+        channel_info = ','.join([channel.get('Name', '') for channel in channels])
     image_size_info = f'Size: {w} x {h} x {zs} C: {cs} T: {ts}\nUncompressed: {size} Pixel type: {pixel_type}'
-    if channel_infos != '':
-        image_size_info += f' Channels: {channel_infos}'
+    if channel_info != '':
+        image_size_info += f' Channels: {channel_info}'
     return image_size_info
 
 

@@ -1,9 +1,9 @@
 import numpy as np
 import bioformats
 import javabridge
-import xmltodict
 from bioformats.formatreader import ImageReader
 
+from src import XmlDict
 from src.OmeSource import OmeSource
 
 
@@ -27,9 +27,10 @@ class BioSource(OmeSource):
 
         xml_metadata = bioformats.get_omexml_metadata(filename)
         self.bio_ome_metadata = bioformats.OMEXML(xml_metadata)
-        self.metadata = xmltodict.parse(xml_metadata)
+        self.metadata = XmlDict.xml2dict(xml_metadata)
         if 'OME' in self.metadata:
             self.metadata = self.metadata['OME']
+            self.has_ome_metadata = True
         self.reader = ImageReader(filename)
 
         self.indexes = []
