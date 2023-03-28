@@ -71,20 +71,22 @@ class TiffSource(OmeSource):
             if isinstance(page, TiffPage):
                 width = page.imagewidth
                 height = page.imagelength
-                depth = page.imagedepth
+                depth = page.imagedepth * npages
                 bitspersample = page.bitspersample
             else:
                 width = shape[1]
                 height = shape[0]
-                depth = 1
+                depth = npages
                 bitspersample = page.dtype.itemsize * 8
             nchannels = shape[2] if len(shape) > 2 else 1
-            if tiff.is_ome and npages == 3:
-                nchannels *= npages
-            else:
-                depth *= npages
+            nt = 1
+            if tiff.is_ome:
+                pixels = self.metadata.get('Image', {}).get('Pixels', {})
+                depth = int(pixels.get('SizeZ', depth))
+                nchannels = int(pixels.get('SizeC', nchannels))
+                nt = int(pixels.get('SizeT', nt))
             self.sizes.append((width, height))
-            self.sizes_xyzct.append((width, height, depth, nchannels, 1))
+            self.sizes_xyzct.append((width, height, depth, nchannels, nt))
             self.pixel_types.append(page.dtype)
             self.pixel_nbits.append(bitspersample)
 
