@@ -171,7 +171,10 @@ def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
 
 def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
     h, w = np.ceil(image.shape[0:2] * scale).astype(int)
-    new_image = np.zeros((h, w, image.shape[2]), dtype=np.float32)
+    shape = [h, w]
+    if len(image.shape) > 2:
+        shape += [image.shape[2]]
+    new_image = np.zeros(shape, dtype=np.float32)
     step_size = 1 / scale
     for y in range(h):
         for x in range(w):
