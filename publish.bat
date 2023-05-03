@@ -1,0 +1,1 @@
+%USERPROFILE%\AppData\Local\Programs\Python\Python38\python -m build

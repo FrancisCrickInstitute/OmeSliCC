@@ -1,3 +1,7 @@
+#### Version 0.5.1
+- Added project TOML for publication
+- Various bug fixes
+
 #### Version 0.4.1
 - Use dictionary to internally store richer channel information
 - Ome metadata fixes

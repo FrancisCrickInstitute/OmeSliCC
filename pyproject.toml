@@ -1,0 +1,14 @@
+[project]
+name = "OmeSliCC"
+version = "0.5.1"
+description = "Ome(ro) Slide Image Conversion and Compression pipeline"
+readme = "README.md"
+license = {file = "LICENSE.md"}
+authors = [{name = "Joost de Folter", email = "folterj@gmail.com" }]
+dynamic = ["dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/FrancisCrickInstitute/OmeSliCC"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}

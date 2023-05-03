@@ -2,6 +2,7 @@ import argparse
 import glob
 import logging
 import os
+import toml
 import validators
 import yaml
 from tqdm import tqdm
@@ -10,7 +11,10 @@ from src.Omero import Omero
 from src.conversion import create_source, get_image_info, extract_thumbnail, convert_image
 from src.util import ensure_list
 from src.parameters import *
-from version import __version__
+
+
+name = toml.load("pyproject.toml")["project"]["name"]
+version = toml.load("pyproject.toml")["project"]["version"]
 
 
 def run_actions(params: dict):
@@ -69,7 +73,7 @@ def run_actions(params: dict):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=f'OmeSliCC {__version__}')
+    parser = argparse.ArgumentParser(description=f'{name} {version}')
     parser.add_argument('--params',
                         help='The parameters file',
                         default=PARAMETER_FILE)

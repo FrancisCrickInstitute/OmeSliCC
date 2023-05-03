@@ -7,13 +7,16 @@ import Ice
 import os
 import omero.gateway
 import omero.model
+import toml
 from uuid import uuid4
 
 from src.image_util import ensure_unsigned_type
 from src.util import get_filetitle, ensure_list, filter_dict
 from src.XmlDict import dict2xml, XmlDict
-from version import __version__
 
+
+name = toml.load("pyproject.toml")["project"]["name"]
+version = toml.load("pyproject.toml")["project"]["version"]
 
 # https://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2016-06/ome.html
 OME_URI = "http://www.openmicroscopy.org/Schemas/OME/2016-06"
@@ -35,7 +38,7 @@ def create_ome_metadata(source: OmeSource,
     ome['@xmlns:xsi'] = OME_XSI
     ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
     ome['@UUID'] = uuid
-    ome['@Creator'] = f'OmeSliCC {__version__}'
+    ome['@Creator'] = f'{name} {version}'
 
     experimenter = ome.get('Experimenter')
 
@@ -176,7 +179,7 @@ def create_ome_metadata_from_omero(source: OmeSource,
     ome['@xmlns:xsi'] = OME_XSI
     ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
     ome['@UUID'] = uuid
-    ome['@Creator'] = f'OmeSliCC {__version__}'
+    ome['@Creator'] = f'{name} {version}'
 
     instrument = None
     objective = None
