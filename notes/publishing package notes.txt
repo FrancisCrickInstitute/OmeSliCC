@@ -1,0 +1,22 @@
+Install build/twine:
+python -m pip install build twine
+
+Create source archive and wheel:
+python -m build
+
+Check built files:
+twine check dist/*
+
+Upload (test):
+twine upload --repository testpypi dist/*
+Upload:
+twine upload dist/*
+
+Pip install (test):
+python -m pip install -i https://test.pypi.org/simple/ OmeSliCC
+Pip install:
+python -m pip install OmeSliCC
+
+
+https://packaging.python.org/en/latest/guides/using-testpypi/
+https://realpython.com/pypi-publish-python-package/
