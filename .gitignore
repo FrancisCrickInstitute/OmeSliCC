@@ -140,3 +140,5 @@ output/
 docs/html/_sources/
 docs/doctrees/
 sphinx/_build/
+resources/
+!resources/params.yml
