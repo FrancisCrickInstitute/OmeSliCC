@@ -7,10 +7,10 @@ import validators
 import yaml
 from tqdm import tqdm
 
-from src.Omero import Omero
-from src.conversion import create_source, get_image_info, extract_thumbnail, convert_image
-from src.util import ensure_list
-from src.parameters import *
+from OmeSliCC.Omero import Omero
+from OmeSliCC.conversion import create_source, get_image_info, extract_thumbnail, convert_image
+from OmeSliCC.util import *
+from OmeSliCC.parameters import *
 
 
 name = toml.load("pyproject.toml")["project"]["name"]

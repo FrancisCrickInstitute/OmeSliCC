@@ -9,8 +9,7 @@ from PIL.ExifTags import TAGS
 import imagecodecs
 from tifffile import TiffFile
 
-from src.XmlDict import XmlDict
-from src.util import tags_to_dict, print_dict, print_hbytes
+from OmeSliCC.util import *
 
 
 # required for auto decoding Zarr

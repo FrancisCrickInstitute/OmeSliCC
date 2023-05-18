@@ -1,10 +1,10 @@
 import logging
 import numpy as np
 
-from src.XmlDict import XmlDict
-from src.image_util import image_resize_fast, image_resize, precise_resize, image_reshape
-from src.ome import create_ome_metadata
-from src.util import check_round_significants, ensure_list, get_value_units_micrometer
+from OmeSliCC.XmlDict import XmlDict
+from OmeSliCC.ome import create_ome_metadata
+from OmeSliCC.image_util import *
+from OmeSliCC.util import *
 
 
 class OmeSource:

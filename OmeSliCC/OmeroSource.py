@@ -3,11 +3,11 @@ import numpy as np
 import PIL.Image
 import omero.gateway
 
-from src import Omero
-from src.OmeSource import OmeSource
-from src.ome import create_ome_metadata_from_omero
-from src.util import get_default
-from src.XmlDict import XmlDict
+from OmeSliCC import Omero
+from OmeSliCC.OmeSource import OmeSource
+from OmeSliCC.ome import create_ome_metadata_from_omero
+from OmeSliCC.XmlDict import XmlDict
+from OmeSliCC.util import *
 
 
 class OmeroSource(OmeSource):

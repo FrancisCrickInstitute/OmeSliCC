@@ -20,3 +20,6 @@ python -m pip install OmeSliCC
 
 https://packaging.python.org/en/latest/guides/using-testpypi/
 https://realpython.com/pypi-publish-python-package/
+https://github.com/pypa/packaging-problems/issues/615
+https://stackoverflow.com/questions/64150719/how-to-write-a-minimally-working-pyproject-toml-file-that-can-install-packages
+https://stackoverflow.com/questions/448271/what-is-init-py-for

@@ -3,9 +3,9 @@ import numpy as np
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
-from src.OmeSource import OmeSource
-from src.XmlDict import XmlDict
-from src.image_util import pilmode_to_pixelinfo, get_pil_metadata
+from OmeSliCC.OmeSource import OmeSource
+from OmeSliCC.XmlDict import XmlDict
+from OmeSliCC.image_util import *
 
 Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents loading large images)
 

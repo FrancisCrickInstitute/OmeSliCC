@@ -3,8 +3,8 @@ import bioformats
 import javabridge
 from bioformats.formatreader import ImageReader
 
-from src import XmlDict
-from src.OmeSource import OmeSource
+from OmeSliCC import XmlDict
+from OmeSliCC.OmeSource import OmeSource
 
 
 class BioSource(OmeSource):

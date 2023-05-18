@@ -25,4 +25,4 @@ WORKDIR /omeslicc
 
 ENV PYTHONUNBUFFERED=TRUE
 
-ENTRYPOINT ["python3", "run.py"]
+ENTRYPOINT ["python3", "/run.py"]

@@ -3,9 +3,9 @@ import logging
 import os
 import yaml
 
-from src.Omero import Omero
-from src.OmeroLabelReader import OmeroLabelReader
-from src.parameters import *
+from OmeSliCC.Omero import Omero
+from OmeSliCC.OmeroLabelReader import OmeroLabelReader
+from OmeSliCC.parameters import *
 
 
 if __name__ == '__main__':

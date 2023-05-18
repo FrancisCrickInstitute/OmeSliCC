@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from src.OmeSource import OmeSource
+    from OmeSource import OmeSource
 
 import Ice
 import os
@@ -10,9 +10,9 @@ import omero.model
 import toml
 from uuid import uuid4
 
-from src.image_util import ensure_unsigned_type
-from src.util import get_filetitle, ensure_list, filter_dict
-from src.XmlDict import dict2xml, XmlDict
+from OmeSliCC.image_util import *
+from OmeSliCC.util import *
+from OmeSliCC.XmlDict import dict2xml, XmlDict
 
 
 name = toml.load("pyproject.toml")["project"]["name"]

@@ -10,16 +10,15 @@ from PIL import Image
 from imagecodecs.numcodecs import Lzw, Jpeg2k, JpegXr, JpegXl
 from tifffile import TIFF, TiffWriter
 
-from src import Omero
-from src.BioSource import BioSource
-from src.OmeSource import OmeSource, get_resolution_from_pixel_size
-from src.OmeroSource import OmeroSource
-from src.PlainImageSource import PlainImageSource
-from src.TiffSource import TiffSource
-from src.ZarrSource import ZarrSource
-from src.image_util import image_resize, get_image_size_info, calc_pyramid, ensure_unsigned_image, reverse_last_axis, \
-    save_image
-from src.util import get_filetitle, split_value_unit_list, ensure_list
+from OmeSliCC import Omero
+from OmeSliCC.BioSource import BioSource
+from OmeSliCC.OmeSource import OmeSource, get_resolution_from_pixel_size
+from OmeSliCC.OmeroSource import OmeroSource
+from OmeSliCC.PlainImageSource import PlainImageSource
+from OmeSliCC.TiffSource import TiffSource
+from OmeSliCC.ZarrSource import ZarrSource
+from OmeSliCC.image_util import *
+from OmeSliCC.util import *
 
 
 def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSource:

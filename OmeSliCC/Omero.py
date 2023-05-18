@@ -5,8 +5,8 @@ from omero.gateway import BlitzGateway
 import omero.model
 from types import TracebackType
 
-from src.omero_credentials import decrypt_credentials
-from src.util import ensure_list
+from OmeSliCC.omero_credentials import decrypt_credentials
+from OmeSliCC.util import *
 
 
 class Omero:

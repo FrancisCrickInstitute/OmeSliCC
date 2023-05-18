@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 extensions = ['autoapi.extension']
 autoapi_type = 'python'
-autoapi_dirs = ['../run.py', '../src']
+autoapi_dirs = ['../run.py', '../OmeSliCC']
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

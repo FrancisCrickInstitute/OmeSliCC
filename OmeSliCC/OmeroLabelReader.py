@@ -4,7 +4,7 @@ import os
 import pandas as pd
 from types import TracebackType
 
-from src.Omero import Omero
+from Omero import Omero
 
 
 class OmeroLabelReader:

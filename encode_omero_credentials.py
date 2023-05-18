@@ -1,8 +1,8 @@
 import argparse
 import yaml
 
-from src.omero_credentials import *
-from src.parameters import PARAMETER_FILE
+from OmeSliCC.omero_credentials import *
+from OmeSliCC.parameters import PARAMETER_FILE
 
 
 if __name__ == '__main__':

@@ -7,12 +7,12 @@ from imageio import imread
 from tqdm import tqdm
 from timeit import default_timer as timer
 
-from src.TiffSource import TiffSource
-from src.image_util import show_image, tiff_info, compare_image_dist, calc_fraction_used
+from OmeSliCC.TiffSource import TiffSource
+from OmeSliCC.image_util import *
 
 
-def test_load(filename: str, magnification: float, position: tuple = None, size: tuple = None) -> np.ndarray:
-    source = TiffSource(filename, magnification)
+def test_load(filename: str, pixel_size: list, position: tuple = None, size: tuple = None) -> np.ndarray:
+    source = TiffSource(filename, pixel_size)
     if position is None:
         position = (0, 0)
     if size is None:

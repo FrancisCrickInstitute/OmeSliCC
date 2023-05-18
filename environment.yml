@@ -27,6 +27,7 @@ dependencies:
  - python-bioformats
  - matplotlib
  - validators
+ - toml
  - pip:
    - opencv-python
    - xmltodict

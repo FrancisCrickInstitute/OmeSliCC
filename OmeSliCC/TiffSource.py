@@ -7,10 +7,10 @@ import numpy as np
 from tifffile import TiffFile, TiffPage
 from concurrent.futures import ThreadPoolExecutor
 
-from src import XmlDict
-from src.OmeSource import OmeSource
-from src.image_util import get_tiff_pages
-from src.util import tags_to_dict, desc_to_dict
+from OmeSliCC import XmlDict
+from OmeSliCC.OmeSource import OmeSource
+from OmeSliCC.image_util import *
+from OmeSliCC.util import *
 
 
 class TiffSource(OmeSource):

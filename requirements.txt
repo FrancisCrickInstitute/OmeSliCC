@@ -20,3 +20,4 @@ python-bioformats
 xmltodict
 matplotlib
 validators
+toml

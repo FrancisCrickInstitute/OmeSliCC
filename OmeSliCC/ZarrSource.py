@@ -2,8 +2,8 @@ import numpy as np
 import zarr
 from zarr.errors import GroupNotFoundError
 
-from src.OmeSource import OmeSource
-from src.XmlDict import XmlDict
+from OmeSliCC.OmeSource import OmeSource
+from OmeSliCC.XmlDict import XmlDict
 
 
 class ZarrSource(OmeSource):

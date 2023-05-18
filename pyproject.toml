@@ -1,6 +1,6 @@
 [project]
 name = "OmeSliCC"
-version = "0.5.1"
+version = "0.5.1.2"
 description = "Ome(ro) Slide Image Conversion and Compression pipeline"
 readme = "README.md"
 license = {file = "LICENSE.md"}
@@ -12,3 +12,6 @@ Homepage = "https://github.com/FrancisCrickInstitute/OmeSliCC"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["OmeSliCC"]
