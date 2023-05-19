@@ -1,3 +1,6 @@
+#### Version 0.5.2
+- Bug fix for new imagecodecs compression naming
+
 #### Version 0.5.1
 - Added project TOML for publication
 - Various bug fixes

@@ -7,7 +7,7 @@ import os
 import numpy as np
 import zarr
 from PIL import Image
-from imagecodecs.numcodecs import Lzw, Jpeg2k, JpegXr, JpegXl
+from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegxr, Jpegxl
 from tifffile import TIFF, TiffWriter
 
 from OmeSliCC import Omero
@@ -128,11 +128,11 @@ def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: st
     if 'lzw' in compression_type:
         compression_filters = [Lzw()]
     elif '2k' in compression_type or '2000' in compression_type:
-        compression_filters = [Jpeg2k(level)]
+        compression_filters = [Jpeg2k(level=level)]
     elif 'jpegxr' in compression_type:
-        compression_filters = [JpegXr(level)]
+        compression_filters = [Jpegxr(level=level)]
     elif 'jpegxl' in compression_type:
-        compression_filters = [JpegXl(level)]
+        compression_filters = [Jpegxl(level=level)]
     else:
         compressor = compression
 
