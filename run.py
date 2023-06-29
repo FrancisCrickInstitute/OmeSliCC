@@ -8,7 +8,7 @@ import yaml
 from tqdm import tqdm
 
 from OmeSliCC.Omero import Omero
-from OmeSliCC.conversion import create_source, get_image_info, extract_thumbnail, convert_image
+from OmeSliCC.conversion import *
 from OmeSliCC.util import *
 from OmeSliCC.parameters import *
 
@@ -27,6 +27,7 @@ def run_actions(params: dict):
     source_ref = input_params.get('source')
     actions = ensure_list(params.get('actions'))
     is_omero = input_params.get('omero') is not None
+    multi_file = ('combine' in actions)
     omero = None
 
     if is_omero:
@@ -36,6 +37,8 @@ def run_actions(params: dict):
     elif isinstance(source_ref, list):
         # list of filenames
         source_refs = source_ref
+        if multi_file:
+            source_refs = [sorted(glob.glob(source_ref1)) for source_ref1 in source_ref]
     else:
         if validators.url(source_ref):
             # URL
@@ -50,9 +53,17 @@ def run_actions(params: dict):
         for action0 in actions:
             action = action0.lower()
             logging.info(f'Starting {action}')
-            for source_ref in tqdm(source_refs):
+            if multi_file:
+                it = zip(*source_refs)
+            else:
+                it = source_refs
+            for source_ref in tqdm(it):
                 try:
-                    source = create_source(str(source_ref), params, omero)
+                    if multi_file:
+                        sources = [create_source(str(source_ref1), params, omero) for source_ref1 in source_ref]
+                        source = sources[0]
+                    else:
+                        source = create_source(str(source_ref), params, omero)
                     if 'info' in action:
                         logging.info(get_image_info(source))
                     elif 'thumb' in action:
@@ -60,6 +71,8 @@ def run_actions(params: dict):
                     elif 'convert' in action:
                         print(str(source_ref))
                         convert_image(source, params)
+                    elif 'combine' in action:
+                        combine_images(sources, params)
                     source.close()
                 except Exception as e:
                     logging.exception(e)

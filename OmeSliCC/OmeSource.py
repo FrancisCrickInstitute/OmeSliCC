@@ -52,9 +52,10 @@ class OmeSource:
         self.source_reference = source_reference
         self.target_pixel_size = target_pixel_size
         self._find_metadata()
-        if (len(self.source_pixel_size) == 0
-                or self.source_pixel_size[0][0] == 0) \
+        if (len(self.source_pixel_size) == 0 or self.source_pixel_size[0][0] == 0
+                or self.source_pixel_size[0][1] == '' or self.source_pixel_size[0][1] == 'inch') \
                 and source_pixel_size is not None:
+            # if pixel size is not set, or default/unspecified value
             self.source_pixel_size = source_pixel_size
         if len(self.source_pixel_size) == 0 or self.source_pixel_size[0][0] == 0:
             msg = f'{source_reference}: No source pixel size in metadata or provided'

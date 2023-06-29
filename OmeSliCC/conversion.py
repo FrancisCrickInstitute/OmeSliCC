@@ -102,6 +102,46 @@ def convert_image(source: OmeSource, params: dict):
             save_image(image, output_filename, output_params)
 
 
+def combine_images(sources: list[OmeSource], params: dict):
+    source0 = sources[0]
+    source_ref = source0.source_reference
+    nchannels = len(sources)
+    input_channels = ensure_list(params['input'].get('channels', []))
+    output_params = params['output']
+    output_folder = output_params['folder']
+    output_format = output_params['format']
+    ome = ('ome' in output_format)
+    image = np.zeros(list(np.flip(source0.get_size())) + [nchannels], dtype=source0.get_pixel_type())
+    channels = []
+    for c, source in enumerate(sources):
+        image1 = get_source_image(source)
+        image[..., c] = image1
+        channel = source.get_channels()[0]
+        name = channel.get('@Name', '')
+        if name == '' or name in [standard_type.name.lower() for standard_type in TIFF.PHOTOMETRIC]:
+            if len(input_channels) > 0:
+                channel = channel.copy()
+                channel['@Name'] = input_channels[c]
+        channels.append(channel)
+    output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
+    if 'zar' in output_format:
+        new_source = ZarrSource(source_ref, source0.get_pixel_size())
+        new_source.channels = channels
+        size = list(new_source.sizes_xyzct[0])
+        size[3] = nchannels
+        new_source.sizes_xyzct[0] = size
+        save_image_as_zarr(new_source, image, output_filename, output_params, ome=ome)
+    elif 'tif' in output_format:
+        new_source = TiffSource(source_ref, source0.get_pixel_size())
+        new_source.channels = channels
+        size = list(new_source.sizes_xyzct[0])
+        size[3] = nchannels
+        new_source.sizes_xyzct[0] = size
+        save_image_as_tiff(new_source, image, output_filename, output_params, ome=ome)
+    else:
+        save_image(image, output_filename, output_params)
+
+
 def get_source_image(source: OmeSource, chunk_size=(10240, 10240)):
     image = source.clone_empty()
     for x0, y0, x1, y1, chunk in source.produce_chunks(chunk_size):
@@ -183,12 +223,21 @@ def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: st
                 axis['unit'] = unit1
             axes.append(axis)
 
+        channels = [{'label': channel.get('Name', ''), 'color': channel.get('Color', '')}
+                    for channel in source.get_channels()]
+
         zarr_root.attrs['multiscales'] = [{
             'version': '0.4',
             'axes': axes,
             'name': get_filetitle(source.source_reference),
             'datasets': datasets
         }]
+
+        zarr_root.attrs['omero'] = {
+            'version': '0.4',
+            'channels': channels,
+        }
+
 
 
 def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
