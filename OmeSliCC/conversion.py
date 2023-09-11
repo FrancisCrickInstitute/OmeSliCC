@@ -11,9 +11,7 @@ from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegxr, Jpegxl
 from tifffile import TIFF, TiffWriter
 
 from OmeSliCC import Omero
-from OmeSliCC.BioSource import BioSource
 from OmeSliCC.OmeSource import OmeSource, get_resolution_from_pixel_size
-from OmeSliCC.OmeroSource import OmeroSource
 from OmeSliCC.PlainImageSource import PlainImageSource
 from OmeSliCC.TiffSource import TiffSource
 from OmeSliCC.ZarrSource import ZarrSource
@@ -26,6 +24,7 @@ def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSour
     target_pixel_size = split_value_unit_list(params['output'].get('pixel_size'))
     ext = os.path.splitext(source_ref)[1].lower()
     if omero is not None:
+        from OmeSliCC.OmeroSource import OmeroSource
         source = OmeroSource(omero, int(source_ref), source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     elif 'zarr' in ext:
         source = ZarrSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
@@ -34,6 +33,7 @@ def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSour
     elif ext in Image.registered_extensions().keys():
         source = PlainImageSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     else:
+        from OmeSliCC.BioSource import BioSource
         source = BioSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     return source
 

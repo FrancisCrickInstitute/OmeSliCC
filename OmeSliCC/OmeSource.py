@@ -2,7 +2,7 @@ import logging
 import numpy as np
 
 from OmeSliCC.XmlDict import XmlDict
-from OmeSliCC.ome import create_ome_metadata
+from OmeSliCC.ome_metadata import create_ome_metadata
 from OmeSliCC.image_util import *
 from OmeSliCC.util import *
 

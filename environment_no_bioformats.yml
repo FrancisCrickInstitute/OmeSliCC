@@ -1,4 +1,4 @@
-name: omeslicc_env
+name: omeslicc_env1
 channels:
  - ome
  - conda-forge
@@ -23,7 +23,6 @@ dependencies:
  - PyYAML
  - Pillow
  - imageio
- - python-bioformats
  - matplotlib
  - validators
  - toml

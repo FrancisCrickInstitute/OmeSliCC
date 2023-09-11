@@ -9,7 +9,6 @@ tifffile
 zarr
 aiohttp
 omero-py
-ome-types
 rsa
 tqdm
 psutil

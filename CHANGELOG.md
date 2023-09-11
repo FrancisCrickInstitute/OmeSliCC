@@ -1,3 +1,7 @@
+#### Version 0.5.3
+- Decoupled hard requirements for Omero / bioformats
+- Minor fixes to ome-zarr metadata
+
 #### Version 0.5.2
 - Bug fix for new imagecodecs compression naming
 

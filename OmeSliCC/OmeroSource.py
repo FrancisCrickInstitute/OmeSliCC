@@ -5,7 +5,7 @@ import omero.gateway
 
 from OmeSliCC import Omero
 from OmeSliCC.OmeSource import OmeSource
-from OmeSliCC.ome import create_ome_metadata_from_omero
+from OmeSliCC.omero_metadata import create_ome_metadata_from_omero
 from OmeSliCC.XmlDict import XmlDict
 from OmeSliCC.util import *
 

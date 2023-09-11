@@ -64,9 +64,9 @@ class Zarr:
             self.shapes.append(shape)
             self.sizes.append(np.flip(shape))
             self.data.append(self.zarr_root.create_dataset(str(pathi), shape=shape, chunks=tile_size, dtype=self.dtype))
-            pixel_size_x = pixel_size[0][0]
-            pixel_size_y = pixel_size[1][0]
-            pixel_size_z = pixel_size[2][0]
+            pixel_size_x = pixel_size[0][0] if len(pixel_size) >= 1 else 1
+            pixel_size_y = pixel_size[1][0] if len(pixel_size) >= 2 else 1
+            pixel_size_z = pixel_size[2][0] if len(pixel_size) >= 3 else 1
             datasets.append({
                 'path': pathi,
                 'coordinateTransformations': [{'type': 'scale', 'scale': [1, 1, pixel_size_z, pixel_size_y / scale, pixel_size_x / scale]}]
@@ -85,7 +85,8 @@ class Zarr:
                     type1 = 'channel'
                 else:
                     type1 = 'space'
-                    unit1 = pixel_size['xyz'.index(dimension)][1]
+                    index = 'xyz'.index(dimension)
+                    unit1 = pixel_size[index][1] if index < len(pixel_size) else ''
                 axis = {'name': dimension, 'type': type1}
                 if unit1 is not None and unit1 != '':
                     axis['unit'] = unit1
