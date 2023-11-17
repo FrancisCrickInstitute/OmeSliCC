@@ -1,14 +1,13 @@
 import numpy as np
+import pathlib
 import zarr
-from zarr.errors import GroupNotFoundError
 
 from OmeSliCC.image_util import *
 from OmeSliCC.util import *
 
-
 class Zarr:
 
-    default_dimension_order = 'tczyx'
+    DEFAULT_DIMENSION_ORDER = 'tczyx'
 
     def __init__(self, filename):
         self.filename = filename
@@ -17,42 +16,16 @@ class Zarr:
         self.data = []
         self.sizes = []
         self.shapes = []
-        self.dimension_order = self.default_dimension_order
+        self.dimension_order = self.DEFAULT_DIMENSION_ORDER
 
-    def open(self):
-        try:
-            self.zarr_root = zarr.open_group(self.filename, mode='r')
-            self.metadata = self.zarr_root.attrs.asdict()
-
-            paths = []
-            dimension_order = self.default_dimension_order
-            if 'multiscales' in self.metadata:
-                for scale in self.metadata.get('multiscales', []):
-                    for index, dataset in enumerate(scale.get('datasets', [])):
-                        paths.append(dataset.get('path', str(index)))
-                    axes = scale.get('axes', [])
-                    if len(axes) > 0:
-                        dimension_order = ''.join([axis.get('name') for axis in axes])
-            else:
-                paths = self.zarr_root.array_keys()
-            self.dimension_order = dimension_order
-            for path in paths:
-                data1 = self.zarr_root.get(path)
-                self.data.append(data1)
-                shape = [1, 1, 1, 1, 1]
-                for i, n in enumerate(data1.shape):
-                    shape_index = self.default_dimension_order.index(dimension_order[i])
-                    shape[shape_index] = n
-                self.shapes.append(shape)
-                self.sizes.append(np.flip(shape))
-                self.dtype = data1.dtype
-        except GroupNotFoundError as e:
-            raise FileNotFoundError(f'Read error: {e}')
-
-    def create(self, source, tile_size=[1, 1, 1, 256, 256], npyramid_add=0, pyramid_downsample=2):
+    def create(self, source, dimension_order=DEFAULT_DIMENSION_ORDER,
+               tile_size=[1, 1, 1, 256, 256],
+               npyramid_add=0, pyramid_downsample=2):
+        self.dimension_order = dimension_order
         self.npyramid_add = npyramid_add
         self.pyramid_downsample = pyramid_downsample
-        self.zarr_root = zarr.open_group(self.filename, mode='w')
+        file_url = pathlib.Path(self.filename).as_uri()
+        self.zarr_root = zarr.open_group(file_url, mode='w', storage_options={'dimension_separator': '/'})
         size0 = source.get_size_xyzct()
         shape0 = list(np.flip(size0))
         self.dtype = source.pixel_types[0]
@@ -67,6 +40,8 @@ class Zarr:
             pixel_size_x = pixel_size[0][0] if len(pixel_size) >= 1 else 1
             pixel_size_y = pixel_size[1][0] if len(pixel_size) >= 2 else 1
             pixel_size_z = pixel_size[2][0] if len(pixel_size) >= 3 else 1
+            if pixel_size_z == 0:
+                pixel_size_z = 1
             datasets.append({
                 'path': pathi,
                 'coordinateTransformations': [{'type': 'scale', 'scale': [1, 1, pixel_size_z, pixel_size_y / scale, pixel_size_x / scale]}]
@@ -74,7 +49,6 @@ class Zarr:
             scale /= pyramid_downsample
 
         if self.ome:
-            self.dimension_order = self.default_dimension_order
             axes = []
             for dimension in self.dimension_order:
                 unit1 = None
