@@ -1,4 +1,4 @@
-name: omeslicc_env1
+name: omeslicc_env
 channels:
  - ome
  - conda-forge
