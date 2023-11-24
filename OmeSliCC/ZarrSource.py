@@ -1,6 +1,6 @@
 import numpy as np
-import zarr
-from zarr.errors import GroupNotFoundError
+from ome_zarr.io import parse_url
+from ome_zarr.reader import Reader
 
 from OmeSliCC.OmeSource import OmeSource
 from OmeSliCC.XmlDict import XmlDict
@@ -21,37 +21,30 @@ class ZarrSource(OmeSource):
 
         super().__init__()
 
+        self.levels = []
         try:
-            root = zarr.open_group(filename, mode='r')
-            self.metadata = root.attrs.asdict()
+            reader = Reader(parse_url(filename))
+            # nodes may include images, labels etc
+            # first node will be the image pixel data
+            image_node = list(reader())[0]
 
-            paths = []
-            dimension_order = 'tczyx'
-            if 'multiscales' in self.metadata:
-                for scale in self.metadata.get('multiscales', []):
-                    for index, dataset in enumerate(scale.get('datasets', [])):
-                        paths.append(dataset.get('path', str(index)))
-                    axes = scale.get('axes', [])
-                    if len(axes) > 0:
-                        dimension_order = ''.join([axis.get('name') for axis in axes])
-            else:
-                paths = root.array_keys()
-            self.dimension_order = dimension_order
+            self.metadata = image_node.metadata
 
-            self.levels = []
-            for path in paths:
-                data = root.get(path)
+            axes = self.metadata.get('axes', [])
+            self.dimension_order = ''.join([axis.get('name') for axis in axes])
+
+            for data in image_node.data:
                 self.levels.append(data)
 
                 xyzct = [1, 1, 1, 1, 1]
                 for i, n in enumerate(data.shape):
-                    xyzct_index = 'xyzct'.index(dimension_order[i])
+                    xyzct_index = 'xyzct'.index(self.dimension_order[i])
                     xyzct[xyzct_index] = n
                 self.sizes_xyzct.append(xyzct)
                 self.sizes.append((xyzct[0], xyzct[1]))
                 self.pixel_types.append(data.dtype)
                 self.pixel_nbits.append(data.dtype.itemsize * 8)
-        except GroupNotFoundError as e:
+        except Exception as e:
             raise FileNotFoundError(f'Read error: {e}')
 
         self._init_metadata(filename,
@@ -62,23 +55,26 @@ class ZarrSource(OmeSource):
     def _find_metadata(self):
         pixel_size = []
         channels = []
-        for scale in self.metadata.get('multiscales', []):
-            axes = ''.join([axis.get('name', '') for axis in scale.get('axes', [])])
-            units = [axis.get('unit', '') for axis in scale.get('axes', [])]
-            scale1 = [0, 0, 0, 0, 0]
-            datasets = scale.get('datasets')
-            if datasets is not None:
-                coordinateTransformations = datasets[0].get('coordinateTransformations')
-                if coordinateTransformations is not None:
-                    scale1 = coordinateTransformations[0].get('scale', scale1)
-            if 'z' in axes:
-                pixel_size = [
-                    (scale1[axes.index('x')], units[axes.index('x')]),
-                    (scale1[axes.index('y')], units[axes.index('y')]),
-                    (scale1[axes.index('z')], units[axes.index('z')])]
-            else:
-                pixel_size = [(0, ''), (0, ''), (0, '')]
+        metadata = self.metadata
+        axes = self.dimension_order
+
+        units = [axis.get('unit', '') for axis in metadata.get('axes', [])]
+
+        scale1 = [0, 0, 0, 0, 0]
+        # get pixelsize using largest/first scale
+        transform = self.metadata.get('coordinateTransformations', [])[0]
+        for transform_element in transform:
+            if 'scale' in transform_element:
+                scale1 = transform_element['scale']
+        if 'z' in axes:
+            pixel_size = [
+                (scale1[axes.index('x')], units[axes.index('x')]),
+                (scale1[axes.index('y')], units[axes.index('y')]),
+                (scale1[axes.index('z')], units[axes.index('z')])]
+        else:
+            pixel_size = [(0, ''), (0, ''), (0, '')]
         nchannels = self.sizes_xyzct[0][3]
+        # look for channel metadata
         for data in self.metadata.values():
             if isinstance(data, dict):
                 n = len(data.get('channels', []))

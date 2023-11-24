@@ -1,4 +1,4 @@
-from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegxr, Jpegxl
+from imagecodecs.numcodecs import Lzw, Jpeg2k, JpegXr, JpegXl
 from numcodecs import register_codec
 import PIL.Image
 import numpy as np
@@ -15,8 +15,8 @@ from OmeSliCC.util import *
 # required for auto decoding Zarr
 register_codec(Lzw)
 register_codec(Jpeg2k)
-register_codec(Jpegxr)
-register_codec(Jpegxl)
+register_codec(JpegXr)
+register_codec(JpegXl)
 
 
 def check_versions():

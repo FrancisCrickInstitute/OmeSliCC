@@ -7,7 +7,7 @@ import validators
 import yaml
 from tqdm import tqdm
 
-from OmeSliCC.Omero import Omero
+import OmeSliCC.Omero
 from OmeSliCC.conversion import *
 from OmeSliCC.util import *
 from OmeSliCC.parameters import *
@@ -31,7 +31,7 @@ def run_actions(params: dict):
     omero = None
 
     if is_omero:
-        omero = Omero(params)
+        omero = Omero.Omero(params)
         omero.init()
         source_refs = omero.get_annotation_image_ids()
     elif isinstance(source_ref, list):

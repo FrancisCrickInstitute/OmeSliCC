@@ -7,7 +7,7 @@ import os
 import numpy as np
 import zarr
 from PIL import Image
-from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegxr, Jpegxl
+from imagecodecs.numcodecs import Lzw, Jpeg2k, JpegXr, JpegXl
 from tifffile import TIFF, TiffWriter
 
 from OmeSliCC import Omero
@@ -95,7 +95,8 @@ def convert_image(source: OmeSource, params: dict):
     if overwrite or not os.path.exists(output_filename):
         image = get_source_image(source)
         if 'zar' in output_format:
-            save_image_as_zarr(source, image, output_filename, output_params, ome=ome)
+            #save_image_as_zarr(source, image, output_filename, output_params, ome=ome)
+            save_image_as_ome_zarr(source, image, output_filename, output_params)
         elif 'tif' in output_format:
             save_image_as_tiff(source, image, output_filename, output_params, ome=ome)
         else:
@@ -149,6 +150,55 @@ def get_source_image(source: OmeSource, chunk_size=(10240, 10240)):
     return image
 
 
+def save_image_as_ome_zarr(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict):
+    # ome-zarr: https://ngff.openmicroscopy.org/latest/
+    tile_size = output_params.get('tile_size')
+    compression = output_params.get('compression')
+    npyramid_add = output_params.get('npyramid_add', 0)
+    pyramid_downsample = output_params.get('pyramid_downsample')
+    size_xyzct = source.get_size_xyzct()
+
+    compression = ensure_list(compression)
+    compression_type = compression[0].lower()
+    if len(compression) > 1:
+        level = int(compression[1])
+    else:
+        level = None
+    compressor = None
+    compression_filters = None
+    if 'lzw' in compression_type:
+        compression_filters = [Lzw()]
+    elif '2k' in compression_type or '2000' in compression_type:
+        compression_filters = [Jpeg2k(level=level)]
+    elif 'jpegxr' in compression_type:
+        compression_filters = [JpegXr(level=level)]
+    elif 'jpegxl' in compression_type:
+        compression_filters = [JpegXl(level=level)]
+    else:
+        compressor = compression
+
+    zarr_root = zarr.open_group(output_filename, mode='w')
+    size = source.get_size()
+    pixel_size = source.get_pixel_size()
+    scale = 1
+    datasets = []
+    for pathi in range(1 + npyramid_add):
+        if scale != 1:
+            new_size = np.multiply(size, scale)
+            image = image_resize(image, new_size)
+        out = zarr_root.create_dataset(str(pathi), shape=image.shape, chunks=tile_size,
+                                       dtype=image.dtype, compressor=compressor, filters=compression_filters)
+        out[...] = image
+        pixel_size_x = pixel_size[0][0]
+        pixel_size_y = pixel_size[1][0]
+        pixel_size_z = pixel_size[2][0]
+        datasets.append({
+            'path': pathi,
+            'coordinateTransformations': [{'type': 'scale', 'scale': [1, 1, pixel_size_z, pixel_size_y / scale, pixel_size_x / scale]}]
+        })
+        scale /= pyramid_downsample
+
+
 def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
     # ome-zarr: https://ngff.openmicroscopy.org/latest/
     tile_size = output_params.get('tile_size')
@@ -170,9 +220,9 @@ def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: st
     elif '2k' in compression_type or '2000' in compression_type:
         compression_filters = [Jpeg2k(level=level)]
     elif 'jpegxr' in compression_type:
-        compression_filters = [Jpegxr(level=level)]
+        compression_filters = [JpegXr(level=level)]
     elif 'jpegxl' in compression_type:
-        compression_filters = [Jpegxl(level=level)]
+        compression_filters = [JpegXl(level=level)]
     else:
         compressor = compression
 

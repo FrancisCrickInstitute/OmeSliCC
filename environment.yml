@@ -16,6 +16,7 @@ dependencies:
  - numcodecs
  - tifffile
  - zarr
+ - ome-zarr
  - aiohttp
  - omero-py
  - rsa
@@ -27,9 +28,7 @@ dependencies:
  - matplotlib
  - validators
  - toml
- - openjdk=8
  - pip:
    - opencv-python
    - xmltodict
-   - python-javabridge==4.0.0
-   - python-bioformats==4.0.5
+   - python-bioformats
