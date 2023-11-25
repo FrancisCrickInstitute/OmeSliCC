@@ -18,20 +18,12 @@ def convert_colors(colors, dtype=np.uint8):
     return colors
 
 
-def vary_colors0(color0, color_var, items):
-    n = len(items)
-    colors = color0 + (np.random.rand(n, 3) - 0.5) * color_var
-    final_colors = np.clip(colors, 0, 1)
-    return final_colors
-
-
 def vary_colors(color0, color_var, link_map):
     colors = [color0]
     for map0 in link_map[1:]:
         # find near colors, take mean, add variance
-        pool = [colors[index] for index in map0 if index < len(colors)]
-        mean_color = np.mean(pool, 0)
-        colors.append(mean_color + (np.random.rand(3) - 0.5) * color_var)
+        colors1 = np.mean([colors[index] for index in map0], 0) + (np.random.rand(3) - 0.5) * color_var
+        colors.append(colors1)
     final_colors = np.clip(colors, 0, 1)
     return final_colors
 
@@ -61,7 +53,7 @@ class ImageGenerator:
         diameters = []
         color_var = 0.5
         diameter = size
-        for _ in range(nscales):
+        for _ in tqdm(range(nscales)):
             centers1 = []
             colors1 = []
             for center0, color0 in zip(centers[-1], colors[-1]):
@@ -84,31 +76,21 @@ class ImageGenerator:
         colors = self.colors
         diameter = self.diameter
         radius = np.ceil(diameter / 2).astype(int)
-        #radius = max(radius)
 
         range1 = np.ceil(np.divide(size, tile_size)).astype(int)
         for indices in list(np.ndindex(tuple(range1))):
             range0 = np.array(indices) * tile_size
             range1 = np.min([range0 + tile_size, size], 0)
-            slices = tuple(reversed([slice(range[0], range[1]) for range in np.transpose((range0, range1))]))
             shape = list(reversed(range1 - range0)) + [3]
             tile = np.zeros(shape, dtype=dtype)
             selected = np.all(centers >= range0, 1) & np.all(centers < range1, 1)
 
-            #for i, selected1, in enumerate(selected):
-            #    if selected1:
-            #        center = centers[i] - range0
-            #        line_type = cv.LINE_AA if radius > 1 else cv.LINE_8
-            #        cv.circle(tile, center, radius, colors[i], -1, lineType=line_type)
-
             centers1 = centers[selected] - range0
             colors1 = np.array(colors)[selected]
-            #tile[tuple(reversed(centers1.T))] = colors1
             for center, color in zip(centers1, colors1):
                 slice1 = tuple([slice(starts, ends) for starts, ends in np.transpose((center - radius, center + radius))])
                 tile[slice1] = color
             # slices & tile in (z,),y,x,c
-            #yield slices, tile
             yield tile
 
 

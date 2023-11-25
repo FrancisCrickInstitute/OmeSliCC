@@ -184,6 +184,32 @@ def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
     return new_image
 
 
+def create_compression_filter(compression):
+    compressor, compression_filters = None, None
+    compression = ensure_list(compression)
+    if len(compression) > 0:
+        compression_type = compression[0].lower()
+        if len(compression) > 1:
+            level = int(compression[1])
+        else:
+            level = None
+        if 'lzw' in compression_type:
+            from imagecodecs.numcodecs import Lzw
+            compression_filters = [Lzw()]
+        elif '2k' in compression_type or '2000' in compression_type:
+            from imagecodecs.numcodecs import Jpeg2k
+            compression_filters = [Jpeg2k(level=level)]
+        elif 'jpegxr' in compression_type:
+            from imagecodecs.numcodecs import JpegXr
+            compression_filters = [JpegXr(level=level)]
+        elif 'jpegxl' in compression_type:
+            from imagecodecs.numcodecs import JpegXl
+            compression_filters = [JpegXl(level=level)]
+        else:
+            compressor = compression
+    return compressor, compression_filters
+
+
 def get_tiff_pages(tiff: TiffFile) -> list:
     pages = []
     found = False

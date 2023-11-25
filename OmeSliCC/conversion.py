@@ -5,15 +5,15 @@
 
 import os
 import numpy as np
-import zarr
 from PIL import Image
-from imagecodecs.numcodecs import Lzw, Jpeg2k, JpegXr, JpegXl
 from tifffile import TIFF, TiffWriter
 
 from OmeSliCC import Omero
 from OmeSliCC.OmeSource import OmeSource, get_resolution_from_pixel_size
+from OmeSliCC.OmeZarr import OmeZarr
 from OmeSliCC.PlainImageSource import PlainImageSource
 from OmeSliCC.TiffSource import TiffSource
+from OmeSliCC.Zarr import Zarr
 from OmeSliCC.ZarrSource import ZarrSource
 from OmeSliCC.image_util import *
 from OmeSliCC.util import *
@@ -94,9 +94,10 @@ def convert_image(source: OmeSource, params: dict):
     output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
     if overwrite or not os.path.exists(output_filename):
         image = get_source_image(source)
-        if 'zar' in output_format:
-            #save_image_as_zarr(source, image, output_filename, output_params, ome=ome)
+        if 'ome.zar' in output_format:
             save_image_as_ome_zarr(source, image, output_filename, output_params)
+        elif 'zar' in output_format:
+            save_image_as_zarr(source, image, output_filename, output_params, ome=ome)
         elif 'tif' in output_format:
             save_image_as_tiff(source, image, output_filename, output_params, ome=ome)
         else:
@@ -150,144 +151,29 @@ def get_source_image(source: OmeSource, chunk_size=(10240, 10240)):
     return image
 
 
-def save_image_as_ome_zarr(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict):
+def save_image_as_ome_zarr(source: OmeSource, data: np.ndarray, output_filename: str, output_params: dict):
     # ome-zarr: https://ngff.openmicroscopy.org/latest/
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     npyramid_add = output_params.get('npyramid_add', 0)
     pyramid_downsample = output_params.get('pyramid_downsample')
-    size_xyzct = source.get_size_xyzct()
 
-    compression = ensure_list(compression)
-    compression_type = compression[0].lower()
-    if len(compression) > 1:
-        level = int(compression[1])
-    else:
-        level = None
-    compressor = None
-    compression_filters = None
-    if 'lzw' in compression_type:
-        compression_filters = [Lzw()]
-    elif '2k' in compression_type or '2000' in compression_type:
-        compression_filters = [Jpeg2k(level=level)]
-    elif 'jpegxr' in compression_type:
-        compression_filters = [JpegXr(level=level)]
-    elif 'jpegxl' in compression_type:
-        compression_filters = [JpegXl(level=level)]
-    else:
-        compressor = compression
-
-    zarr_root = zarr.open_group(output_filename, mode='w')
-    size = source.get_size()
-    pixel_size = source.get_pixel_size()
-    scale = 1
-    datasets = []
-    for pathi in range(1 + npyramid_add):
-        if scale != 1:
-            new_size = np.multiply(size, scale)
-            image = image_resize(image, new_size)
-        out = zarr_root.create_dataset(str(pathi), shape=image.shape, chunks=tile_size,
-                                       dtype=image.dtype, compressor=compressor, filters=compression_filters)
-        out[...] = image
-        pixel_size_x = pixel_size[0][0]
-        pixel_size_y = pixel_size[1][0]
-        pixel_size_z = pixel_size[2][0]
-        datasets.append({
-            'path': pathi,
-            'coordinateTransformations': [{'type': 'scale', 'scale': [1, 1, pixel_size_z, pixel_size_y / scale, pixel_size_x / scale]}]
-        })
-        scale /= pyramid_downsample
+    zarr = OmeZarr(output_filename)
+    zarr.write(data, source, dimension_order='yxc', tile_size=tile_size, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
+               compression=compression)
 
 
-def save_image_as_zarr(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
+def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
     # ome-zarr: https://ngff.openmicroscopy.org/latest/
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     npyramid_add = output_params.get('npyramid_add', 0)
     pyramid_downsample = output_params.get('pyramid_downsample')
-    size_xyzct = source.get_size_xyzct()
 
-    compression = ensure_list(compression)
-    compression_type = compression[0].lower()
-    if len(compression) > 1:
-        level = int(compression[1])
-    else:
-        level = None
-    compressor = None
-    compression_filters = None
-    if 'lzw' in compression_type:
-        compression_filters = [Lzw()]
-    elif '2k' in compression_type or '2000' in compression_type:
-        compression_filters = [Jpeg2k(level=level)]
-    elif 'jpegxr' in compression_type:
-        compression_filters = [JpegXr(level=level)]
-    elif 'jpegxl' in compression_type:
-        compression_filters = [JpegXl(level=level)]
-    else:
-        compressor = compression
-
-    zarr_root = zarr.open_group(output_filename, mode='w')
-    size = source.get_size()
-    pixel_size = source.get_pixel_size()
-    scale = 1
-    datasets = []
-    for pathi in range(1 + npyramid_add):
-        if scale != 1:
-            new_size = np.multiply(size, scale)
-            image = image_resize(image, new_size)
-        out = zarr_root.create_dataset(str(pathi), shape=image.shape, chunks=tile_size,
-                                       dtype=image.dtype, compressor=compressor, filters=compression_filters)
-        out[...] = image
-        pixel_size_x = pixel_size[0][0]
-        pixel_size_y = pixel_size[1][0]
-        pixel_size_z = pixel_size[2][0]
-        datasets.append({
-            'path': pathi,
-            'coordinateTransformations': [{'type': 'scale', 'scale': [1, 1, pixel_size_z, pixel_size_y / scale, pixel_size_x / scale]}]
-        })
-        scale /= pyramid_downsample
-
-    if ome:
-        # metadata
-        axes = []
-        dimension_order = 'yx'
-        _, _, z, c, t = size_xyzct
-        if c > 1:
-            dimension_order += 'c'
-        if z > 1:
-            dimension_order += 'z'
-        if t > 1:
-            dimension_order += 't'
-        for dimension in dimension_order:
-            unit1 = None
-            if dimension == 't':
-                type1 = 'time'
-                unit1 = 'millisecond'
-            elif dimension == 'c':
-                type1 = 'channel'
-            else:
-                type1 = 'space'
-                unit1 = pixel_size['xyz'.index(dimension)][1]
-            axis = {'name': dimension, 'type': type1}
-            if unit1 is not None and unit1 != '':
-                axis['unit'] = unit1
-            axes.append(axis)
-
-        channels = [{'label': channel.get('Name', ''), 'color': channel.get('Color', '')}
-                    for channel in source.get_channels()]
-
-        zarr_root.attrs['multiscales'] = [{
-            'version': '0.4',
-            'axes': axes,
-            'name': get_filetitle(source.source_reference),
-            'datasets': datasets
-        }]
-
-        zarr_root.attrs['omero'] = {
-            'version': '0.4',
-            'channels': channels,
-        }
-
+    zarr = Zarr(output_filename)
+    zarr.create(source, tile_size=tile_size, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
+                compression=compression)
+    zarr.set(data)
 
 
 def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
