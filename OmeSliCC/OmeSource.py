@@ -14,6 +14,8 @@ class OmeSource:
     """metadata dictionary"""
     has_ome_metadata: bool
     """has ome metadata"""
+    dimension_order: str
+    """data dimension order"""
     source_pixel_size: list
     """original source pixel size"""
     target_pixel_size: list
@@ -34,6 +36,7 @@ class OmeSource:
     def __init__(self):
         self.metadata = {}
         self.has_ome_metadata = False
+        self.dimension_order = ''
         self.source_pixel_size = []
         self.target_pixel_size = []
         self.target_scale = []
@@ -133,12 +136,25 @@ class OmeSource:
             self.best_level = 0
             self.best_factor = [1]
 
+        if self.dimension_order == '':
+            x, y, z, c, t = self.get_size_xyzct()
+            self.dimension_order = 'yx'
+            if c > 1:
+                self.dimension_order += 'c'
+            if z > 1:
+                self.dimension_order = 'z' + self.dimension_order
+            if t > 1:
+                self.dimension_order = 't' + self.dimension_order
+
     def get_mag(self) -> float:
         # get effective mag at target pixel size
         if len(self.target_scale) > 0:
             return check_round_significants(self.source_mag / np.mean(self.target_scale), 3)
         else:
             return self.source_mag
+
+    def get_dimension_order(self) -> str:
+        return self.dimension_order
 
     def get_physical_size(self) -> tuple:
         physical_size = []
@@ -195,13 +211,34 @@ class OmeSource:
     def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:
         size, index = get_best_size(self.sizes, target_size)
         scale = np.divide(target_size, self.sizes[index])
-        image = self._asarray_level(index, 0, 0, size[0], size[1])
+        image = self._asarray_level(index)
         if np.round(scale, 3)[0] == 1 and np.round(scale, 3)[1] == 1:
             return image
         elif precise:
             return precise_resize(image, scale)
         else:
             return image_resize(image, target_size)
+
+    def get_min_max(self, channeli):
+        min_quantile = 0.001
+        max_quantile = 0.999
+
+        dtype = self.get_pixel_type()
+        if dtype.kind == 'f':
+            info = np.finfo(dtype)
+        else:
+            info = np.iinfo(dtype)
+        start, end = info.min, info.max
+
+        nsizes = len(self.sizes)
+        if nsizes > 1:
+            image = self._asarray_level(nsizes - 1)
+            if image.ndim > 2:
+                image = image[..., channeli]
+            min, max = get_image_quantile(image, min_quantile), get_image_quantile(image, max_quantile)
+        else:
+            min, max = start, end
+        return start, end, min, max
 
     def asarray(self, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
         # ensure fixed patch size

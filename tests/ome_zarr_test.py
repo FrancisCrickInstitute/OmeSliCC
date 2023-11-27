@@ -4,7 +4,7 @@ from tqdm import tqdm
 from OmeSliCC.image_util import *
 from OmeSliCC.TiffSource import TiffSource
 from OmeSliCC.Zarr import Zarr
-from OmeSliCC.ZarrSource import ZarrSource
+from OmeSliCC.OmeZarrSource import OmeZarrSource
 
 
 def simple_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsample):
@@ -25,7 +25,7 @@ def simple_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsa
 
 
 def open_zarr_source(filename):
-    source = ZarrSource(filename)
+    source = OmeZarrSource(filename)
     image = source._asarray_level(0, 15000, 15000, 16000, 16000)
     show_image(image)
     image = source._asarray_level(4)

@@ -6,7 +6,7 @@ from OmeSliCC.OmeSource import OmeSource
 from OmeSliCC.XmlDict import XmlDict
 
 
-class ZarrSource(OmeSource):
+class OmeZarrSource(OmeSource):
     """Zarr-compatible image source"""
 
     filename: str

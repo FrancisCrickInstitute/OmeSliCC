@@ -65,6 +65,11 @@ def convert_image_sign_type(image0: np.ndarray, dtype: np.dtype) -> np.ndarray:
     return image
 
 
+def get_image_quantile(image, quantile):
+    value = np.quantile(image, quantile).astype(image.dtype)
+    return value
+
+
 def get_image_size_info(xyzct: tuple, pixel_nbytes: int, pixel_type: np.dtype, channels: list) -> str:
     w, h, zs, cs, ts = xyzct
     size = print_hbytes(np.int64(pixel_nbytes) * w * h * zs * cs * ts)

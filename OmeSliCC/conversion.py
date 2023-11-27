@@ -14,7 +14,7 @@ from OmeSliCC.OmeZarr import OmeZarr
 from OmeSliCC.PlainImageSource import PlainImageSource
 from OmeSliCC.TiffSource import TiffSource
 from OmeSliCC.Zarr import Zarr
-from OmeSliCC.ZarrSource import ZarrSource
+from OmeSliCC.OmeZarrSource import OmeZarrSource
 from OmeSliCC.image_util import *
 from OmeSliCC.util import *
 
@@ -27,7 +27,7 @@ def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSour
         from OmeSliCC.OmeroSource import OmeroSource
         source = OmeroSource(omero, int(source_ref), source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     elif 'zarr' in ext:
-        source = ZarrSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
+        source = OmeZarrSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     elif ext.lstrip('.') in TIFF.FILE_EXTENSIONS:
         source = TiffSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     elif ext in Image.registered_extensions().keys():
@@ -127,7 +127,7 @@ def combine_images(sources: list[OmeSource], params: dict):
         channels.append(channel)
     output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
     if 'zar' in output_format:
-        new_source = ZarrSource(source_ref, source0.get_pixel_size())
+        new_source = OmeZarrSource(source_ref, source0.get_pixel_size())
         new_source.channels = channels
         size = list(new_source.sizes_xyzct[0])
         size[3] = nchannels
@@ -159,7 +159,7 @@ def save_image_as_ome_zarr(source: OmeSource, data: np.ndarray, output_filename:
     pyramid_downsample = output_params.get('pyramid_downsample')
 
     zarr = OmeZarr(output_filename)
-    zarr.write(data, source, dimension_order='yxc', tile_size=tile_size, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
+    zarr.write(data, source, tile_size=tile_size, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
                compression=compression)
 
 
