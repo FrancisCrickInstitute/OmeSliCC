@@ -9,6 +9,7 @@ import omero.model
 import toml
 from uuid import uuid4
 
+from OmeSliCC.color_conversion import rgba_to_int
 from OmeSliCC.image_util import *
 from OmeSliCC.util import *
 from OmeSliCC.XmlDict import dict2xml, XmlDict
@@ -123,10 +124,12 @@ def create_ome_metadata_from_omero(source: OmeSource,
         if combine_rgb and len(channels) == 3:
             channel = channels[0].copy()
             channel['@SamplesPerPixel'] = nchannels
-            channel.pop('Color', None)
+            channel.pop('@Color', None)
             channels = [channel]
         elif not combine_rgb and len(channels) < nchannels:
             channel = channels[0].copy()
+            if '@Color' in channel:
+                channel['@Color'] = rgba_to_int(channel['@Color'])
             channel['@SamplesPerPixel'] = 1
             channels = [channel] * nchannels
 

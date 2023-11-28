@@ -5,6 +5,7 @@ import omero.gateway
 
 from OmeSliCC import Omero
 from OmeSliCC.OmeSource import OmeSource
+from OmeSliCC.color_conversion import *
 from OmeSliCC.omero_metadata import create_ome_metadata_from_omero
 from OmeSliCC.XmlDict import XmlDict
 from OmeSliCC.util import *
@@ -72,7 +73,7 @@ class OmeroSource(OmeSource):
         self.source_mag = image_object.getObjectiveSettings().getObjective().getNominalMagnification()
         self.channels = []
         for channel in image_object.getChannels():
-            channel = XmlDict({'@Name': channel.getName(), '@Color': channel.getColor().getInt(),
+            channel = XmlDict({'@Name': channel.getName(), '@Color': int_to_rgba(channel.getColor().getInt()),
                                '@SamplesPerPixel': channel.getLogicalChannel().getSamplesPerPixel()})
             self.channels.append(channel)
 

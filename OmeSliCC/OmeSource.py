@@ -2,6 +2,7 @@ import logging
 import numpy as np
 
 from OmeSliCC.XmlDict import XmlDict
+from OmeSliCC.color_conversion import *
 from OmeSliCC.ome_metadata import create_ome_metadata
 from OmeSliCC.image_util import *
 from OmeSliCC.util import *
@@ -71,7 +72,8 @@ class OmeSource:
     def _get_ome_metadate(self):
         images = ensure_list(self.metadata.get('Image', {}))[0]
         pixels = images.get('Pixels', {})
-        self.dimension_order = pixels.get('DimensionOrder').lower()
+        # data will be flattened
+        #self.dimension_order = pixels.get('DimensionOrder').lower()
         self.source_pixel_size = [(float(pixels.get('PhysicalSizeX', 0)), pixels.get('PhysicalSizeXUnit', 'µm')),
                                   (float(pixels.get('PhysicalSizeY', 0)), pixels.get('PhysicalSizeYUnit', 'µm')),
                                   (float(pixels.get('PhysicalSizeZ', 0)), pixels.get('PhysicalSizeZUnit', 'µm'))]
@@ -85,6 +87,8 @@ class OmeSource:
         for channel0 in ensure_list(pixels.get('Channel', [])):
             channel = channel0.copy()
             channel['@SamplesPerPixel'] = int(channel['SamplesPerPixel'])
+            if channel0.get('Color') is not None:
+                channel['@Color'] = int_to_rgba(int(channel0['Color']))
             channels.append(channel)
         if len(channels) == 0:
             if nchannels == 3:

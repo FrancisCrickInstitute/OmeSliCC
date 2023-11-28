@@ -42,9 +42,9 @@ class XmlList(list):
         return self
 
     def __next__(self):
-        item = self[self.i]
-        self.i += 1
         if self.i < len(self):
+            item = self[self.i]
+            self.i += 1
             return item
         else:
             raise StopIteration

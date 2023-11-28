@@ -1,3 +1,6 @@
+from OmeSliCC.color_conversion import *
+
+
 def create_axes_metadata(dimension_order):
     axes = []
     for dimension in dimension_order:
@@ -41,13 +44,10 @@ def create_channel_metadata(source):
         color = channel0.get('Color')
         if color is None:
             color = 'FFFFFF'
-        elif isinstance(color, str):
-            # int value as string; convert
-            color = int(color)
-        if not isinstance(color, str):
-            color = hex(color & 0xFFFFFF)[2:].upper().zfill(6)
+        else:
+            color = rgba_to_hexrgb(color)
         channel['color'] = color
-        if not 'window' in channel:
+        if 'window' not in channel:
             start, end, min, max = source.get_min_max(channeli)
             channel['window'] = {'start': start, 'end': end, 'min': min, 'max': max}
         channels.append(channel)
