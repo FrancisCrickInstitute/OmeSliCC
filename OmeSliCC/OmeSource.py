@@ -71,6 +71,7 @@ class OmeSource:
     def _get_ome_metadate(self):
         images = ensure_list(self.metadata.get('Image', {}))[0]
         pixels = images.get('Pixels', {})
+        self.dimension_order = pixels.get('DimensionOrder').lower()
         self.source_pixel_size = [(float(pixels.get('PhysicalSizeX', 0)), pixels.get('PhysicalSizeXUnit', 'µm')),
                                   (float(pixels.get('PhysicalSizeY', 0)), pixels.get('PhysicalSizeYUnit', 'µm')),
                                   (float(pixels.get('PhysicalSizeZ', 0)), pixels.get('PhysicalSizeZUnit', 'µm'))]

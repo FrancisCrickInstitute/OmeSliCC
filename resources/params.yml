@@ -19,13 +19,13 @@ input:
       image: [0, 1]
     # labels - required Omero metadata labels (optional)
     #labels: [label1,label2]
-  # mag - source magnification (if not in metadata)
-  #mag: 20
+  # pixel_size - source magnification (if not in metadata)
+  #pixel_size: 1
 
 # output parameters
 output:
-  # mag - optional output magnification
-  #mag: 20
+  # pixel_size - optional output magnification
+  #pixel_size: 1
   # folder - output folder
   folder: output/images
   # format - output image format

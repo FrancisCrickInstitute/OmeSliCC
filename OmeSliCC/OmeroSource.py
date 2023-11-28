@@ -39,6 +39,8 @@ class OmeroSource(OmeSource):
         zsize = get_default(image_object.getPixelSizeZ(), 1)
         nchannels = np.sum([channel.getLogicalChannel().getSamplesPerPixel() for channel in image_object.getChannels()])
         pixel_type = np.dtype(image_object.getPixelsType())
+        # currently only support/output yxc - allow default value
+        #self.dimension_order = image_object.getPrimaryPixels().getDimensionOrder().getValue().lower()
         self.pixels_store = self.omero.create_pixels_store(self.image_object)
         for resolution in self.pixels_store.getResolutionDescriptions():
             self.sizes.append((resolution.sizeX, resolution.sizeY))
@@ -48,12 +50,13 @@ class OmeroSource(OmeSource):
 
         # Omero API issue: pixel store level order not guaranteed
         default_level = self.pixels_store.getResolutionLevel()
+        nlevels = self.pixels_store.getResolutionLevels()
         if default_level != 0:
             # reverse order
-            self.pixels_store_pyramid_order = list(reversed(range(default_level + 1)))
+            self.pixels_store_pyramid_order = list(reversed(range(nlevels)))
         else:
             # default order
-            self.pixels_store_pyramid_order = list(range(len(self.sizes)))
+            self.pixels_store_pyramid_order = list(range(nlevels))
 
         self._init_metadata(str(image_id),
                             source_pixel_size=source_pixel_size,
@@ -84,6 +87,8 @@ class OmeroSource(OmeSource):
         return image
 
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
+        if x1 < 0 or y1 < 0:
+            x1, y1 = self.sizes[level]
         pixels_store = self.pixels_store
         w, h = x1 - x0, y1 - y0
         nchannels = self.sizes_xyzct[level][3]
@@ -91,8 +96,7 @@ class OmeroSource(OmeSource):
         pixels_store.setResolutionLevel(self.pixels_store_pyramid_order[level])
         for c in range(nchannels):
             tile0 = pixels_store.getTile(0, c, 0, x0, y0, w, h)
-            tile = np.frombuffer(tile0, dtype=image.dtype)
-            tile.resize(h, w)
+            tile = np.frombuffer(tile0, dtype=image.dtype).reshape(h, w)
             image[..., c] = tile
         if nchannels == 1:
             return image[..., 0]
