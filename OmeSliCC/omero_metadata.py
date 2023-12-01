@@ -15,9 +15,6 @@ from OmeSliCC.util import *
 from OmeSliCC.XmlDict import dict2xml, XmlDict
 
 
-name = toml.load("pyproject.toml")["project"]["name"]
-version = toml.load("pyproject.toml")["project"]["version"]
-
 # https://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2016-06/ome.html
 OME_URI = "http://www.openmicroscopy.org/Schemas/OME/2016-06"
 OME_XSI = "http://www.w3.org/2001/XMLSchema-instance"
@@ -33,6 +30,8 @@ def create_ome_metadata_from_omero(source: OmeSource,
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
+    name = toml.load("pyproject.toml")["project"]["name"]
+    version = toml.load("pyproject.toml")["project"]["version"]
 
     ome = XmlDict()
     ome['@xmlns'] = OME_URI

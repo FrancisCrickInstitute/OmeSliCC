@@ -3,7 +3,7 @@ import os
 import numpy as np
 import random
 import zarr
-from imageio import imread
+from imageio.v3 import imread
 from tqdm import tqdm
 from timeit import default_timer as timer
 
@@ -11,7 +11,7 @@ from OmeSliCC.TiffSource import TiffSource
 from OmeSliCC.image_util import *
 
 
-def test_load(filename: str, pixel_size: list, position: tuple = None, size: tuple = None) -> np.ndarray:
+def test_load(filename: str, pixel_size: list = None, position: tuple = None, size: tuple = None) -> np.ndarray:
     source = TiffSource(filename, pixel_size)
     if position is None:
         position = (0, 0)
@@ -138,6 +138,8 @@ def calc_images_fraction(pattern: str):
 if __name__ == '__main__':
     image_dir = 'resources/images/'
     patch_size = (256, 256)
-    os.chdir('../../')
+    os.chdir('../')
 
     # perform test
+    #test_load('D:/slides/Pharos_test_images/01-08-23_test2__33.tiff')
+    test_load('D:/slides/Pharos_test_images/Testing7.tiff')
