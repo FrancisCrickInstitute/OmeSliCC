@@ -14,11 +14,18 @@ matplotlib.rcParams['figure.dpi'] = 300
 def convert_colors(colors, dtype=np.uint8):
     if np.dtype(dtype).kind != 'f':
         max_val = 2 ** (8 * np.dtype(dtype).itemsize) - 1
-        colors = (np.asarray(colors) * max_val).astype(dtype).tolist()
+        colors = np.multiply(colors, max_val).astype(dtype).tolist()
     return colors
 
 
-def vary_colors(color0, color_var, link_map):
+def vary_colors(color0, color_var, items):
+    n = len(items)
+    colors = color0 + (np.random.rand(n, 3).astype(np.float32) - 0.5) * color_var
+    final_colors = np.clip(colors, 0, 1)
+    return final_colors
+
+
+def vary_colors1(color0, color_var, link_map):
     colors = [color0]
     for map0 in link_map[1:]:
         # find near colors, take mean, add variance
@@ -48,8 +55,8 @@ class ImageGenerator:
         link_matrix = (dist_matrix != 0) & (dist_matrix < 0.1)
         link_map = [(np.where(link_matrix[i] & (rads < rads[i] - 0.01))[0]) for i, r1 in enumerate(range3)]
 
-        centers = [[np.divide(size, 2)]]
-        colors = [[(0.5, 0.5, 0.5)]]
+        centers = [[np.divide(size, 2, dtype=np.float32)]]
+        colors = [[np.array([0.5, 0.5, 0.5], dtype=np.float32)]]
         diameters = []
         color_var = 0.5
         diameter = size
@@ -73,20 +80,21 @@ class ImageGenerator:
 
     def get_tiles(self, tile_size, dtype=np.uint8):
         centers = self.centers
-        colors = self.colors
+        colors = np.array(self.colors)
         diameter = self.diameter
         radius = np.ceil(diameter / 2).astype(int)
 
-        range1 = np.ceil(np.divide(size, tile_size)).astype(int)
-        for indices in list(np.ndindex(tuple(range1))):
-            range0 = np.array(indices) * tile_size
+        ranges = np.ceil(np.divide(size, tile_size)).astype(int)
+        # flip: cycle over indices in x, y, z order using range = [z, y, x]
+        for indices in tqdm(list(np.ndindex(tuple(ranges)))):
+            range0 = np.flip(indices) * tile_size
             range1 = np.min([range0 + tile_size, size], 0)
             shape = list(reversed(range1 - range0)) + [3]
             tile = np.zeros(shape, dtype=dtype)
             selected = np.all(centers >= range0, 1) & np.all(centers < range1, 1)
 
             centers1 = centers[selected] - range0
-            colors1 = np.array(colors)[selected]
+            colors1 = colors[selected]
             for center, color in zip(centers1, colors1):
                 slice1 = tuple([slice(starts, ends) for starts, ends in np.transpose((center - radius, center + radius))])
                 tile[slice1] = color
@@ -94,8 +102,58 @@ class ImageGenerator:
             yield tile
 
 
-def save_tiff(filename, data, shape=None, dtype=None, ome=False):
-    tifffile.imwrite(filename, data, shape=shape, dtype=dtype, ome=ome)
+class SimpleImageGenerator:
+    def __init__(self, size, seed=None):
+        self.size = size
+        if seed is not None:
+            np.random.seed(seed)
+
+        self.color_ranges = [
+            [(0, 0, 0), (1, 0, 0)],
+            [(0, 0, 0), (0, 1, 0)],
+            [(0, 0, 0), (0, 0, 1)],
+        ]
+
+    def calc_value(self, *args):
+        channels = []
+        channel = None
+        for index, value in enumerate(reversed(args)):
+            channel = (value + self.range0[index]) / self.size[index]
+            channels.append(channel)
+        while len(channels) < 3:
+            channels.append(channel)
+        return np.stack(channels, axis=-1)
+
+    def get_tiles(self, tile_size, dtype=np.uint8):
+        if np.dtype(dtype).kind != 'f':
+            max_val = 2 ** (8 * np.dtype(dtype).itemsize) - 1
+        else:
+            max_val = 1
+        ranges = np.flip(np.ceil(np.divide(self.size, tile_size)).astype(int))
+        # flip: cycle over indices in x, y, z order using range = [z, y, x]
+        for indices in tqdm(list(np.ndindex(tuple(ranges)))):
+            self.range0 = np.flip(indices) * tile_size
+            self.range1 = np.min([self.range0 + tile_size, size], 0)
+            shape = list(reversed(self.range1 - self.range0))
+
+            tile = np.fromfunction(self.calc_value, shape, dtype=np.float32)
+
+            #noise = np.random.random(size=shape) - 0.5     # uniform
+            noise = np.random.normal(loc=0, scale=0.1, size=shape)  # gaussian
+
+            # apply noise to each channel separately
+            for channeli in range(3):
+                tile[..., channeli] = np.clip(tile[..., channeli] + noise, 0, 1)
+
+            if np.dtype(dtype).kind != 'f':
+                tile *= max_val
+
+            # tile in (z,),y,x,c
+            yield tile.astype(dtype)
+
+
+def save_tiff(filename, data, shape=None, dtype=None, tile_size=None, ome=False):
+    tifffile.imwrite(filename, data, shape=shape, dtype=dtype, tile=tile_size, ome=ome)
 
 
 def render_image(data, shape, dtype):
@@ -104,7 +162,7 @@ def render_image(data, shape, dtype):
 
     image = np.zeros(np.prod(shape, dtype=np.uint64), dtype=dtype)
     position = np.uint64(0)
-    for tile in tqdm(data):
+    for tile in data:
         tshape = np.prod(tile.shape, dtype=np.uint64)
         image[position: position + tshape] = tile.flatten()
         position += tshape
@@ -125,19 +183,22 @@ def show_image(image):
 if __name__ == '__main__':
     # (tile) size in x,y(,z)
     size = 1024, 1024, 1024
-    tile_size = size
+    tile_size = 1024, 1024, 1
+    path = 'D:/slides/test.tiff'
     dtype = np.uint8
-    nscales = 2
+    #nscales = 2
     seed = 0
 
     shape = list(reversed(size)) + [3]
+    tile_shape = list(reversed(tile_size[:2]))
 
     print('init')
-    image_generator = ImageGenerator(size, nscales, seed)
+    #image_generator = ImageGenerator(size, nscales, seed)
+    image_generator = SimpleImageGenerator(size, seed)
     print('init done')
 
     data = image_generator.get_tiles(tile_size, dtype)
-    save_tiff('test.tiff', data, shape, dtype, ome=True)
+    save_tiff(path, data, shape, dtype, tile_size=tile_shape, ome=True)
     print('save done')
 
     data = image_generator.get_tiles(tile_size, dtype)
