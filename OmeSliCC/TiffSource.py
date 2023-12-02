@@ -51,6 +51,7 @@ class TiffSource(OmeSource):
             self.executor = ThreadPoolExecutor(max_workers)
 
         tiff = TiffFile(filename)
+        self.first_page = tiff.pages.first
         if tiff.is_ome and tiff.ome_metadata is not None:
             xml_metadata = tiff.ome_metadata
             self.metadata = XmlDict.xml2dict(xml_metadata)
@@ -59,6 +60,15 @@ class TiffSource(OmeSource):
                 self.has_ome_metadata = True
         elif tiff.is_imagej:
             self.metadata = tiff.imagej_metadata
+        elif self.first_page.description:
+            self.metadata = desc_to_dict(self.first_page.description)
+        else:
+            self.metadata = tags_to_dict(self.first_page.tags)
+            if 'FEI_TITAN' in self.metadata:
+                metadata = tifffile.xml2dict(self.metadata.pop('FEI_TITAN'))
+                if 'FeiImage' in metadata:
+                    metadata = metadata['FeiImage']
+                self.metadata.update(metadata)
 
         self.pages = get_tiff_pages(tiff)
         for page0 in self.pages:
@@ -100,11 +110,7 @@ class TiffSource(OmeSource):
     def _find_metadata(self):
         pixel_size = []
         pixel_size_unit = ''
-        channels = []
-        mag = 0
-        page = self.pages[0]
-        if isinstance(page, list):
-            page = page[0]
+        page = self.first_page
         # from OME metadata
         if page.is_ome:
             self._get_ome_metadate()
@@ -115,46 +121,46 @@ class TiffSource(OmeSource):
         if len(pixel_size) == 0 and self.metadata is not None and 'spacing' in self.metadata:
             pixel_size_unit = self.metadata.get('unit', '')
             pixel_size_z = (self.metadata['spacing'], pixel_size_unit)
-        if mag == 0 and self.metadata is not None:
-            mag = self.metadata.get('Mag', 0)
+        # from description
+        if len(pixel_size) < 2 and 'pixelWidth' in self.metadata:
+            pixel_info = self.metadata['pixelWidth']
+            pixel_size.append((pixel_info['value'], pixel_info['unit']))
+            pixel_info = self.metadata['pixelHeight']
+            pixel_size.append((pixel_info['value'], pixel_info['unit']))
+        if len(pixel_size) < 2 and 'MPP' in self.metadata:
+            pixel_size.append((self.metadata['MPP'], 'µm'))
+            pixel_size.append((self.metadata['MPP'], 'µm'))
         # from page TAGS
-        metadata = tags_to_dict(page.tags)
         if len(pixel_size) < 2:
             if pixel_size_unit == '':
-                pixel_size_unit = metadata.get('ResolutionUnit', '')
+                pixel_size_unit = self.metadata.get('ResolutionUnit', '')
                 if isinstance(pixel_size_unit, Enum):
                     pixel_size_unit = pixel_size_unit.name
                 pixel_size_unit = pixel_size_unit.lower()
                 if pixel_size_unit == 'none':
                     pixel_size_unit = ''
-            res0 = metadata.get('XResolution')
+            res0 = self.metadata.get('XResolution')
             if res0 is not None:
                 if isinstance(res0, tuple):
                     res0 = res0[0] / res0[1]
                 if res0 != 0:
                     pixel_size.append((1 / res0, pixel_size_unit))
-            res0 = metadata.get('YResolution')
+            res0 = self.metadata.get('YResolution')
             if res0 is not None:
                 if isinstance(res0, tuple):
                     res0 = res0[0] / res0[1]
                 if res0 != 0:
                     pixel_size.append((1 / res0, pixel_size_unit))
-        if len(channels) == 0:
-            nchannels = self.sizes_xyzct[0][3]
-            photometric = str(metadata.get('PhotometricInterpretation', '')).lower().split('.')[-1]
-            channels = [XmlDict.XmlDict({'@Name': photometric, '@SamplesPerPixel': nchannels})]
-        if mag == 0:
-            mag = metadata.get('Mag', 0)
-        # from description
-        if not page.is_ome:
-            metadata = desc_to_dict(page.description)
-            if mag == 0:
-                mag = metadata.get('Mag', metadata.get('AppMag', 0))
-            if len(pixel_size) < 2 and 'MPP' in metadata:
-                pixel_size.append((metadata['MPP'], 'µm'))
-                pixel_size.append((metadata['MPP'], 'µm'))
+
         if pixel_size_z is not None and len(pixel_size) == 2:
             pixel_size.append(pixel_size_z)
+
+        mag = self.metadata.get('Mag', self.metadata.get('AppMag', 0))
+
+        nchannels = self.sizes_xyzct[0][3]
+        photometric = str(self.metadata.get('PhotometricInterpretation', '')).lower().split('.')[-1]
+        channels = [XmlDict.XmlDict({'@Name': photometric, '@SamplesPerPixel': nchannels})]
+
         self.source_pixel_size = pixel_size
         self.source_mag = mag
         self.channels = channels

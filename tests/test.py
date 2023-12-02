@@ -1,6 +1,7 @@
 import glob
-import os
+import imageio.v3
 import numpy as np
+import os
 import random
 import zarr
 from imageio.v3 import imread
@@ -19,6 +20,23 @@ def test_load(filename: str, pixel_size: list = None, position: tuple = None, si
         size = source.get_size()
     image = source.asarray(position[0], position[1], position[0] + size[0], position[1] + size[1])
     return image
+
+
+def test_extract_metadata(path: str):
+    print('### immeta')
+    print(print_dict(imageio.v3.immeta(path)))
+    print()
+
+    print('### improps')
+    print(imageio.v3.improps(path))
+    print()
+
+    print('### source metadata')
+    source = TiffSource(path)
+    metadata = source.metadata.copy()
+    metadata.pop('StripOffsets', None)
+    metadata.pop('StripByteCounts', None)
+    print(print_dict(metadata))
 
 
 def compare_image_tiles(filename1: str, filename2: str, bits_per_channel: int = 8, tile_size: tuple = (512, 512)) -> tuple:
@@ -140,6 +158,10 @@ if __name__ == '__main__':
     patch_size = (256, 256)
     os.chdir('../')
 
+    #path = 'E:/Personal/Crick/slides/test_images/19629.svs'
+    path = 'D:/slides/Pharos_test_images/01-08-23_test2__33.tiff'
+    #path = 'D:/slides/Pharos_test_images/Testing7.tiff'
+
     # perform test
-    #test_load('D:/slides/Pharos_test_images/01-08-23_test2__33.tiff')
-    test_load('D:/slides/Pharos_test_images/Testing7.tiff')
+    test_extract_metadata(path)
+    #test_load(path)

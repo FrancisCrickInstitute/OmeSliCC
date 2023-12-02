@@ -263,7 +263,7 @@ def tiff_info(filename: str) -> str:
         if 'ImageDescription' in tag_dict and tag_dict['ImageDescription'].startswith('<?xml'):
             # redundant
             tag_dict.pop('ImageDescription')
-        s += print_dict(tag_dict, compact=True) + '\n\n'
+        s += print_dict(tag_dict) + '\n\n'
         nom_size += page.size
 
     s += f'Overall compression: 1:{nom_size / real_size:.1f}'

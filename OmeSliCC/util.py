@@ -54,36 +54,29 @@ def desc_to_dict(desc: str) -> dict:
             items = item.split(item_sep)
             key = items[0].strip()
             value = items[1].strip()
-            try:
-                if '.' in value:
-                    value = float(value)
-                else:
-                    value = int(value)
-            except:
+            for dtype in (int, float, bool):
                 try:
-                    value = bool(value)
+                    value = dtype(value)
+                    break
                 except:
                     pass
             desc_dict[key] = value
     return desc_dict
 
 
-def print_dict(dct: dict, compact: bool = False, indent: int = 0):
+def print_dict(dct: dict, indent: int = 0):
     s = ''
     for key, value in dct.items():
+        s += '\n'
         if not isinstance(value, list):
-            if not compact: s += '\t' * indent
-            s += str(key)
-            s += ':' if compact else '\n'
+            s += '\t' * indent + str(key) + ': '
         if isinstance(value, dict):
             s += print_dict(value, indent=indent + 1)
         elif isinstance(value, list):
             for v in value:
                 s += print_dict(v)
         else:
-            if not compact: s += '\t' * (indent + 1)
             s += str(value)
-        s += ' ' if compact else '\n'
     return s
 
 
