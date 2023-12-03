@@ -103,69 +103,78 @@ class ImageGenerator:
 
 
 class SimpleImageGenerator:
-    def __init__(self, size, seed=None):
+    def __init__(self, size, tile_size, dtype=np.uint8, seed=None):
         self.size = size
+        self.tile_size = tile_size
+        self.dtype = dtype
+
         if seed is not None:
             np.random.seed(seed)
 
-        self.color_ranges = [
-            [(0, 0, 0), (1, 0, 0)],
-            [(0, 0, 0), (0, 1, 0)],
-            [(0, 0, 0), (0, 0, 1)],
-        ]
+        self.color_value_table = [np.sin(np.divide(range(dim), dim, dtype=np.float32) * np.pi)
+                                  for dim in np.flip(size)]
 
-    def calc_value(self, *args):
+        # self.noise = np.random.random(size=shape) - 0.5     # uniform
+        self.noise = np.random.normal(loc=0, scale=0.1, size=np.flip(tile_size))  # gaussian
+
+    def calc_color(self, *args):
         channels = []
         channel = None
         for index, value in enumerate(reversed(args)):
-            channel = (value + self.range0[index]) / self.size[index]
+            #channel = np.sin((value + self.range0[index]) / self.size[index] * np.pi)
+            channel = self.color_value_table[index][value + self.range0[index]]
             channels.append(channel)
         while len(channels) < 3:
             channels.append(channel)
         return np.stack(channels, axis=-1)
 
-    def get_tiles(self, tile_size, dtype=np.uint8):
+    def get_tiles(self):
         if np.dtype(dtype).kind != 'f':
             max_val = 2 ** (8 * np.dtype(dtype).itemsize) - 1
         else:
             max_val = 1
-        ranges = np.flip(np.ceil(np.divide(self.size, tile_size)).astype(int))
+        ranges = np.flip(np.ceil(np.divide(self.size, self.tile_size)).astype(int))
         # flip: cycle over indices in x, y, z order using range = [z, y, x]
         for indices in tqdm(list(np.ndindex(tuple(ranges)))):
             self.range0 = np.flip(indices) * tile_size
-            self.range1 = np.min([self.range0 + tile_size, size], 0)
+            self.range1 = np.min([self.range0 + self.tile_size, self.size], 0)
             shape = list(reversed(self.range1 - self.range0))
 
-            tile = np.fromfunction(self.calc_value, shape, dtype=np.float32)
-
-            #noise = np.random.random(size=shape) - 0.5     # uniform
-            noise = np.random.normal(loc=0, scale=0.1, size=shape)  # gaussian
+            tile = np.fromfunction(self.calc_color, shape, dtype=int)
 
             # apply noise to each channel separately
             for channeli in range(3):
-                tile[..., channeli] = np.clip(tile[..., channeli] + noise, 0, 1)
+                tile[..., channeli] = np.clip(tile[..., channeli] + self.noise, 0, 1)
 
             if np.dtype(dtype).kind != 'f':
                 tile *= max_val
 
             # tile in (z,),y,x,c
             yield tile.astype(dtype)
+            # TODO: wrap into dask array?
 
 
-def save_tiff(filename, data, shape=None, dtype=None, tile_size=None, ome=False):
-    tifffile.imwrite(filename, data, shape=shape, dtype=dtype, tile=tile_size, ome=ome)
+def save_tiff(filename, data, shape=None, dtype=None, tile_size=None, bigtiff=None, ome=False, compression=None):
+    if bigtiff is None:
+        if shape is not None and dtype is not None:
+            datasize = np.prod(shape, dtype=np.uint64) * np.dtype(dtype).itemsize
+        else:
+            datasize = data.size * data.itemsize
+        bigtiff = (datasize > 2 ** 32 - 2 ** 25 and not compression)
+    tifffile.imwrite(filename, data, shape=shape, dtype=dtype, tile=tile_size, bigtiff=bigtiff, ome=ome,
+                     compression=compression)
 
 
 def render_image(data, shape, dtype):
     #for slice1, tile in tqdm(data):
     #    image[slice1] = tile
 
-    image = np.zeros(np.prod(shape, dtype=np.uint64), dtype=dtype)
-    position = np.uint64(0)
+    image = np.zeros(shape, dtype=dtype)
+    position = np.array([0] * len(shape))
     for tile in data:
-        tshape = np.prod(tile.shape, dtype=np.uint64)
-        image[position: position + tshape] = tile.flatten()
-        position += tshape
+        image[position: position + tile.shape] = tile
+        position += tile.shape
+        # TODO: increase/carry-over (x,) y, z
     image = image.reshape(shape)
 
     if len(shape) <= 3 and shape[-1] <= 4:
@@ -182,8 +191,8 @@ def show_image(image):
 
 if __name__ == '__main__':
     # (tile) size in x,y(,z)
-    size = 1024, 1024, 1024
-    tile_size = 1024, 1024, 1
+    size = 2048, 2048, 2048
+    tile_size = 2048, 2048, 1
     path = 'D:/slides/test.tiff'
     dtype = np.uint8
     #nscales = 2
@@ -194,12 +203,12 @@ if __name__ == '__main__':
 
     print('init')
     #image_generator = ImageGenerator(size, nscales, seed)
-    image_generator = SimpleImageGenerator(size, seed)
+    image_generator = SimpleImageGenerator(size, tile_size, dtype, seed)
     print('init done')
 
-    data = image_generator.get_tiles(tile_size, dtype)
+    data = image_generator.get_tiles()
     save_tiff(path, data, shape, dtype, tile_size=tile_shape, ome=True)
     print('save done')
 
-    data = image_generator.get_tiles(tile_size, dtype)
+    data = image_generator.get_tiles()
     render_image(data, shape, dtype)
