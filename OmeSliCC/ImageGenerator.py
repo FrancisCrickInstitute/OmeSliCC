@@ -1,12 +1,18 @@
-import cv2 as cv
+import dask
+import dask.array as da
 import itertools
 import matplotlib
+import zarr
 from matplotlib import pyplot as plt
 import numpy as np
+from ome_zarr.io import parse_url
+from ome_zarr.scale import Scaler
+from ome_zarr.writer import write_image
 from sklearn.metrics import euclidean_distances
 from tifffile import tifffile
 from tqdm import tqdm
 
+from OmeSliCC.image_util import create_compression_filter
 
 matplotlib.rcParams['figure.dpi'] = 300
 
@@ -108,6 +114,11 @@ class SimpleImageGenerator:
         self.tile_size = tile_size
         self.dtype = dtype
 
+        if np.dtype(dtype).kind != 'f':
+            self.max_val = 2 ** (8 * np.dtype(dtype).itemsize) - 1
+        else:
+            self.max_val = 1
+
         ranges = np.flip(np.ceil(np.divide(self.size, self.tile_size)).astype(int))
         self.tile_indices = list(np.ndindex(tuple(ranges)))
 
@@ -131,29 +142,33 @@ class SimpleImageGenerator:
             channels.append(channel)
         return np.stack(channels, axis=-1)
 
-    def get_tiles(self):
+    def get_tile(self, indices):
+        # tile in (z,),y,x,c
+        self.range0 = np.flip(indices) * tile_size
+        self.range1 = np.min([self.range0 + self.tile_size, self.size], 0)
+        shape = list(reversed(self.range1 - self.range0))
+        tile = np.fromfunction(self.calc_color, shape, dtype=int)
+        # apply noise to each channel separately
+        for channeli in range(3):
+            tile[..., channeli] = np.clip(tile[..., channeli] + self.noise, 0, 1)
         if np.dtype(dtype).kind != 'f':
-            max_val = 2 ** (8 * np.dtype(dtype).itemsize) - 1
-        else:
-            max_val = 1
-        # flip: cycle over indices in x, y, z order using range = [z, y, x]
+            tile *= self.max_val
+        return tile.astype(dtype)
+
+    def get_tiles(self):
         for indices in tqdm(self.tile_indices):
-            self.range0 = np.flip(indices) * tile_size
-            self.range1 = np.min([self.range0 + self.tile_size, self.size], 0)
-            shape = list(reversed(self.range1 - self.range0))
+            yield self.get_tile(indices)
 
-            tile = np.fromfunction(self.calc_color, shape, dtype=int)
-
-            # apply noise to each channel separately
-            for channeli in range(3):
-                tile[..., channeli] = np.clip(tile[..., channeli] + self.noise, 0, 1)
-
-            if np.dtype(dtype).kind != 'f':
-                tile *= max_val
-
-            # tile in (z,),y,x,c
-            yield tile.astype(dtype)
-            # TODO: wrap into dask array?
+    def get_dask(self):
+        # TODO: fix dimensions / shapes
+        delayed_reader = dask.delayed(self.get_tile)
+        tile_shape = list(np.flip(self.tile_size)) + [3]
+        dask_tiles = []
+        for indices in self.tile_indices:
+            dask_tile = da.from_delayed(delayed_reader(indices), shape=tile_shape, dtype=self.dtype)
+            dask_tiles.append(dask_tile)
+        dask_data = da.stack(dask_tiles, axis=0)
+        return dask_data
 
 
 def save_tiff(filename, data, shape=None, dtype=None, tile_size=None, bigtiff=None, ome=False, compression=None):
@@ -165,6 +180,23 @@ def save_tiff(filename, data, shape=None, dtype=None, tile_size=None, bigtiff=No
         bigtiff = (datasize > 2 ** 32 - 2 ** 25 and not compression)
     tifffile.imwrite(filename, data, shape=shape, dtype=dtype, tile=tile_size, bigtiff=bigtiff, ome=ome,
                      compression=compression)
+
+
+def save_zarr(filename, dask_data, shape=None, dtype=None, tile_size=None, compression=None,
+              npyramid_add=None, pyramid_downsample=None):
+    # https://forum.image.sc/t/writing-tile-wise-ome-zarr-with-pyramid-size/85063
+
+    storage_options = {'dimension_separator': '/', 'chunks': tile_size}
+
+    scaler = Scaler(downscale=pyramid_downsample, max_layer=npyramid_add) if npyramid_add is not None else None
+
+    compressor, compression_filters = create_compression_filter(compression)
+    if compressor is not None:
+        storage_options['compressor'] = compressor
+    if compression_filters is not None:
+        storage_options['filters'] = compression_filters
+    zarr_root = zarr.group(parse_url(filename, mode="w").store, overwrite=True)
+    write_image(image=dask_data, group=zarr_root, scaler=scaler, storage_options=storage_options)
 
 
 def render_image(image_generator):
@@ -205,9 +237,8 @@ def show_image(image):
 
 if __name__ == '__main__':
     # (tile) size in x,y(,z)
-    size = 2048, 2048, 2048
-    tile_size = 2048, 2048, 1
-    path = 'D:/slides/test.tiff'
+    size = 256, 256, 256
+    tile_size = 256, 256, 1
     dtype = np.uint8
     #nscales = 2
     seed = 0
@@ -220,8 +251,8 @@ if __name__ == '__main__':
     image_generator = SimpleImageGenerator(size, tile_size, dtype, seed)
     print('init done')
 
-    data = image_generator.get_tiles()
-    save_tiff(path, data, shape, dtype, tile_size=tile_shape, ome=True)
+    #save_tiff('D:/slides/test.ome.tiff', image_generator.get_tiles(), shape, dtype, tile_size=tile_shape, ome=True)
+    save_zarr('D:/slides/test.ome.zarr', image_generator.get_dask(), shape, dtype, tile_size=tile_shape)
     print('save done')
 
     render_image(image_generator)

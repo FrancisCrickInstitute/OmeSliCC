@@ -10,7 +10,9 @@ def get_default(x, default):
 
 
 def ensure_list(x) -> list:
-    if isinstance(x, list):
+    if x is None:
+        return []
+    elif isinstance(x, list):
         return x
     else:
         return [x]

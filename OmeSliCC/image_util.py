@@ -192,7 +192,7 @@ def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
 def create_compression_filter(compression):
     compressor, compression_filters = None, None
     compression = ensure_list(compression)
-    if len(compression) > 0:
+    if compression is not None and len(compression) > 0:
         compression_type = compression[0].lower()
         if len(compression) > 1:
             level = int(compression[1])
