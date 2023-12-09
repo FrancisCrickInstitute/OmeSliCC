@@ -142,9 +142,9 @@ class SimpleImageGenerator:
             channels.append(channel)
         return np.stack(channels, axis=-1)
 
-    def get_tile(self, indices):
+    def get_tile(self, indices, channels_last=False):
         # tile in (z,),y,x,c
-        self.range0 = np.flip(indices) * tile_size
+        self.range0 = np.flip(indices[1:]) * tile_size
         self.range1 = np.min([self.range0 + self.tile_size, self.size], 0)
         shape = list(reversed(self.range1 - self.range0))
         tile = np.fromfunction(self.calc_color, shape, dtype=int)
@@ -153,21 +153,25 @@ class SimpleImageGenerator:
             tile[..., channeli] = np.clip(tile[..., channeli] + self.noise, 0, 1)
         if np.dtype(dtype).kind != 'f':
             tile *= self.max_val
-        return tile.astype(dtype)
+        tile = tile.astype(dtype)
+        if not channels_last:
+            tile = np.moveaxis(tile, -1, 0)
+        return tile
 
-    def get_tiles(self):
+    def get_tiles(self, channels_last=False):
         for indices in tqdm(self.tile_indices):
-            yield self.get_tile(indices)
+            yield self.get_tile(indices, channels_last)
 
     def get_dask(self):
         # TODO: fix dimensions / shapes
         delayed_reader = dask.delayed(self.get_tile)
-        tile_shape = list(np.flip(self.tile_size)) + [3]
+        tile_shape = [3] + list(np.flip(self.tile_size))
         dask_tiles = []
-        for indices in self.tile_indices:
+        for indices_zyx in self.tile_indices:
+            indices = [0] + list(indices_zyx)
             dask_tile = da.from_delayed(delayed_reader(indices), shape=tile_shape, dtype=self.dtype)
             dask_tiles.append(dask_tile)
-        dask_data = da.stack(dask_tiles, axis=0)
+        dask_data = da.concatenate(dask_tiles, axis=1)
         return dask_data
 
 
@@ -196,7 +200,7 @@ def save_zarr(filename, dask_data, shape=None, dtype=None, tile_size=None, compr
     if compression_filters is not None:
         storage_options['filters'] = compression_filters
     zarr_root = zarr.group(parse_url(filename, mode="w").store, overwrite=True)
-    write_image(image=dask_data, group=zarr_root, scaler=scaler, storage_options=storage_options)
+    write_image(image=dask_data, group=zarr_root, scaler=scaler, axes='czyx', storage_options=storage_options)
 
 
 def render_image(image_generator):
@@ -251,7 +255,7 @@ if __name__ == '__main__':
     image_generator = SimpleImageGenerator(size, tile_size, dtype, seed)
     print('init done')
 
-    #save_tiff('D:/slides/test.ome.tiff', image_generator.get_tiles(), shape, dtype, tile_size=tile_shape, ome=True)
+    #save_tiff('D:/slides/test.ome.tiff', image_generator.get_tiles(channels_last=True), shape, dtype, tile_size=tile_shape, ome=True)
     save_zarr('D:/slides/test.ome.zarr', image_generator.get_dask(), shape, dtype, tile_size=tile_shape)
     print('save done')
 
