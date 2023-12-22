@@ -139,18 +139,17 @@ class TiffSource(OmeSource):
                 pixel_size_unit = pixel_size_unit.lower()
                 if pixel_size_unit == 'none':
                     pixel_size_unit = ''
-            res0 = self.metadata.get('XResolution')
-            if res0 is not None:
-                if isinstance(res0, tuple):
-                    res0 = res0[0] / res0[1]
-                if res0 != 0:
-                    pixel_size.append((1 / res0, pixel_size_unit))
-            res0 = self.metadata.get('YResolution')
-            if res0 is not None:
-                if isinstance(res0, tuple):
-                    res0 = res0[0] / res0[1]
-                if res0 != 0:
-                    pixel_size.append((1 / res0, pixel_size_unit))
+            res0 = convert_rational_value(self.metadata.get('XResolution'))
+            if res0 is not None and res0 != 0:
+                pixel_size.append((1 / res0, pixel_size_unit))
+            res0 = convert_rational_value(self.metadata.get('YResolution'))
+            if res0 is not None and res0 != 0:
+                pixel_size.append((1 / res0, pixel_size_unit))
+
+        xpos = convert_rational_value(self.metadata.get('XPosition'))
+        ypos = convert_rational_value(self.metadata.get('YPosition'))
+        if xpos is not None and ypos is not None:
+            position = [(xpos, pixel_size_unit), (ypos, pixel_size_unit)]
 
         if pixel_size_z is not None and len(pixel_size) == 2:
             pixel_size.append(pixel_size_z)

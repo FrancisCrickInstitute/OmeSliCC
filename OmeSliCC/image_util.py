@@ -249,9 +249,10 @@ def tiff_info(filename: str) -> str:
     if tiff.imagej_metadata:
         s += f'ImageJ: {tiff.imagej_metadata}\n'
 
-    for page in get_tiff_pages(tiff):
+    for page0 in get_tiff_pages(tiff):
+        page = page0[0] if isinstance(page0, list) else page0
         s += str(page) + '\n'
-        s += f'Size: {page.shape[1]} {page.shape[0]} {page.shape[2]} ({print_hbytes(page.size)})\n'
+        s += f'Size: {np.flip(page.shape)} ({print_hbytes(page.size)})\n'
         if page.is_tiled:
             s += f'Tiling: {page.tilewidth} {page.tilelength} {page.tiledepth}\n'
         s += f'Compression: {str(page.compression)} jpegtables: {page.jpegtables is not None}\n'

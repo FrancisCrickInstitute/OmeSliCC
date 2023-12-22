@@ -183,3 +183,9 @@ def get_value_units_micrometer(value_units0: list):
 
     value_units = [value_unit[0] * conversions.get(value_unit[1], 1) for value_unit in value_units0]
     return value_units
+
+
+def convert_rational_value(value):
+    if value is not None and isinstance(value, tuple):
+        value = value[0] / value[1]
+    return value

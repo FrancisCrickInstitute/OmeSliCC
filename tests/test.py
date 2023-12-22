@@ -23,9 +23,11 @@ def test_load(filename: str, pixel_size: list = None, position: tuple = None, si
 
 
 def test_extract_metadata(path: str):
-    print('### immeta')
-    print(print_dict(imageio.v3.immeta(path)))
-    print()
+    is_ome = '.ome.' in path
+    if not is_ome:
+        print('### immeta')
+        print(print_dict(imageio.v3.immeta(path)))
+        print()
 
     print('### improps')
     print(imageio.v3.improps(path))
@@ -159,9 +161,13 @@ if __name__ == '__main__':
     os.chdir('../')
 
     #path = 'E:/Personal/Crick/slides/test_images/19629.svs'
-    path = 'D:/slides/Pharos_test_images/01-08-23_test2__33.tiff'
+    #path = 'D:/slides/Pharos_test_images/01-08-23_test2__33.tiff'
     #path = 'D:/slides/Pharos_test_images/Testing7.tiff'
+    #path = 'D:/slides/Pharos_test_images/image_navcam.tiff'
+    #path = 'C:/temp/sbemimage_test/workspace/OV000.ome.tif'
+    path = 'C:/temp/sbemimage_test/workspace/old OV000.tif'
 
     # perform test
+    print(tiff_info(path))
     test_extract_metadata(path)
     #test_load(path)
