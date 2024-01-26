@@ -8,11 +8,23 @@ from imageio.v3 import imread
 from tqdm import tqdm
 from timeit import default_timer as timer
 
+from OmeSliCC.OmeZarrSource import OmeZarrSource
 from OmeSliCC.TiffSource import TiffSource
 from OmeSliCC.image_util import *
 
 
-def test_load(filename: str, pixel_size: list = None, position: tuple = None, size: tuple = None) -> np.ndarray:
+def render_at_pixel_size(filename: str, source_pixel_size: list = None,
+                            target_pixel_size: list = None, pos: tuple = (0, 0, -1, -1)) -> np.ndarray:
+    if filename.endswith('.zarr'):
+        source = OmeZarrSource(filename, source_pixel_size)
+    else:
+        source = TiffSource(filename, source_pixel_size)
+    image0 = source.asarray(pos[0], pos[1], pos[2], pos[3], pixel_size=target_pixel_size)
+    image = source.render(image0)
+    return image
+
+
+def test_load(filename: str, pixel_size: tuple = None, position: tuple = None, size: tuple = None) -> np.ndarray:
     source = TiffSource(filename, pixel_size)
     if position is None:
         position = (0, 0)
@@ -165,9 +177,13 @@ if __name__ == '__main__':
     #path = 'D:/slides/Pharos_test_images/Testing7.tiff'
     #path = 'D:/slides/Pharos_test_images/image_navcam.tiff'
     #path = 'C:/temp/sbemimage_test/workspace/OV000.ome.tif'
-    path = 'C:/temp/sbemimage_test/workspace/old OV000.tif'
+    #path = 'C:/temp/sbemimage_test/workspace/old OV000.tif'
+    #path = 'D:/slides/EM04613/EM04613_04_20x_WF_Reflection-02-Stitching-01.ome.tif'
+    #path = 'D:/slides/EM04613/EM04613_04_20x_WF_Reflection-02-Stitching-01.ome.zarr'
+    path = 'D:/slides/EM04573_01t/stitched_norm.ome.zarr'
 
     # perform test
-    print(tiff_info(path))
-    test_extract_metadata(path)
+    #print(tiff_info(path))
+    #test_extract_metadata(path)
     #test_load(path)
+    show_image(render_at_pixel_size(path, target_pixel_size=[(10, 10)]))

@@ -33,7 +33,10 @@ class BioSource(OmeSource):
             self.has_ome_metadata = True
         self.reader = ImageReader(filename)
 
+        #self.reader.rdr.getSeriesCount()
+        # good images have StageLabel in metadata?
         self.indexes = []
+        # TODO: use self.metadata instead of self.bio_ome_metadata
         for i in range(self.bio_ome_metadata.get_image_count()):
             pmetadata = self.bio_ome_metadata.image(i).Pixels
             if pmetadata.PhysicalSizeX is not None:
@@ -52,11 +55,24 @@ class BioSource(OmeSource):
     def _find_metadata(self):
         self._get_ome_metadate()
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
+                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
         if x1 < 0 or y1 < 0:
             x1, y1 = self.sizes[level]
+        if t is None:
+            t = 0
+        if z is None:
+            z = 0
         xywh = (x0, y0, x1 - x0, y1 - y0)
-        image = self.reader.read(series=self.indexes[level], XYWH=xywh, rescale=False)      # don't 'rescale' to 0-1!
+        image = self.reader.read(series=self.indexes[level], XYWH=xywh, rescale=False,      # don't 'rescale' to 0-1!
+                                 c=c, z=z, t=t)
+        ndim0 = image.ndim
+        image = np.expand_dims(image, 0)
+        if ndim0 == 2:
+            image = np.expand_dims(image, 0)
+        else:
+            image = np.moveaxis(image, -1, 0)
+        image = np.expand_dims(image, 0)
         return image
 
     def close(self):

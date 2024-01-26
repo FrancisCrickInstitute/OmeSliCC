@@ -42,6 +42,8 @@ def create_ome_metadata(source: OmeSource,
     mag = source.get_mag()
     instrument = ome.get('Instrument')
     objective = ome.get('Instrument', {}).get('Objective')
+    if isinstance(objective, list):
+        objective = objective[0]
     if mag != 0:
         if instrument is None:
             instrument = {'@ID': 'Instrument:0'}
@@ -63,8 +65,20 @@ def create_ome_metadata(source: OmeSource,
             image0 = {}
         pixels0 = image0.get('Pixels', {})
 
-        channels = source.get_channels().copy()
         nchannels = source.get_size_xyzct()[3]
+        channels0 = source.get_channels()
+        n = len(channels0)
+        samples_per_pixel = nchannels // n
+
+        channels = []
+        for channeli, channel0 in enumerate(channels0):
+            channel = XmlDict({'@Name': channel0.get('label', ''),
+                               '@SamplesPerPixel': samples_per_pixel})
+            color = channel0.get('color')
+            if color:
+                channel['@Color'] = rgba_to_int(color)
+            channels.append(channel)
+
         if combine_rgb and len(channels) == 3:
             channel = channels[0].copy()
             channel['@SamplesPerPixel'] = nchannels
@@ -123,11 +137,11 @@ def create_ome_metadata(source: OmeSource,
             image['Description'] = image0['Description']
         # Set image refs
         if experimenter is not None:
-            image['ExperimenterRef'] = {'@ID': experimenter['ID']}
+            image['ExperimenterRef'] = {'@ID': experimenter['@ID']}
         if instrument is not None:
-            image['InstrumentRef'] = {'@ID': instrument['ID']}
+            image['InstrumentRef'] = {'@ID': instrument['@ID']}
         if objective is not None:
-            image['ObjectiveSettings'] = {'@ID': objective['ID']}
+            image['ObjectiveSettings'] = {'@ID': objective['@ID']}
         # (end image refs)
         if 'StageLabel' in image0:
             image['StageLabel'] = image0['StageLabel']

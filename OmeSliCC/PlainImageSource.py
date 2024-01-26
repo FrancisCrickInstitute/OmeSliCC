@@ -4,7 +4,6 @@ from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 
 from OmeSliCC.OmeSource import OmeSource
-from OmeSliCC.XmlDict import XmlDict
 from OmeSliCC.image_util import *
 
 Image.MAX_IMAGE_PIXELS = None   # avoid DecompressionBombError (which prevents loading large images)
@@ -41,11 +40,19 @@ class PlainImageSource(OmeSource):
         self.metadata = get_pil_metadata(self.image)
         size = (self.image.width, self.image.height)
         self.sizes = [size]
-        size_xyzct = (self.image.width, self.image.height, self.image.n_frames, len(self.image.getbands()), 1)
+        nchannels = self.image.im.bands
+        size_xyzct = (self.image.width, self.image.height, self.image.n_frames, nchannels, 1)
         self.sizes_xyzct = [size_xyzct]
         pixelinfo = pilmode_to_pixelinfo(self.image.mode)
         self.pixel_types = [pixelinfo[0]]
         self.pixel_nbits = [pixelinfo[1]]
+
+        dimension_order = 'yx'
+        if self.image.n_frames > 1:
+            dimension_order = 'z' + dimension_order
+        if nchannels > 1:
+            dimension_order += 'c'
+        self.dimension_order = dimension_order
 
         self._init_metadata(filename,
                             source_pixel_size=source_pixel_size,
@@ -68,8 +75,7 @@ class PlainImageSource(OmeSource):
             if res0 != 0:
                 self.source_pixel_size.append((1 / res0, pixel_size_unit))
         self.source_mag = self.metadata.get('Mag', 0)
-        nchannels = len(self.image.getbands())
-        self.channels = [XmlDict({'@Name': '', '@SamplesPerPixel': nchannels})]
+        self.channels = [{'label': ''}]
 
     def load(self):
         self.unload()
@@ -82,12 +88,20 @@ class PlainImageSource(OmeSource):
         self.arrays = []
         self.loaded = False
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
+                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
         if x1 < 0 or y1 < 0:
             x1, y1 = self.sizes[level]
 
         if self.loaded:
-            array = self.arrays[level]
+            image = self.arrays[level]
         else:
-            array = np.array(self.image)
-        return array[y0:y1, x0:x1]
+            image = np.array(self.image)
+
+        if 'c' in self.dimension_order:
+            image = np.moveaxis(image, -1, 0)   # move C to front
+        image = np.expand_dims(image, 0)    # add T
+        if image.ndim < 5:
+            image = np.expand_dims(image, 2)    # add Z
+        image = image[..., y0:y1, x0:x1]
+        return image

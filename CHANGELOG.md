@@ -1,3 +1,8 @@
+#### Version 0.6.1
+- Rewritten code base supporting full multi-dimensional images
+- Improved (ome) zarr support
+- Added convenience rgb render function
+
 #### Version 0.5.3
 - Decoupled hard requirements for Omero / bioformats
 - Minor fixes to ome-zarr metadata

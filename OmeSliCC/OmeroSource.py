@@ -7,7 +7,6 @@ from OmeSliCC import Omero
 from OmeSliCC.OmeSource import OmeSource
 from OmeSliCC.color_conversion import *
 from OmeSliCC.omero_metadata import create_ome_metadata_from_omero
-from OmeSliCC.XmlDict import XmlDict
 from OmeSliCC.util import *
 
 
@@ -73,8 +72,7 @@ class OmeroSource(OmeSource):
         self.source_mag = image_object.getObjectiveSettings().getObjective().getNominalMagnification()
         self.channels = []
         for channel in image_object.getChannels():
-            channel = XmlDict({'@Name': channel.getName(), '@Color': int_to_rgba(channel.getColor().getInt()),
-                               '@SamplesPerPixel': channel.getLogicalChannel().getSamplesPerPixel()})
+            channel = {'label': channel.getName(), 'color': int_to_rgba(channel.getColor().getInt())}
             self.channels.append(channel)
 
     def create_xml_metadata(self, output_filename: str, combine_rgb: bool = True, pyramid_sizes_add: list = None) -> str:
@@ -87,22 +85,36 @@ class OmeroSource(OmeSource):
         image = np.array(PIL.Image.open(image_stream))
         return image
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
+                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
+        xyzct = list(self.sizes_xyzct[level]).copy()
         if x1 < 0 or y1 < 0:
             x1, y1 = self.sizes[level]
+        if t is None:
+            t = 0
+        if z is None:
+            z = 0
+
         pixels_store = self.pixels_store
         w, h = x1 - x0, y1 - y0
-        nchannels = self.sizes_xyzct[level][3]
-        image = np.zeros((h, w, nchannels), dtype=self.pixel_types[level])
+        xyzct[0] = w
+        xyzct[1] = h
+        if c is not None:
+            channels = [c]
+        else:
+            channels = range(self.get_nchannels())
+        shape = h, w, len(channels)
+        image = np.zeros(shape, dtype=self.pixel_types[level])
         pixels_store.setResolutionLevel(self.pixels_store_pyramid_order[level])
-        for c in range(nchannels):
-            tile0 = pixels_store.getTile(0, c, 0, x0, y0, w, h)
+        for c in channels:
+            tile0 = pixels_store.getTile(z, c, t, x0, y0, w, h)
             tile = np.frombuffer(tile0, dtype=image.dtype).reshape(h, w)
             image[..., c] = tile
-        if nchannels == 1:
-            return image[..., 0]
-        else:
-            return image
+
+        image = np.expand_dims(image, 0)
+        image = np.moveaxis(image, -1, 0)
+        image = np.expand_dims(image, 0)
+        return image
 
     def close(self):
         self.pixels_store.close()

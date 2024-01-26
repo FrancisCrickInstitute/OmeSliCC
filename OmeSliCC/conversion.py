@@ -26,7 +26,7 @@ def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSour
     if omero is not None:
         from OmeSliCC.OmeroSource import OmeroSource
         source = OmeroSource(omero, int(source_ref), source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
-    elif 'zarr' in ext:
+    elif ext == '.zarr':
         source = OmeZarrSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     elif ext.lstrip('.') in TIFF.FILE_EXTENSIONS:
         source = TiffSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
@@ -82,7 +82,7 @@ def extract_thumbnail(source: OmeSource, params: dict):
         save_tiff(output_filename, thumb)
 
 
-def convert_image(source: OmeSource, params: dict):
+def convert_image(source: OmeSource, params: dict, load_chunked: bool = False):
     source_ref = source.source_reference
     output_params = params['output']
     output_folder = output_params['folder']
@@ -91,13 +91,17 @@ def convert_image(source: OmeSource, params: dict):
     overwrite = output_params.get('overwrite', True)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
+    filetitle = get_filetitle(source_ref).rstrip('.ome')
+    output_filename = str(os.path.join(output_folder, filetitle + '.' + output_format))
     if overwrite or not os.path.exists(output_filename):
-        image = get_source_image(source)
-        if 'ome.zar' in output_format:
+        if load_chunked:
+            image = get_source_image_chunked(source)
+        else:
+            image = get_source_image(source)
+        if 'ome.zarr' in output_format:
             save_image_as_ome_zarr(source, image, output_filename, output_params)
-        elif 'zar' in output_format:
-            save_image_as_zarr(source, image, output_filename, output_params, ome=ome)
+        elif 'zarr' in output_format:
+            save_image_as_zarr(source, image, output_filename, output_params)
         elif 'tif' in output_format:
             save_image_as_tiff(source, image, output_filename, output_params, ome=ome)
         else:
@@ -125,14 +129,18 @@ def combine_images(sources: list[OmeSource], params: dict):
                 channel = channel.copy()
                 channel['@Name'] = input_channels[c]
         channels.append(channel)
-    output_filename = os.path.join(output_folder, get_filetitle(source_ref, remove_all_ext=True) + '.' + output_format)
+    filetitle = get_filetitle(source_ref).rstrip('.ome')
+    output_filename = os.path.join(output_folder, filetitle + '.' + output_format)
     if 'zar' in output_format:
         new_source = OmeZarrSource(source_ref, source0.get_pixel_size())
         new_source.channels = channels
         size = list(new_source.sizes_xyzct[0])
         size[3] = nchannels
         new_source.sizes_xyzct[0] = size
-        save_image_as_zarr(new_source, image, output_filename, output_params, ome=ome)
+        if 'ome.' in output_format:
+            save_image_as_ome_zarr(new_source, image, output_filename, output_params)
+        else:
+            save_image_as_zarr(new_source, image, output_filename, output_params)
     elif 'tif' in output_format:
         new_source = TiffSource(source_ref, source0.get_pixel_size())
         new_source.channels = channels
@@ -144,10 +152,20 @@ def combine_images(sources: list[OmeSource], params: dict):
         save_image(image, output_filename, output_params)
 
 
-def get_source_image(source: OmeSource, chunk_size=(10240, 10240)):
+def get_source_image(source: OmeSource):
+    return source.asarray()
+
+
+def get_source_image_chunked(source: OmeSource, chunk_size=(10240, 10240)):
     image = source.clone_empty()
-    for x0, y0, x1, y1, chunk in source.produce_chunks(chunk_size):
-        image[y0:y1, x0:x1] = chunk
+    for indices, chunk in source.produce_chunks(chunk_size):
+        s = indices
+        d = chunk.shape
+        image[s[0]:s[0] + d[0],
+              s[1]:s[1] + d[1],
+              s[2]:s[2] + d[2],
+              s[3]:s[3] + d[3],
+              s[4]:s[4] + d[4]] = chunk
     return image
 
 
@@ -163,7 +181,7 @@ def save_image_as_ome_zarr(source: OmeSource, data: np.ndarray, output_filename:
                compression=compression)
 
 
-def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
+def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str, output_params: dict):
     # ome-zarr: https://ngff.openmicroscopy.org/latest/
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
@@ -177,6 +195,7 @@ def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str
 
 
 def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: str, output_params: dict, ome: bool = False):
+    dimension_order = source.get_dimension_order()
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     combine_rgb = output_params.get('combine_rgb', True)
@@ -199,22 +218,30 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
     resolution, resolution_unit = get_resolution_from_pixel_size(source.get_pixel_size())
 
     save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata,
+              dimension_order=dimension_order,
               resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size,
               compression=compression, combine_rgb=combine_rgb, pyramid_sizes_add=pyramid_sizes_add)
 
 
 def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metadata: str = None,
+              dimension_order: str = 'yxc',
               resolution: tuple = None, resolution_unit: str = None, tile_size: tuple = None, compression: [] = None,
               combine_rgb=True, npyramid_add: int = 0, pyramid_downsample: float = 4.0, pyramid_sizes_add: list = None):
     # Use tiled writing (less memory needed but maybe slower):
     # writer.write(tile_iterator, shape=shape_size_at_desired_mag_pyramid_scale, tile=tile_size)
-
+    nchannels = 1
+    if 'c' in dimension_order:
+        index = dimension_order.index('c')
+        if index < image.ndim:
+            nchannels = image.shape[index]
+    volumetric = ('z' in dimension_order)
     image = ensure_unsigned_image(image)
 
-    nchannels = image.shape[2] if len(image.shape) > 2 else 1
-    volumetric = (nchannels > 4)
     split_channels = not (combine_rgb and nchannels == 3)
-    photometric = 'minisblack' if split_channels or nchannels != 3 else None
+    if nchannels == 3 and not split_channels:
+        photometric = 'RGB'
+    else:
+        photometric = 'MINISBLACK'
     if volumetric:
         size = image.shape[1], image.shape[0], image.shape[2]
     else:
@@ -228,7 +255,7 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     xml_metadata_bytes = xml_metadata.encode() if xml_metadata is not None else None
     bigtiff = (image.size * image.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)
     with TiffWriter(filename, ome=False, bigtiff=bigtiff) as writer:    # set ome=False to provide custom OME xml in description
-        writer.write(reverse_last_axis(image, reverse=split_channels), photometric=photometric, subifds=npyramid_add,
+        writer.write(image.squeeze(), photometric=photometric, subifds=npyramid_add,
                      resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression,
                      metadata=metadata, description=xml_metadata_bytes)
 
@@ -240,6 +267,6 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
                 if resolution is not None:
                     resolution = tuple(np.divide(resolution, pyramid_downsample))
                 new_size = np.multiply(size, scale)
-            image = image_resize(image, new_size)
-            writer.write(reverse_last_axis(image, reverse=split_channels), photometric=photometric, subfiletype=1,
+            image = image_resize(image, new_size, dimension_order=dimension_order)
+            writer.write(image.squeeze(), photometric=photometric, subfiletype=1,
                          resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression)

@@ -82,15 +82,15 @@ def print_dict(dct: dict, indent: int = 0):
     return s
 
 
-def print_hbytes(bytes: int) -> str:
+def print_hbytes(nbytes: int) -> str:
     exps = ['', 'K', 'M', 'G', 'T']
     div = 1024
     exp = 0
 
-    while bytes > div:
-        bytes /= div
-        exp +=1
-    return f'{bytes:.1f}{exps[exp]}B'
+    while nbytes > div:
+        nbytes /= div
+        exp += 1
+    return f'{nbytes:.1f}{exps[exp]}B'
 
 
 def check_round_significants(a: float, significant_digits: int) -> float:
@@ -111,12 +111,9 @@ def round_significants(a: float, significant_digits: int) -> float:
     return a
 
 
-def get_filetitle(filename: str, remove_all_ext: bool = False) -> str:
+def get_filetitle(filename: str) -> str:
     filebase = os.path.basename(filename)
-    if remove_all_ext:
-        return filebase.split('.')[0]
-    else:
-        return os.path.splitext(filebase)[0]
+    return os.path.splitext(filebase)[0]
 
 
 def split_num_text(text):
@@ -177,12 +174,18 @@ def split_value_unit_list(text):
 
 
 def get_value_units_micrometer(value_units0: list):
-    conversions = {'nm': 1e-3, 'µm': 1, 'um': 1, 'mm': 1e3, 'cm': 1e4, 'm': 1e6}
+    conversions = {'nm': 1e-3, 'µm': 1, 'um': 1, 'micrometer': 1, 'mm': 1e3, 'cm': 1e4, 'm': 1e6}
     if value_units0 is None:
         return None
 
-    value_units = [value_unit[0] * conversions.get(value_unit[1], 1) for value_unit in value_units0]
-    return value_units
+    values_um = []
+    for value_unit in value_units0:
+        if not isinstance(value_unit, float):
+            value_um = value_unit[0] * conversions.get(value_unit[1], 1)
+        else:
+            value_um = value_unit
+        values_um.append(value_um)
+    return values_um
 
 
 def convert_rational_value(value):

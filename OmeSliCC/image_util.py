@@ -1,4 +1,4 @@
-from imagecodecs.numcodecs import Lzw, Jpeg2k, JpegXr, JpegXl
+from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegxr, Jpegxl
 from numcodecs import register_codec
 import PIL.Image
 import numpy as np
@@ -15,8 +15,8 @@ from OmeSliCC.util import *
 # required for auto decoding Zarr
 register_codec(Lzw)
 register_codec(Jpeg2k)
-register_codec(JpegXr)
-register_codec(JpegXl)
+register_codec(Jpegxr)
+register_codec(Jpegxl)
 
 
 def check_versions():
@@ -32,6 +32,22 @@ def show_image(image: np.ndarray):
 def show_image_gray(image: np.ndarray):
     plt.imshow(image, cmap='gray')
     plt.show()
+
+
+def int2float_image(image):
+    if image.dtype.kind != 'f':
+        maxval = 2 ** (8 * image.dtype.itemsize) - 1
+        return image / np.float32(maxval)
+    else:
+        return image
+
+
+def float2int_image(image, dtype=np.dtype(np.uint8)):
+    if not (image.dtype.kind == 'i' or image.dtype.kind == 'u') and not dtype.kind == 'f':
+        maxval = 2 ** (8 * dtype.itemsize) - 1
+        return (image * maxval).astype(dtype)
+    else:
+        return image
 
 
 def ensure_unsigned_type(dtype: np.dtype) -> np.dtype:
@@ -65,9 +81,13 @@ def convert_image_sign_type(image0: np.ndarray, dtype: np.dtype) -> np.ndarray:
     return image
 
 
-def get_image_quantile(image, quantile):
-    value = np.quantile(image, quantile).astype(image.dtype)
+def get_image_quantile(image, quantile, axis=None):
+    value = np.quantile(image, quantile, axis=axis).astype(image.dtype)
     return value
+
+
+def normalise_values(image, min_value, max_value):
+    return np.clip((image.astype(np.float32) - min_value) / (max_value - min_value), 0, 1)
 
 
 def get_image_size_info(xyzct: tuple, pixel_nbytes: int, pixel_type: np.dtype, channels: list) -> str:
@@ -136,57 +156,56 @@ def image_reshape(image: np.ndarray, target_size: tuple) -> np.ndarray:
     return image
 
 
-def image_resize_fast(image: np.ndarray, target_size: tuple) -> np.ndarray:
-    shape = image.shape
-    if (len(shape) > 2 and shape[2] > 4) or image.dtype.kind == 'i' \
-            or image.dtype.byteorder == '>' or image.dtype.byteorder == '<':
-        new_image = image_resize(image, target_size)
-    else:
-        if np.mean(np.divide(np.flip(shape[0:2]), target_size)) < 1:
-            interpolation = cv.INTER_CUBIC
-        else:
-            interpolation = cv.INTER_AREA
-        new_image = cv.resize(image, target_size, interpolation=interpolation)
-    return new_image
-
-
-def image_resize(image: np.ndarray, target_size0: tuple) -> np.ndarray:
+def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 'yxc') -> np.ndarray:
     if not isinstance(image, np.ndarray):
         image = image.asarray()
     shape = image.shape
-    if np.mean(np.divide(np.flip(shape[0:2]), target_size0)) < 1:
+    x_index = dimension_order.index('x')
+    y_index = dimension_order.index('y')
+    size = shape[x_index], shape[y_index]
+    if np.mean(np.divide(size, target_size0)) < 1:
         interpolation = cv.INTER_CUBIC
     else:
         interpolation = cv.INTER_AREA
     dtype0 = image.dtype
     image = ensure_unsigned_image(image)
     target_size = tuple(np.maximum(np.round(target_size0).astype(int), 1))
-    if len(shape) > 2 and shape[2] > 4:
-        # volumetric
-        target_shape = (target_size[1], target_size[0], shape[2])
-        new_image = np.zeros(target_shape, dtype=image.dtype)
-        for z in range(target_shape[2]):
-            new_image[..., z] = cv.resize(image[..., z], target_size, interpolation=interpolation)
-    else:
+    if dimension_order.startswith('yx'):
         new_image = cv.resize(image, target_size, interpolation=interpolation)
+    else:
+        if 'z' in dimension_order:
+            z_index = dimension_order.index('z')
+        if 't' in dimension_order:
+            t_index = dimension_order.index('t')
+        target_shape = list(image.shape).copy()
+        target_shape[x_index] = target_size[0]
+        target_shape[y_index] = target_size[1]
+        new_image = np.zeros(target_shape, dtype=image.dtype)
+        for t in range(image.shape[t_index]):
+            for z in range(image.shape[z_index]):
+                image1 = image[t, :, z, ...]
+                image1 = np.moveaxis(image1, 0, -1)
+                new_image1 = np.atleast_3d(cv.resize(image1, target_size, interpolation=interpolation))
+                new_image1 = np.moveaxis(new_image1, -1, 0)
+                new_image[t, :, z, ...] = new_image1
     new_image = convert_image_sign_type(new_image, dtype0)
     return new_image
 
 
 def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
     h, w = np.ceil(image.shape[0:2] * scale).astype(int)
-    shape = [h, w]
-    if len(image.shape) > 2:
-        shape += [image.shape[2]]
+    shape = list(image.shape).copy()
+    shape[:2] = h, w
     new_image = np.zeros(shape, dtype=np.float32)
     step_size = 1 / scale
     for y in range(h):
         for x in range(w):
             y0, y1 = np.round([y * step_size[1], (y + 1) * step_size[1]]).astype(int)
             x0, x1 = np.round([x * step_size[0], (x + 1) * step_size[0]]).astype(int)
-            value = np.mean(image[y0:y1, x0:x1], axis=(0, 1))
-            new_image[y, x] = value
-    return new_image
+            image1 = image[y0:y1, x0:x1]
+            if image1.size > 0:
+                new_image[y, x] = np.mean(image1, axis=(0, 1))
+    return new_image.astype(image.dtype)
 
 
 def create_compression_filter(compression):
@@ -205,11 +224,11 @@ def create_compression_filter(compression):
             from imagecodecs.numcodecs import Jpeg2k
             compression_filters = [Jpeg2k(level=level)]
         elif 'jpegxr' in compression_type:
-            from imagecodecs.numcodecs import JpegXr
-            compression_filters = [JpegXr(level=level)]
+            from imagecodecs.numcodecs import Jpegxr
+            compression_filters = [Jpegxr(level=level)]
         elif 'jpegxl' in compression_type:
-            from imagecodecs.numcodecs import JpegXl
-            compression_filters = [JpegXl(level=level)]
+            from imagecodecs.numcodecs import Jpegxl
+            compression_filters = [Jpegxl(level=level)]
         else:
             compressor = compression
     return compressor, compression_filters

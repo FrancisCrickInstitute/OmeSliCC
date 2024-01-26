@@ -10,9 +10,6 @@ from OmeSliCC.util import *
 
 
 class OmeZarr:
-
-    DEFAULT_DIMENSION_ORDER = 'tczyx'
-
     def __init__(self, filename):
         self.filename = filename
 

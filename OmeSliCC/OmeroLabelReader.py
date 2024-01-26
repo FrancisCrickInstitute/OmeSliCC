@@ -37,12 +37,12 @@ class OmeroLabelReader:
     def create_label_csv(self, image_ids):
         image_names = []
         image_annotations = []
-        input = self.params['input']
-        output = self.params['output']
-        input_labels = input.get('omero', {}).get('labels', [])
+        input_params = self.params['input']
+        output_params = self.params['output']
+        input_labels = input_params.get('omero', {}).get('labels', [])
         logging.info(f'Matching images: {len(image_ids)}')
-        for id in image_ids:
-            name, annotations = self.omero.get_image_annotation(id, input_labels)
+        for image_id in image_ids:
+            name, annotations = self.omero.get_image_annotation(image_id, input_labels)
             image_names.append(name)
             image_annotations.append(annotations)
         df = pd.DataFrame(index=image_ids, data=image_annotations)
@@ -51,8 +51,8 @@ class OmeroLabelReader:
             if input_label in df:
                 logging.info(f'Label {input_label}:\n' + df[input_label].value_counts().to_string())
         df.insert(0, 'omero_name', image_names)
-        df['path'] = [image_name + '.' + output['format'] for image_name in image_names]
-        log_path = os.path.dirname(output['csv'])
+        df['path'] = [image_name + '.' + output_params['format'] for image_name in image_names]
+        log_path = os.path.dirname(output_params['csv'])
         if not os.path.exists(log_path):
             os.makedirs(log_path)
-        df.to_csv(output['csv'])
+        df.to_csv(output_params['csv'])

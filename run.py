@@ -69,13 +69,13 @@ def run_actions(params: dict):
                     elif 'thumb' in action:
                         extract_thumbnail(source, params)
                     elif 'convert' in action:
-                        print(str(source_ref))
-                        convert_image(source, params)
+                        print(os.path.basename(str(source_ref)))
+                        convert_image(source, params, load_chunked=is_omero)
                     elif 'combine' in action:
                         combine_images(sources, params)
                     source.close()
                 except Exception as e:
-                    logging.exception(e)
+                    logging.exception(str(e) + ' in ' + str(source_ref))
             logging.info(f'Done {action}')
     else:
         logging.warning('No files to process')

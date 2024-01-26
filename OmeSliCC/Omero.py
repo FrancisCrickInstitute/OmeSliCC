@@ -82,19 +82,19 @@ class Omero:
             for dataset in project.listChildren():
                 image_ids.update(self._get_dataset_annotation_image_ids(dataset.getId(), target_labels))
         # exclude
-        for id in ensure_list(exclude.get('image', [])):
-            if id in image_ids:
-                image_ids.remove(id)
+        for image_id in ensure_list(exclude.get('image', [])):
+            if image_id in image_ids:
+                image_ids.remove(image_id)
         for dataset_id in ensure_list(exclude.get('dataset', [])):
-            for id in self._get_dataset_annotation_image_ids(dataset_id):
-                if id in image_ids:
-                    image_ids.remove(id)
+            for image_id in self._get_dataset_annotation_image_ids(dataset_id):
+                if image_id in image_ids:
+                    image_ids.remove(image_id)
         for project_id in ensure_list(exclude.get('project', [])):
             project = self._get_project(project_id)
             for dataset in project.listChildren():
-                for id in self._get_dataset_annotation_image_ids(dataset.getId()):
-                    if id in image_ids:
-                        image_ids.remove(id)
+                for image_id in self._get_dataset_annotation_image_ids(dataset.getId()):
+                    if image_id in image_ids:
+                        image_ids.remove(image_id)
         return list(image_ids)
 
     def _get_dataset_annotation_image_ids(self, dataset_id: int, target_labels: list = []) -> list:

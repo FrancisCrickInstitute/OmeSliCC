@@ -23,11 +23,11 @@ def create_axes_metadata(dimension_order):
 def create_transformation_metadata(dimension_order, pixel_size_um, scale):
     pixel_size_scale = []
     for dimension in dimension_order:
-        if dimension == 'z':
+        if dimension == 'z' and len(pixel_size_um) > 2:
             pixel_size_scale1 = pixel_size_um[2]
-        elif dimension == 'y':
+        elif dimension == 'y' and len(pixel_size_um) > 1:
             pixel_size_scale1 = pixel_size_um[1] / scale
-        elif dimension == 'x':
+        elif dimension == 'x' and len(pixel_size_um) > 0:
             pixel_size_scale1 = pixel_size_um[0] / scale
         else:
             pixel_size_scale1 = 1
@@ -40,16 +40,11 @@ def create_transformation_metadata(dimension_order, pixel_size_um, scale):
 def create_channel_metadata(source):
     channels = []
     for channeli, channel0 in enumerate(source.get_channels()):
-        channel = {'label': channel0.get('Name', '')}
-        color = channel0.get('Color')
-        if color is None:
-            color = 'FFFFFF'
-        else:
-            color = rgba_to_hexrgb(color)
-        channel['color'] = color
+        channel = channel0.copy()
+        if 'color' in channel:
+            channel['color'] = rgba_to_hexrgb(channel['color'])
         if 'window' not in channel:
-            start, end, min, max = source.get_min_max(channeli)
-            channel['window'] = {'start': start, 'end': end, 'min': min, 'max': max}
+            channel['window'] = source.get_window_min_max(channeli)
         channels.append(channel)
 
     metadata = {
@@ -65,6 +60,6 @@ def calc_shape_scale(shape0, dimension_order, scale):
         return shape0
     for shape1, dimension in zip(shape0, dimension_order):
         if dimension in ['x', 'y']:
-            shape1 = int(round(shape1 / scale))
+            shape1 = int(round(shape1 * scale))
         shape.append(shape1)
     return shape

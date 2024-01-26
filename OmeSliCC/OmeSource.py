@@ -1,7 +1,6 @@
 import logging
 import numpy as np
 
-from OmeSliCC.XmlDict import XmlDict
 from OmeSliCC.color_conversion import *
 from OmeSliCC.ome_metadata import create_ome_metadata
 from OmeSliCC.image_util import *
@@ -16,13 +15,13 @@ class OmeSource:
     has_ome_metadata: bool
     """has ome metadata"""
     dimension_order: str
+    """source dimension order"""
+    output_dimension_order: str
     """data dimension order"""
     source_pixel_size: list
     """original source pixel size"""
     target_pixel_size: list
     """target pixel size"""
-    target_scale: list
-    """target (pixel size) scale"""
     sizes: list
     """x/y size pairs for all pages"""
     sizes_xyzct: list
@@ -38,9 +37,9 @@ class OmeSource:
         self.metadata = {}
         self.has_ome_metadata = False
         self.dimension_order = ''
+        self.output_dimension_order = ''
         self.source_pixel_size = []
         self.target_pixel_size = []
-        self.target_scale = []
         self.sizes = []
         self.sizes_xyzct = []
         self.pixel_types = []
@@ -72,34 +71,38 @@ class OmeSource:
     def _get_ome_metadate(self):
         images = ensure_list(self.metadata.get('Image', {}))[0]
         pixels = images.get('Pixels', {})
-        # data will be flattened
-        #self.dimension_order = pixels.get('DimensionOrder').lower()
-        self.source_pixel_size = [(float(pixels.get('PhysicalSizeX', 0)), pixels.get('PhysicalSizeXUnit', 'µm')),
-                                  (float(pixels.get('PhysicalSizeY', 0)), pixels.get('PhysicalSizeYUnit', 'µm')),
-                                  (float(pixels.get('PhysicalSizeZ', 0)), pixels.get('PhysicalSizeZUnit', 'µm'))]
+        self.source_pixel_size = []
+        size = float(pixels.get('PhysicalSizeX', 0))
+        if size > 0:
+            self.source_pixel_size.append((size, pixels.get('PhysicalSizeXUnit', 'µm')))
+        size = float(pixels.get('PhysicalSizeY', 0))
+        if size > 0:
+            self.source_pixel_size.append((size, pixels.get('PhysicalSizeYUnit', 'µm')))
+        size = float(pixels.get('PhysicalSizeZ', 0))
+        if size > 0:
+            self.source_pixel_size.append((size, pixels.get('PhysicalSizeZUnit', 'µm')))
+
         self.source_mag = 0
         objective_id = images.get('ObjectiveSettings', {}).get('ID', '')
         for objective in ensure_list(self.metadata.get('Instrument', {}).get('Objective', [])):
             if objective.get('ID', '') == objective_id:
                 self.source_mag = float(objective.get('NominalMagnification', 0))
-        nchannels = self.sizes_xyzct[0][3]
+        nchannels = self.get_nchannels()
         channels = []
         for channel0 in ensure_list(pixels.get('Channel', [])):
-            channel = channel0.copy()
-            channel['@SamplesPerPixel'] = int(channel['SamplesPerPixel'])
-            if channel0.get('Color') is not None:
-                channel['@Color'] = int_to_rgba(int(channel0['Color']))
+            channel = {'label': channel0.get('Name', '')}
+            color = channel0.get('Color')
+            if color:
+                channel['color'] = int_to_rgba(int(color))
             channels.append(channel)
         if len(channels) == 0:
             if nchannels == 3:
-                channels = [XmlDict({'@Name': '', '@SamplesPerPixel': nchannels})]
+                channels = [{'label': ''}]
             else:
-                channels = [XmlDict({'@Name': '', '@SamplesPerPixel': 1})] * nchannels
+                channels = [{'label': ''}] * nchannels
         self.channels = channels
 
     def _init_sizes(self):
-        self.scales = [np.mean(np.divide(self.sizes[0], size)) for size in self.sizes]
-
         # normalise source pixel sizes
         standard_units = {'nano': 'nm', 'micro': 'µm', 'milli': 'mm', 'centi': 'cm'}
         pixel_size = []
@@ -127,39 +130,33 @@ class OmeSource:
                 mag = self.source_mag * np.mean(np.divide(size, self.sizes[0]))
                 self.source_mags.append(check_round_significants(mag, 3))
 
-        target_scale = []
-        for source_pixel_size1, target_pixel_size1 in \
-                zip(get_value_units_micrometer(self.source_pixel_size), get_value_units_micrometer(self.target_pixel_size)):
-            if source_pixel_size1 != 0:
-                target_scale.append(np.divide(target_pixel_size1, source_pixel_size1))
-        self.target_scale = target_scale
-
-        if len(target_scale) > 0:
-            best_scale, self.best_level = get_best_scale(self.scales, float(np.mean(target_scale)))
-            self.best_factor = np.divide(target_scale, best_scale)
+        if self.target_pixel_size:
+            self.best_level, self.best_factor, self.full_factor = get_best_level_factor(self, self.target_pixel_size)
         else:
             self.best_level = 0
-            self.best_factor = [1]
+            self.best_factor = 1
 
         if self.dimension_order == '':
             x, y, z, c, t = self.get_size_xyzct()
-            self.dimension_order = 'yx'
+            if t > 1:
+                self.dimension_order += 't'
             if c > 1:
                 self.dimension_order += 'c'
             if z > 1:
-                self.dimension_order = 'z' + self.dimension_order
-            if t > 1:
-                self.dimension_order = 't' + self.dimension_order
+                self.dimension_order += 'z'
+            self.dimension_order += 'yx'
+
+        self.output_dimension_order = 'tczyx'
 
     def get_mag(self) -> float:
+        mag = self.source_mag
         # get effective mag at target pixel size
-        if len(self.target_scale) > 0:
-            return check_round_significants(self.source_mag / np.mean(self.target_scale), 3)
-        else:
-            return self.source_mag
+        if self.target_pixel_size:
+            mag *= np.mean(self.full_factor)
+        return check_round_significants(mag, 3)
 
     def get_dimension_order(self) -> str:
-        return self.dimension_order
+        return self.output_dimension_order
 
     def get_physical_size(self) -> tuple:
         physical_size = []
@@ -178,16 +175,10 @@ class OmeSource:
 
     def get_size(self) -> tuple:
         # size at target pixel size
-        return np.divide(self.sizes[self.best_level], self.best_factor[0:2]).astype(int)
+        return np.round(np.multiply(self.sizes[self.best_level], self.best_factor)).astype(int)
 
     def get_size_xyzct(self) -> tuple:
-        xyzct = list(self.sizes_xyzct[0])
-        n_same_size = len([size for size in self.sizes_xyzct[1:] if list(size) == xyzct]) + 1
-        if n_same_size > 1:
-            if xyzct[2] == 1:
-                xyzct[2] = n_same_size
-            else:
-                xyzct[-1] = n_same_size
+        xyzct = list(self.sizes_xyzct[self.best_level]).copy()
         size = self.get_size()
         xyzct[0:2] = size
         return tuple(xyzct)
@@ -201,32 +192,33 @@ class OmeSource:
     def get_pixel_size_micrometer(self):
         return get_value_units_micrometer(self.get_pixel_size())
 
-    def get_shape(self) -> tuple:
-        xyzct = self.get_size_xyzct()
-        n = xyzct[2] * xyzct[3]
-        if n > 1:
-            shape = (xyzct[1], xyzct[0], n)
-        else:
-            shape = (xyzct[1], xyzct[0])
-        return shape
-
-    def clone_empty(self) -> np.ndarray:
-        return np.zeros(self.get_shape(), dtype=self.get_pixel_type())
+    def get_shape(self, dimension_order: str = None, xyzct: tuple = None) -> tuple:
+        shape = []
+        if dimension_order is None:
+            dimension_order = self.get_dimension_order()
+        if xyzct is None:
+            xyzct = self.get_size_xyzct()
+        for dimension in dimension_order:
+            index = 'xyzct'.index(dimension)
+            shape.append(xyzct[index])
+        return tuple(shape)
 
     def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:
         size, index = get_best_size(self.sizes, target_size)
         scale = np.divide(target_size, self.sizes[index])
-        image = self._asarray_level(index)
-        if np.round(scale, 3)[0] == 1 and np.round(scale, 3)[1] == 1:
-            return image
-        elif precise:
-            return precise_resize(image, scale)
+        image = self.get_redimension_image(self._asarray_level(index))
+        if precise:
+            thumbnail = precise_resize(image, scale)
         else:
-            return image_resize(image, target_size)
+            thumbnail = self.render(image_resize(image, target_size))
+        return thumbnail
 
-    def get_min_max(self, channeli):
+    def get_window_min_max(self, channeli):
         min_quantile = 0.001
         max_quantile = 0.999
+
+        if 'window' in self.channels[channeli]:
+            return self.channels[channeli].get('window')
 
         dtype = self.get_pixel_type()
         if dtype.kind == 'f':
@@ -238,35 +230,92 @@ class OmeSource:
         nsizes = len(self.sizes)
         if nsizes > 1:
             image = self._asarray_level(nsizes - 1)
-            if image.ndim > 2:
-                image = image[..., channeli]
+            image = image[:, channeli:channeli+1, ...]
             min, max = get_image_quantile(image, min_quantile), get_image_quantile(image, max_quantile)
         else:
+            # do not query full size image
             min, max = start, end
-        return start, end, min, max
+        return {'start': start, 'end': end, 'min': min, 'max': max}
 
-    def asarray(self, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
-        # ensure fixed patch size
+    def get_redimension_image(self, image, t=0, z=0, c=None):
+        image = np.moveaxis(image, 1, -1)
+        if z is not None:
+            image = image[:, z, ...]
+        if t is not None:
+            image = image[t, ...]
+        if c is not None:
+            image = image[..., c]
+        return image
+
+    def render(self, image: np.ndarray, channels: list = []) -> np.ndarray:
+        if image.ndim == 5:
+            image = self.get_redimension_image(image)
+        new_image = np.zeros(list(image.shape[:2]) + [3], dtype=np.float32)
+        tot_alpha = 0
+        n = len(self.channels)
+
+        is_rgb = (self.get_nchannels() == 3 and n == 1)
+        do_normalisation = (image.dtype.itemsize == 2)
+
+        if not is_rgb:
+            for channeli, channel in enumerate(self.channels):
+                if not channels or channeli in channels:
+                    if n == 1:
+                        channel_values = image
+                    else:
+                        channel_values = image[..., channeli]
+                    if do_normalisation:
+                        window = self.get_window_min_max(channeli)
+                        channel_values = normalise_values(channel_values, window['min'], window['max'])
+                    else:
+                        channel_values = int2float_image(channel_values)
+                    if 'color' in channel and channel['color'] != '':
+                        rgba = channel['color']
+                    else:
+                        rgba = [1, 1, 1, 1]
+                    color = rgba[:3]
+                    alpha = rgba[3]
+                    if alpha == 0:
+                        alpha = 1
+                    alpha_color = np.multiply(color, alpha).astype(np.float32)
+                    new_image += np.atleast_3d(channel_values) * alpha_color
+                    tot_alpha += alpha
+            new_image = float2int_image(new_image / tot_alpha)
+        elif do_normalisation:
+            window = self.get_window_min_max(0)
+            new_image = float2int_image(normalise_values(image, window['min'], window['max']))
+        else:
+            new_image = image
+
+        return new_image
+
+    def asarray(self, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
+                c: int = None, z: int = None, t: int = None,
+                pixel_size: list = []) -> np.ndarray:
+        # allow custom pixel size
+        if pixel_size:
+            level, factor, _ = get_best_level_factor(self, pixel_size)
+            size0 = np.round(np.multiply(self.sizes[level], factor)).astype(int)
+        else:
+            level, factor = self.best_level, self.best_factor
+            size0 = self.get_size()
+
         if x1 < 0 or y1 < 0:
-            x1, y1 = self.get_size()
-        # ensure fixed patch size
-        w0 = x1 - x0
-        h0 = y1 - y0
-        factor = self.best_factor
+            x1, y1 = size0
         if np.mean(factor) != 1:
-            ox0, oy0 = np.round(np.multiply([x0, y0], factor)).astype(int)
-            ox1, oy1 = np.round(np.multiply([x1, y1], factor)).astype(int)
+            ox0, oy0 = np.round(np.divide([x0, y0], factor)).astype(int)
+            ox1, oy1 = np.round(np.divide([x1, y1], factor)).astype(int)
         else:
             ox0, oy0, ox1, oy1 = x0, y0, x1, y1
-        image0 = self._asarray_level(self.best_level, ox0, oy0, ox1, oy1)
+        image0 = self._asarray_level(level, ox0, oy0, ox1, oy1, c, z, t)
         if np.mean(factor) != 1:
-            h, w = np.round(np.divide(image0.shape[0:2], factor)).astype(int)
-            image = image_resize_fast(image0, (w, h))
+            image = image_resize(image0, size0, dimension_order=self.get_dimension_order())
         else:
             image = image0
-        if image.shape[0:2] != (h0, w0):
-            image = image_reshape(image, (w0, h0))
         return image
+
+    def clone_empty(self) -> np.ndarray:
+        return np.zeros(self.get_shape(), dtype=self.get_pixel_type())
 
     def produce_chunks(self, chunk_size: tuple) -> tuple:
         w, h = self.get_size()
@@ -276,7 +325,8 @@ class OmeSource:
             for chunkx in range(nx):
                 x0, y0 = chunkx * chunk_size[0], chunky * chunk_size[1]
                 x1, y1 = min((chunkx + 1) * chunk_size[0], w), min((chunky + 1) * chunk_size[1], h)
-                yield x0, y0, x1, y1, self.asarray(x0, y0, x1, y1)
+                indices = 0, 0, 0, y0, x0
+                yield indices, self.asarray(x0, y0, x1, y1)
 
     def get_metadata(self) -> dict:
         return self.metadata
@@ -287,7 +337,8 @@ class OmeSource:
     def _find_metadata(self):
         raise NotImplementedError('Implement method in subclass')
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1) -> np.ndarray:
+    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
+                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
         raise NotImplementedError('Implement method in subclass')
 
     def close(self):
@@ -299,6 +350,7 @@ def get_resolution_from_pixel_size(pixel_size: list) -> tuple:
         'cm': (1, 'centimeter'),
         'mm': (1, 'millimeter'),
         'µm': (1, 'micrometer'),
+        'um': (1, 'micrometer'),
         'nm': (1000, 'micrometer'),
         'nanometer': (1000, 'micrometer'),
     }
@@ -323,18 +375,23 @@ def get_resolution_from_pixel_size(pixel_size: list) -> tuple:
     return resolutions, resolutions_unit
 
 
-def get_best_scale(scales: list, target_scale: float) -> tuple:
-    # find smallest scale larger/equal to target scale
-    best_factor = None
-    best_scale = 1
+def get_best_level_factor(source: OmeSource, target_pixel_size: list) -> tuple:
+    # find best pixel_size level and corresponding factor
+    if source.source_pixel_size:
+        target_factor = np.divide(get_value_units_micrometer(source.source_pixel_size)[:2],
+                                  get_value_units_micrometer(target_pixel_size)[:2])
+    else:
+        target_factor = 1
     best_level = 0
-    for level, scale in enumerate(scales):
-        factor = target_scale / scale
-        if best_factor is None or 1 <= factor < best_factor:
-            best_factor = factor
-            best_scale = scale
+    best_factor = None
+    for level, size in enumerate(source.sizes):
+        factor = np.divide(size, source.sizes[0])
+        if (np.all(factor > target_factor)
+                or np.all(np.isclose(factor, target_factor, rtol=1e-4))
+                or best_factor is None):
             best_level = level
-    return best_scale, best_level
+            best_factor = factor
+    return best_level, target_factor / best_factor, target_factor
 
 
 def get_best_size(sizes: list, target_size: tuple) -> tuple:
