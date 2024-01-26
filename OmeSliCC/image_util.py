@@ -192,8 +192,8 @@ def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 
     return new_image
 
 
-def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
-    h, w = np.ceil(image.shape[0:2] * scale).astype(int)
+def precise_resize(image: np.ndarray, scale: np.ndarray, use_max: bool = False) -> np.ndarray:
+    h, w = np.ceil(image.shape[:2] * scale).astype(int)
     shape = list(image.shape).copy()
     shape[:2] = h, w
     new_image = np.zeros(shape, dtype=np.float32)
@@ -204,7 +204,11 @@ def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
             x0, x1 = np.round([x * step_size[0], (x + 1) * step_size[0]]).astype(int)
             image1 = image[y0:y1, x0:x1]
             if image1.size > 0:
-                new_image[y, x] = np.mean(image1, axis=(0, 1))
+                if use_max:
+                    value = np.max(image1, axis=(0, 1))
+                else:
+                    value = np.mean(image1, axis=(0, 1))
+                new_image[y, x] = value
     return new_image.astype(image.dtype)
 
 

@@ -109,6 +109,8 @@ class OmeZarrSource(OmeSource):
             image = np.expand_dims(image, 0)
         if dimension_order.endswith('c'):
             image = np.moveaxis(image, -1, 1)
+        elif 'c' not in dimension_order:
+            image = np.expand_dims(image, 0)
         if 't' not in dimension_order:
             image = np.expand_dims(image, 0)
         if t is not None:
