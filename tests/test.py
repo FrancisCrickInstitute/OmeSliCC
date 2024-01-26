@@ -14,7 +14,7 @@ from OmeSliCC.image_util import *
 
 
 def render_at_pixel_size(filename: str, source_pixel_size: list = None,
-                            target_pixel_size: list = None, pos: tuple = (0, 0, -1, -1)) -> np.ndarray:
+                         target_pixel_size: list = None, pos: tuple = (0, 0, -1, -1)) -> np.ndarray:
     if filename.endswith('.zarr'):
         source = OmeZarrSource(filename, source_pixel_size)
     else:

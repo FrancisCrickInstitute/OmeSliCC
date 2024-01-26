@@ -1,7 +1,6 @@
-import os
 import numpy as np
 from PIL import Image
-from concurrent.futures import ThreadPoolExecutor
+from tifffile import RESUNIT
 
 from OmeSliCC.OmeSource import OmeSource
 from OmeSliCC.image_util import *
@@ -23,24 +22,17 @@ class PlainImageSource(OmeSource):
                  filename: str,
                  source_pixel_size: list = None,
                  target_pixel_size: list = None,
-                 source_info_required: bool = False,
-                 executor: ThreadPoolExecutor = None):
+                 source_info_required: bool = False):
 
         super().__init__()
         self.loaded = False
         self.arrays = []
 
-        if executor is not None:
-            self.executor = executor
-        else:
-            max_workers = (os.cpu_count() or 1) + 4
-            self.executor = ThreadPoolExecutor(max_workers)
-
         self.image = Image.open(filename)
         self.metadata = get_pil_metadata(self.image)
         size = (self.image.width, self.image.height)
         self.sizes = [size]
-        nchannels = self.image.im.bands
+        nchannels = len(self.image.getbands())
         size_xyzct = (self.image.width, self.image.height, self.image.n_frames, nchannels, 1)
         self.sizes_xyzct = [size_xyzct]
         pixelinfo = pilmode_to_pixelinfo(self.image.mode)
@@ -61,25 +53,38 @@ class PlainImageSource(OmeSource):
 
     def _find_metadata(self):
         self.source_pixel_size = []
-        pixel_size_unit = self.metadata.get('unit', '')
+        pixel_size_unit = None
+        pixel_size_z = None
+
+        description = self.metadata.get('ImageDescription', '')
+        if description != '':
+            metadata = desc_to_dict(description)
+            if 'spacing' in metadata:
+                pixel_size_unit = metadata.get('unit', '')
+                if not isinstance(pixel_size_unit, str):
+                    pixel_size_unit = 'micrometer'
+                pixel_size_z = metadata['spacing']
+        if not pixel_size_unit:
+            pixel_size_unit = self.metadata.get('ResolutionUnit')
+            if pixel_size_unit is not None:
+                pixel_size_unit = str(RESUNIT(pixel_size_unit).name).lower()
+                if pixel_size_unit == 'none':
+                    pixel_size_unit = ''
         res0 = self.metadata.get('XResolution')
         if res0 is not None:
-            if isinstance(res0, tuple):
-                res0 = res0[0] / res0[1]
-            if res0 != 0:
-                self.source_pixel_size.append((1 / res0, pixel_size_unit))
+            self.source_pixel_size.append((1 / float(res0), pixel_size_unit))
         res0 = self.metadata.get('YResolution')
         if res0 is not None:
-            if isinstance(res0, tuple):
-                res0 = res0[0] / res0[1]
-            if res0 != 0:
-                self.source_pixel_size.append((1 / res0, pixel_size_unit))
+            self.source_pixel_size.append((1 / float(res0), pixel_size_unit))
+        if pixel_size_z is not None:
+            self.source_pixel_size.append((pixel_size_z, pixel_size_unit))
         self.source_mag = self.metadata.get('Mag', 0)
         self.channels = [{'label': ''}]
 
     def load(self):
         self.unload()
-        self.arrays.append(np.array(self.image))
+        for level in range(len(self.sizes)):
+            self.arrays.append(self._asarray_level(level))
         self.loaded = True
 
     def unload(self):
@@ -93,15 +98,24 @@ class PlainImageSource(OmeSource):
         if x1 < 0 or y1 < 0:
             x1, y1 = self.sizes[level]
 
+        nframes = self.image.n_frames
         if self.loaded:
             image = self.arrays[level]
+        elif nframes > 1:
+            shape = [nframes] + list(np.array(self.image).shape)
+            image = np.zeros(shape, dtype=self.pixel_types[level])
+            for framei in range(nframes):
+                self.image.seek(framei)
+                image[framei] = np.array(self.image)
         else:
             image = np.array(self.image)
 
+        if 'z' not in self.dimension_order:
+            image = np.expand_dims(image, 0)    # add Z
         if 'c' in self.dimension_order:
             image = np.moveaxis(image, -1, 0)   # move C to front
+        else:
+            image = np.expand_dims(image, 0)    # add C
         image = np.expand_dims(image, 0)    # add T
-        if image.ndim < 5:
-            image = np.expand_dims(image, 2)    # add Z
         image = image[..., y0:y1, x0:x1]
         return image

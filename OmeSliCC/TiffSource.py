@@ -270,13 +270,14 @@ class TiffSource(OmeSource):
         xyzct[0] = w
         xyzct[1] = h
 
-        # Match internal Tiff page dimensions: separate sample, depth, length, width, contig sample
-        s = self.npages
+        # Match internal Tiff page dimensions [separate sample, depth, length, width, contig sample]
+        n = self.npages
         d = self.depth
-        n = nc
-        if n > 1 and n == self.npages:
-            n = 1
-        shape = s, d, h, w, n
+        s = nc
+        if self.npages == s > 1:
+            # in case channels represented as pages
+            s = 1
+        shape = n, d, h, w, s
         out = np.zeros(shape, page.dtype)
 
         dataoffsets = []
@@ -297,7 +298,7 @@ class TiffSource(OmeSource):
         target_y0 = y0 - tile_y0 * tile_height
         target_x0 = x0 - tile_x0 * tile_width
         image = out[:, :, target_y0: target_y0 + dh, target_x0: target_x0 + dw, :]
-        # 'sdyxn' -> 'tzyxc'
+        # 'ndyxs' -> 'tzyxc'
         if image.shape[0] == nc > 1:
             image = np.swapaxes(image, 0, -1)
         elif image.shape[0] == nz > 1:

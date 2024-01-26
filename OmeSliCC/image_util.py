@@ -1,12 +1,12 @@
+import cv2 as cv
+import imagecodecs
 from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegxr, Jpegxl
 from numcodecs import register_codec
-import PIL.Image
 import numpy as np
-import cv2 as cv
 import matplotlib.pyplot as plt
-import tifffile
+import PIL.Image
 from PIL.ExifTags import TAGS
-import imagecodecs
+import tifffile
 from tifffile import TiffFile
 
 from OmeSliCC.util import *
@@ -34,7 +34,7 @@ def show_image_gray(image: np.ndarray):
     plt.show()
 
 
-def int2float_image(image):
+def int2float_image(image: np.ndarray) -> np.ndarray:
     if image.dtype.kind != 'f':
         maxval = 2 ** (8 * image.dtype.itemsize) - 1
         return image / np.float32(maxval)
@@ -42,7 +42,7 @@ def int2float_image(image):
         return image
 
 
-def float2int_image(image, dtype=np.dtype(np.uint8)):
+def float2int_image(image: np.ndarray, dtype: np.dtype = np.dtype(np.uint8)) -> np.ndarray:
     if not (image.dtype.kind == 'i' or image.dtype.kind == 'u') and not dtype.kind == 'f':
         maxval = 2 ** (8 * dtype.itemsize) - 1
         return (image * maxval).astype(dtype)
@@ -81,12 +81,12 @@ def convert_image_sign_type(image0: np.ndarray, dtype: np.dtype) -> np.ndarray:
     return image
 
 
-def get_image_quantile(image, quantile, axis=None):
+def get_image_quantile(image: np.ndarray, quantile: float, axis=None) -> float:
     value = np.quantile(image, quantile, axis=axis).astype(image.dtype)
     return value
 
 
-def normalise_values(image, min_value, max_value):
+def normalise_values(image: np.ndarray, min_value: float, max_value: float) -> np.ndarray:
     return np.clip((image.astype(np.float32) - min_value) / (max_value - min_value), 0, 1)
 
 
@@ -208,7 +208,7 @@ def precise_resize(image: np.ndarray, scale: np.ndarray) -> np.ndarray:
     return new_image.astype(image.dtype)
 
 
-def create_compression_filter(compression):
+def create_compression_filter(compression: list) -> tuple:
     compressor, compression_filters = None, None
     compression = ensure_list(compression)
     if compression is not None and len(compression) > 0:
@@ -252,6 +252,13 @@ def get_tiff_pages(tiff: TiffFile) -> list:
         for page in tiff.pages:
             pages.append(page)
     return pages
+
+
+def tags_to_dict(tags: tifffile.TiffTags) -> dict:
+    tag_dict = {}
+    for tag in tags.values():
+        tag_dict[tag.name] = tag.value
+    return tag_dict
 
 
 def tiff_info(filename: str) -> str:
@@ -358,13 +365,6 @@ def calc_fraction_used(image: np.ndarray, threshold: float = 0.1) -> float:
                 good += 1
     fraction = good / total
     return fraction
-
-
-def reverse_last_axis(image, reverse=True):
-    if reverse and len(image.shape) > 2 and image.shape[-1] > 1:
-        return np.moveaxis(image, -1, 0)
-    else:
-        return image
 
 
 def save_image(image: np.ndarray, filename: str, output_params: dict = {}):

@@ -65,7 +65,7 @@ def create_ome_metadata(source: OmeSource,
             image0 = {}
         pixels0 = image0.get('Pixels', {})
 
-        nchannels = source.get_size_xyzct()[3]
+        nchannels = source.get_nchannels()
         channels0 = source.get_channels()
         n = len(channels0)
         samples_per_pixel = nchannels // n

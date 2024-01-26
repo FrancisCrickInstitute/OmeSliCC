@@ -2,7 +2,6 @@ import ast
 import os
 import re
 import numpy as np
-import tifffile
 
 
 def get_default(x, default):
@@ -18,7 +17,7 @@ def ensure_list(x) -> list:
         return [x]
 
 
-def filter_dict(dict0):
+def filter_dict(dict0: dict) -> dict:
     new_dict = {}
     for key, value0 in dict0.items():
         if value0 is not None:
@@ -31,13 +30,6 @@ def filter_dict(dict0):
                 values = values[0]
             new_dict[key] = values
     return new_dict
-
-
-def tags_to_dict(tags: tifffile.TiffTags) -> dict:
-    tag_dict = {}
-    for tag in tags.values():
-        tag_dict[tag.name] = tag.value
-    return tag_dict
 
 
 def desc_to_dict(desc: str) -> dict:
@@ -66,7 +58,7 @@ def desc_to_dict(desc: str) -> dict:
     return desc_dict
 
 
-def print_dict(dct: dict, indent: int = 0):
+def print_dict(dct: dict, indent: int = 0) -> str:
     s = ''
     for key, value in dct.items():
         s += '\n'
@@ -116,7 +108,7 @@ def get_filetitle(filename: str) -> str:
     return os.path.splitext(filebase)[0]
 
 
-def split_num_text(text):
+def split_num_text(text: str) -> list:
     num_texts = []
     block = ''
     is_num0 = None
@@ -145,7 +137,7 @@ def split_num_text(text):
     return num_texts2
 
 
-def split_value_unit_list(text):
+def split_value_unit_list(text: str) -> list:
     value_units = []
     if text is None:
         return None
@@ -173,7 +165,7 @@ def split_value_unit_list(text):
     return value_units
 
 
-def get_value_units_micrometer(value_units0: list):
+def get_value_units_micrometer(value_units0: list) -> list:
     conversions = {'nm': 1e-3, 'µm': 1, 'um': 1, 'micrometer': 1, 'mm': 1e3, 'cm': 1e4, 'm': 1e6}
     if value_units0 is None:
         return None
@@ -188,7 +180,7 @@ def get_value_units_micrometer(value_units0: list):
     return values_um
 
 
-def convert_rational_value(value):
+def convert_rational_value(value) -> float:
     if value is not None and isinstance(value, tuple):
         value = value[0] / value[1]
     return value

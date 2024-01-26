@@ -119,7 +119,7 @@ def create_ome_metadata_from_omero(source: OmeSource,
             }
             channels.append(channel)
 
-        nchannels = source.get_size_xyzct()[3]
+        nchannels = source.get_nchannels()
         if combine_rgb and len(channels) == 3:
             channel = channels[0].copy()
             channel['@SamplesPerPixel'] = nchannels

@@ -9,6 +9,7 @@ from OmeSliCC.util import *
 
 class OmeSource:
     """OME-compatible image source (base class)"""
+    """Internal image format is [TCZYX]"""
 
     metadata: dict
     """metadata dictionary"""
@@ -206,7 +207,7 @@ class OmeSource:
     def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:
         size, index = get_best_size(self.sizes, target_size)
         scale = np.divide(target_size, self.sizes[index])
-        image = self.get_redimension_image(self._asarray_level(index))
+        image = self.get_yxc_image(self._asarray_level(index))
         if precise:
             thumbnail = precise_resize(image, scale)
         else:
@@ -237,7 +238,7 @@ class OmeSource:
             min, max = start, end
         return {'start': start, 'end': end, 'min': min, 'max': max}
 
-    def get_redimension_image(self, image, t=0, z=0, c=None):
+    def get_yxc_image(self, image, t=0, z=0, c=None):
         image = np.moveaxis(image, 1, -1)
         if z is not None:
             image = image[:, z, ...]
@@ -247,9 +248,9 @@ class OmeSource:
             image = image[..., c]
         return image
 
-    def render(self, image: np.ndarray, channels: list = []) -> np.ndarray:
+    def render(self, image: np.ndarray, t: int = 0, z: int = 0, channels: list = []) -> np.ndarray:
         if image.ndim == 5:
-            image = self.get_redimension_image(image)
+            image = self.get_yxc_image(image, t=t, z=z)
         new_image = np.zeros(list(image.shape[:2]) + [3], dtype=np.float32)
         tot_alpha = 0
         n = len(self.channels)
