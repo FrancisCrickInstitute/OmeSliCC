@@ -44,7 +44,7 @@ def create_channel_metadata(source):
         if 'color' in channel:
             channel['color'] = rgba_to_hexrgb(channel['color'])
         if 'window' not in channel:
-            channel['window'] = source.get_window_min_max(channeli)
+            channel['window'] = source.get_channel_window(channeli)
         channels.append(channel)
 
     metadata = {

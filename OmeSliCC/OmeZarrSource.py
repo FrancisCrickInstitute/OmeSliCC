@@ -98,6 +98,9 @@ class OmeZarrSource(OmeSource):
         self.channels = channels
         self.source_mag = 0
 
+    def as_dask(self):
+        return self.levels
+
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
                        c: int = None, z: int = None, t: int = None) -> np.ndarray:
         if x1 < 0 or y1 < 0:

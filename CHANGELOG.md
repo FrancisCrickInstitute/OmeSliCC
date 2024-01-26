@@ -1,3 +1,6 @@
+#### Version 0.6.2
+- Added Dask converter for ome.tiff reader
+
 #### Version 0.6.1
 - Rewritten code base supporting full multi-dimensional images
 - Improved (ome) zarr support

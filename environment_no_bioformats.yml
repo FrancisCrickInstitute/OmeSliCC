@@ -13,6 +13,7 @@ dependencies:
  - scikit-learn
  - imagecodecs
  - numcodecs
+ - dask
  - tifffile
  - zarr
  - ome-zarr
