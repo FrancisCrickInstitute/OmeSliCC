@@ -3,6 +3,8 @@
 def int_to_rgba(intrgba: int) -> list:
     signed = (intrgba < 0)
     rgba = [x / 255 for x in intrgba.to_bytes(4, signed=signed, byteorder="big")]
+    if rgba[-1] == 0:
+        rgba[-1] = 1
     return rgba
 
 

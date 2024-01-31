@@ -178,8 +178,11 @@ class TiffSource(OmeSource):
         self.source_mag = mag
         self.channels = channels
 
-    def as_dask(self):
+    def get_source_dask(self):
         return [da.from_zarr(self.tiff.aszarr(level=level)) for level in range(len(self.sizes))]
+
+    def _get_output_dask(self):
+        return da.from_zarr(self.tiff.aszarr(level=0))
 
     def load(self, decompress: bool = False):
         self.fh.seek(0)

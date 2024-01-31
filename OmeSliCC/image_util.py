@@ -1,4 +1,5 @@
 import cv2 as cv
+import dask.array as da
 import imagecodecs
 from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegxr, Jpegxl
 from numcodecs import register_codec
@@ -81,6 +82,32 @@ def convert_image_sign_type(image0: np.ndarray, dtype: np.dtype) -> np.ndarray:
     return image
 
 
+def redimension_data(data, old_order, new_order, **kwargs):
+    # able to provide optional dimension values e.g. t=0, z=0
+    if new_order == old_order:
+        return data
+
+    new_data = data
+    order = old_order
+    # remove
+    for o in old_order:
+        if o not in new_order:
+            index = order.index(o)
+            dim_value = kwargs.get(o, 0)
+            new_data = np.take(new_data, indices=dim_value, axis=index)
+            order = order.replace(o, '')
+    # add
+    for o in new_order:
+        if o not in order:
+            new_data = np.expand_dims(new_data, 0)
+            order = o + order
+    # move
+    old_indices = [order.index(o) for o in new_order]
+    new_indices = list(range(len(new_order)))
+    new_data = np.moveaxis(new_data, old_indices, new_indices)
+    return new_data
+
+
 def get_image_quantile(image: np.ndarray, quantile: float, axis=None) -> float:
     value = np.quantile(image, quantile, axis=axis).astype(image.dtype)
     return value
@@ -125,7 +152,7 @@ def pilmode_to_pixelinfo(mode: str) -> tuple:
     return pixelinfo
 
 
-def calc_pyramid(xyzct: tuple, npyramid_add: int = 0, pyramid_downsample: float = 4.0,
+def calc_pyramid(xyzct: tuple, npyramid_add: int = 0, pyramid_downsample: float = 2,
                  volumetric_resize: bool = False) -> list:
     x, y, z, c, t = xyzct
     if volumetric_resize and z > 1:
@@ -157,7 +184,7 @@ def image_reshape(image: np.ndarray, target_size: tuple) -> np.ndarray:
 
 
 def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 'yxc') -> np.ndarray:
-    if not isinstance(image, np.ndarray):
+    if not isinstance(image, np.ndarray) and not isinstance(image, da.Array):
         image = image.asarray()
     shape = image.shape
     x_index = dimension_order.index('x')
@@ -185,7 +212,7 @@ def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 
             for z in range(image.shape[z_index]):
                 image1 = image[t, :, z, ...]
                 image1 = np.moveaxis(image1, 0, -1)
-                new_image1 = np.atleast_3d(cv.resize(image1, target_size, interpolation=interpolation))
+                new_image1 = np.atleast_3d(cv.resize(np.asarray(image1), target_size, interpolation=interpolation))
                 new_image1 = np.moveaxis(new_image1, -1, 0)
                 new_image[t, :, z, ...] = new_image1
     new_image = convert_image_sign_type(new_image, dtype0)

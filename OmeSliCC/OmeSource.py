@@ -149,7 +149,14 @@ class OmeSource:
 
         self.output_dimension_order = 'tczyx'
 
-    def as_dask(self):
+    def get_source_dask(self):
+        raise NotImplementedError('Implement method in subclass')
+
+    def get_output_dask(self):
+        data = self._get_output_dask()
+        return redimension_data(data, self.dimension_order, self.get_dimension_order())
+
+    def _get_output_dask(self):
         raise NotImplementedError('Implement method in subclass')
 
     def get_mag(self) -> float:
@@ -242,13 +249,14 @@ class OmeSource:
         return {'start': start, 'end': end, 'min': min, 'max': max}
 
     def get_yxc_image(self, image, t=0, z=0, c=None):
-        image = np.moveaxis(image, 1, -1)
         if z is not None:
-            image = image[:, z, ...]
+            image = image[:, :, z, ...]
+        if c is not None:
+            image = image[:, c, ...]
+        else:
+            image = np.moveaxis(image, 1, -1)
         if t is not None:
             image = image[t, ...]
-        if c is not None:
-            image = image[..., c]
         return image
 
     def render(self, image: np.ndarray, t: int = 0, z: int = 0, channels: list = []) -> np.ndarray:

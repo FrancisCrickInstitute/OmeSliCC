@@ -6,7 +6,7 @@
 import os
 import numpy as np
 from PIL import Image
-from tifffile import TIFF, TiffWriter
+from tifffile import TiffWriter, TIFF, PHOTOMETRIC
 
 from OmeSliCC import Omero
 from OmeSliCC.OmeSource import OmeSource, get_resolution_from_pixel_size
@@ -154,6 +154,7 @@ def combine_images(sources: list[OmeSource], params: dict):
 
 def get_source_image(source: OmeSource):
     return source.asarray()
+    #return source.get_output_dask()    # significantly slower
 
 
 def get_source_image_chunked(source: OmeSource, chunk_size=(10240, 10240)):
@@ -226,47 +227,48 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
 def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metadata: str = None,
               dimension_order: str = 'yxc',
               resolution: tuple = None, resolution_unit: str = None, tile_size: tuple = None, compression: [] = None,
-              combine_rgb=True, npyramid_add: int = 0, pyramid_downsample: float = 4.0, pyramid_sizes_add: list = None):
-    # Use tiled writing (less memory needed but maybe slower):
-    # writer.write(tile_iterator, shape=shape_size_at_desired_mag_pyramid_scale, tile=tile_size)
+              combine_rgb=True, pyramid_sizes_add: list = None):
+    x_index = dimension_order.index('x')
+    y_index = dimension_order.index('y')
+    size = image.shape[x_index], image.shape[y_index]
+
     nchannels = 1
     if 'c' in dimension_order:
-        index = dimension_order.index('c')
-        if index < image.ndim:
-            nchannels = image.shape[index]
-    volumetric = ('z' in dimension_order)
+        c_index = dimension_order.index('c')
+        if c_index < image.ndim:
+            nchannels = image.shape[c_index]
     image = ensure_unsigned_image(image)
+
+    if tile_size is not None and isinstance(tile_size, int):
+        tile_size = [tile_size] * 2
 
     split_channels = not (combine_rgb and nchannels == 3)
     if nchannels == 3 and not split_channels:
-        photometric = 'RGB'
+        photometric = PHOTOMETRIC.RGB
     else:
-        photometric = 'MINISBLACK'
-    if volumetric:
-        size = image.shape[1], image.shape[0], image.shape[2]
-    else:
-        size = image.shape[1], image.shape[0]
+        photometric = PHOTOMETRIC.MINISBLACK
+
     if resolution is not None:
-        # tifffile only support x/y resolution
+        # tifffile only supports x/y pyramid resolution
         resolution = tuple(resolution[0:2])
-    if pyramid_sizes_add is not None:
-        npyramid_add = len(pyramid_sizes_add)
-    scale = 1
+
+    # estimate size (w/o compression)
+    estimated_size = image.size * image.itemsize
+    base_size = np.divide(estimated_size, np.prod(size))
+    for new_size in pyramid_sizes_add:
+        estimated_size += np.prod(new_size) * base_size
+    bigtiff = (estimated_size > 2 ** 32)
+
+    #scaler = Scaler(downscale=..., max_layer=len(pyramid_sizes_add))   # use ome-zarr-py dask scaling
+
+    # set ome=False to provide custom OME xml in description
     xml_metadata_bytes = xml_metadata.encode() if xml_metadata is not None else None
-    bigtiff = (image.size * image.itemsize > 2 ** 32)       # estimate size (w/o compression or pyramid)
-    with TiffWriter(filename, ome=False, bigtiff=bigtiff) as writer:    # set ome=False to provide custom OME xml in description
-        writer.write(image.squeeze(), photometric=photometric, subifds=npyramid_add,
+    with TiffWriter(filename, ome=False, bigtiff=bigtiff) as writer:
+        writer.write(image.squeeze(), photometric=photometric, subifds=len(pyramid_sizes_add),
                      resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression,
                      metadata=metadata, description=xml_metadata_bytes)
-
-        for i in range(npyramid_add):
-            if pyramid_sizes_add is not None:
-                new_size = pyramid_sizes_add[i]
-            else:
-                scale /= pyramid_downsample
-                if resolution is not None:
-                    resolution = tuple(np.divide(resolution, pyramid_downsample))
-                new_size = np.multiply(size, scale)
+        for new_size in pyramid_sizes_add:
             image = image_resize(image, new_size, dimension_order=dimension_order)
+            #image = scaler.resize_image(image)    # significantly slower
             writer.write(image.squeeze(), photometric=photometric, subfiletype=1,
                          resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression)

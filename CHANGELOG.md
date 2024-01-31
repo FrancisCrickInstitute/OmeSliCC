@@ -1,3 +1,7 @@
+#### Version 0.6.3
+- Improved Dask support
+- Fixed minor issue in channel color conversion
+
 #### Version 0.6.2
 - Added Dask converter for ome.tiff reader
 
