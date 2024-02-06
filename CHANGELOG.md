@@ -1,3 +1,6 @@
+#### Version 0.6.4
+- Fixed bug in TiffSource decoding & indexing
+
 #### Version 0.6.3
 - Improved Dask support
 - Fixed minor issue in channel color conversion
