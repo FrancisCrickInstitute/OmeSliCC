@@ -172,7 +172,7 @@ def get_value_units_micrometer(value_units0: list) -> list:
 
     values_um = []
     for value_unit in value_units0:
-        if not isinstance(value_unit, float):
+        if not (isinstance(value_unit, int) or isinstance(value_unit, float)):
             value_um = value_unit[0] * conversions.get(value_unit[1], 1)
         else:
             value_um = value_unit
