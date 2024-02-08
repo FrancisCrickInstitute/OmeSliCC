@@ -13,8 +13,8 @@ from OmeSliCC.util import *
 from OmeSliCC.parameters import *
 
 
-name = toml.load("pyproject.toml")["project"]["name"]
-version = toml.load("pyproject.toml")["project"]["version"]
+software_name = toml.load("pyproject.toml")["project"]["name"]
+software_version = toml.load("pyproject.toml")["project"]["version"]
 
 
 def run_actions(params: dict):
@@ -65,7 +65,10 @@ def run_actions(params: dict):
                     else:
                         source = create_source(str(source_ref), params, omero)
                     if 'info' in action:
-                        logging.info(get_image_info(source))
+                        s = get_image_info(source)
+                        if is_omero:
+                            s = f'{source.image_id} {s}'
+                        logging.info(s)
                     elif 'thumb' in action:
                         extract_thumbnail(source, params)
                     elif 'convert' in action:
@@ -86,7 +89,7 @@ def run_actions(params: dict):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=f'{name} {version}')
+    parser = argparse.ArgumentParser(description=f'{software_name} {software_version}')
     parser.add_argument('--params',
                         help='The parameters file',
                         default=PARAMETER_FILE)
@@ -100,6 +103,10 @@ if __name__ == '__main__':
     if not os.path.exists(basepath):
         os.makedirs(basepath)
     logging.basicConfig(level=logging.INFO, format=log_params['log_format'],
-                        handlers=[logging.StreamHandler(), logging.FileHandler(log_params['filename'])])
+                        handlers=[logging.StreamHandler(), logging.FileHandler(log_params['filename'], encoding='utf-8')],
+                        encoding='utf-8')
+
+    for module in ['omero']:
+        logging.getLogger(module).setLevel(logging.WARNING)
 
     run_actions(params)

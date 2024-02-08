@@ -22,20 +22,20 @@ OME_SCHEMA_LOC = f"{OME_URI} {OME_URI}/ome.xsd"
 def create_ome_metadata(source: OmeSource,
                         output_filename: str,
                         combine_rgb: bool = True,
-                        pyramid_sizes_add: list = None) -> str:
+                        pyramid_sizes_add: list = []) -> str:
 
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
-    name = toml.load("pyproject.toml")["project"]["name"]
-    version = toml.load("pyproject.toml")["project"]["version"]
+    software_name = toml.load("pyproject.toml")["project"]["name"]
+    software_version = toml.load("pyproject.toml")["project"]["version"]
 
     ome = source.get_metadata().copy() if source.has_ome_metadata else XmlDict()
     ome['@xmlns'] = OME_URI
     ome['@xmlns:xsi'] = OME_XSI
     ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
     ome['@UUID'] = uuid
-    ome['@Creator'] = f'{name} {version}'
+    ome['@Creator'] = f'{software_name} {software_version}'
 
     experimenter = ome.get('Experimenter')
 
@@ -136,11 +136,11 @@ def create_ome_metadata(source: OmeSource,
         if 'Description' in image0:
             image['Description'] = image0['Description']
         # Set image refs
-        if experimenter is not None:
+        if experimenter:
             image['ExperimenterRef'] = {'@ID': experimenter['@ID']}
-        if instrument is not None:
+        if instrument:
             image['InstrumentRef'] = {'@ID': instrument['@ID']}
-        if objective is not None:
+        if objective:
             image['ObjectiveSettings'] = {'@ID': objective['@ID']}
         # (end image refs)
         if 'StageLabel' in image0:
@@ -158,7 +158,7 @@ def create_ome_metadata(source: OmeSource,
     map_annotations = [annotation for annotation in map_annotations0
                        if 'resolution' not in annotation.get('ID', '').lower()]
     # add pyramid sizes
-    if pyramid_sizes_add is not None:
+    if pyramid_sizes_add:
         key_value_map = {'M': [{'@K': i + 1, '#text': f'{" ".join([str(size) for size in pyramid_size])}'}
                                for i, pyramid_size in enumerate(pyramid_sizes_add)]}
         map_annotations.insert(0, {

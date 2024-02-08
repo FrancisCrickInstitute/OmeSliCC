@@ -1,7 +1,7 @@
 import cv2 as cv
 import dask.array as da
 import imagecodecs
-from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegxr, Jpegxl
+from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegls, Jpegxr, Jpegxl
 from numcodecs import register_codec
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,6 +16,7 @@ from OmeSliCC.util import *
 # required for auto decoding Zarr
 register_codec(Lzw)
 register_codec(Jpeg2k)
+register_codec(Jpegls)
 register_codec(Jpegxr)
 register_codec(Jpegxl)
 
@@ -117,14 +118,20 @@ def normalise_values(image: np.ndarray, min_value: float, max_value: float) -> n
     return np.clip((image.astype(np.float32) - min_value) / (max_value - min_value), 0, 1)
 
 
-def get_image_size_info(xyzct: tuple, pixel_nbytes: int, pixel_type: np.dtype, channels: list) -> str:
-    w, h, zs, cs, ts = xyzct
-    size = print_hbytes(np.int64(pixel_nbytes) * w * h * zs * cs * ts)
-    if cs == 3:
+def get_image_size_info(sizes_xyzct: list, pixel_nbytes: int, pixel_type: np.dtype, channels: list) -> str:
+    image_size_info = 'XYZCT:'
+    size = 0
+    for i, size_xyzct in enumerate(sizes_xyzct):
+        w, h, zs, cs, ts = size_xyzct
+        size += np.int64(pixel_nbytes) * w * h * zs * cs * ts
+        if i > 0:
+            image_size_info += ','
+        image_size_info += f' {w} {h} {zs} {cs} {ts}'
+    image_size_info += f' Pixel type: {pixel_type} Uncompressed: {print_hbytes(size)}'
+    if sizes_xyzct[0][3] == 3:
         channel_info = 'rgb'
     else:
         channel_info = ','.join([channel.get('Name', '') for channel in channels])
-    image_size_info = f'Size: {w} x {h} x {zs} C: {cs} T: {ts}\nUncompressed: {size} Pixel type: {pixel_type}'
     if channel_info != '':
         image_size_info += f' Channels: {channel_info}'
     return image_size_info

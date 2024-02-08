@@ -1,3 +1,8 @@
+#### Version 0.6.5
+- Expanded Omero image selection
+- Improved image info format, including pyramid sizes
+- Various bug fixes
+
 #### Version 0.6.4
 - Fixed bug in TiffSource decoding & indexing
 

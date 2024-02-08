@@ -144,16 +144,16 @@ class SimpleImageGenerator:
 
     def get_tile(self, indices, channels_last=False):
         # tile in (z,),y,x,c
-        self.range0 = np.flip(indices[1:]) * tile_size
+        self.range0 = np.flip(indices[1:]) * self.tile_size
         self.range1 = np.min([self.range0 + self.tile_size, self.size], 0)
         shape = list(reversed(self.range1 - self.range0))
         tile = np.fromfunction(self.calc_color, shape, dtype=int)
         # apply noise to each channel separately
         for channeli in range(3):
             tile[..., channeli] = np.clip(tile[..., channeli] + self.noise, 0, 1)
-        if np.dtype(dtype).kind != 'f':
+        if np.dtype(self.dtype).kind != 'f':
             tile *= self.max_val
-        tile = tile.astype(dtype)
+        tile = tile.astype(self.dtype)
         if not channels_last:
             tile = np.moveaxis(tile, -1, 0)
         return tile

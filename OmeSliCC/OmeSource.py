@@ -100,7 +100,7 @@ class OmeSource:
             if nchannels == 3:
                 channels = [{'label': ''}]
             else:
-                channels = [{'label': ''}] * nchannels
+                channels = [{'label': str(channeli)} for channeli in range(nchannels)]
         self.channels = channels
 
     def _init_sizes(self):
@@ -217,7 +217,7 @@ class OmeSource:
     def get_thumbnail(self, target_size: tuple, precise: bool = False) -> np.ndarray:
         size, index = get_best_size(self.sizes, target_size)
         scale = np.divide(target_size, self.sizes[index])
-        image = self.get_yxc_image(self._asarray_level(index))
+        image, _ = self.get_yxc_image(self._asarray_level(index), t=0, z=0)
         if precise:
             thumbnail = precise_resize(image, scale)
         else:
@@ -248,20 +248,35 @@ class OmeSource:
             min, max = start, end
         return {'start': start, 'end': end, 'min': min, 'max': max}
 
-    def get_yxc_image(self, image, t=0, z=0, c=None):
+    def get_yxc_image(self, image, t=None, z=None, c=None):
+        new_dimension_order = self.get_dimension_order()
+        xyzct = self.get_size_xyzct()
+        if xyzct[2] == 1:
+            z = 0
+        if xyzct[-2] == 1:
+            c = 0
+        if xyzct[-1] == 1:
+            t = 0
+
         if z is not None:
             image = image[:, :, z, ...]
+            new_dimension_order = new_dimension_order.replace('z', '')
+
+        new_dimension_order = new_dimension_order.replace('c', '')
         if c is not None:
             image = image[:, c, ...]
         else:
             image = np.moveaxis(image, 1, -1)
+            new_dimension_order += 'c'
+
         if t is not None:
             image = image[t, ...]
-        return image
+            new_dimension_order = new_dimension_order.replace('t', '')
+        return image, new_dimension_order
 
     def render(self, image: np.ndarray, t: int = 0, z: int = 0, channels: list = []) -> np.ndarray:
         if image.ndim == 5:
-            image = self.get_yxc_image(image, t=t, z=z)
+            image, _ = self.get_yxc_image(image, t=t, z=z)
         new_image = np.zeros(list(image.shape[:2]) + [3], dtype=np.float32)
         tot_alpha = 0
         n = len(self.channels)

@@ -33,6 +33,7 @@ class OmeroSource(OmeSource):
 
         super().__init__()
         self.omero = omero
+        self.image_id = image_id
         image_object = self.omero.get_image_object(image_id)
         self.image_object = image_object
 
@@ -41,7 +42,7 @@ class OmeroSource(OmeSource):
         pixel_type = np.dtype(image_object.getPixelsType())
         # currently only support/output yxc - allow default value
         #self.dimension_order = image_object.getPrimaryPixels().getDimensionOrder().getValue().lower()
-        self.pixels_store = self.omero.create_pixels_store(self.image_object)
+        self.pixels_store = self.omero.create_pixels_store(image_object)
         for resolution in self.pixels_store.getResolutionDescriptions():
             self.sizes.append((resolution.sizeX, resolution.sizeY))
             self.sizes_xyzct.append((resolution.sizeX, resolution.sizeY, zsize, nchannels, 1))
@@ -58,21 +59,25 @@ class OmeroSource(OmeSource):
             # default order
             self.pixels_store_pyramid_order = list(range(nlevels))
 
-        self._init_metadata(str(image_id),
+        self._init_metadata(image_object.getName(),
                             source_pixel_size=source_pixel_size,
                             target_pixel_size=target_pixel_size,
                             source_info_required=source_info_required)
 
     def _find_metadata(self):
-        #metadata = get_omero_metadata_dict(self.image_object)
         image_object = self.image_object
         self.source_pixel_size = [(get_default(image_object.getPixelSizeX(), 0), 'µm'),
                                   (get_default(image_object.getPixelSizeY(), 0), 'µm'),
                                   (get_default(image_object.getPixelSizeZ(), 0), 'µm')]
-        self.source_mag = image_object.getObjectiveSettings().getObjective().getNominalMagnification()
+        objective_settings = image_object.getObjectiveSettings()
+        if objective_settings:
+            self.source_mag = objective_settings.getObjective().getNominalMagnification()
+        else:
+            self.source_mag = 0
         self.channels = []
-        for channel in image_object.getChannels():
-            channel = {'label': channel.getName(), 'color': int_to_rgba(channel.getColor().getInt())}
+        for channeli, channel0 in enumerate(image_object.getChannels()):
+            channel = {'label': get_default(channel0.getName(), str(channeli)),
+                       'color': int_to_rgba(channel0.getColor().getInt())}
             self.channels.append(channel)
 
     def create_xml_metadata(self, output_filename: str, combine_rgb: bool = True, pyramid_sizes_add: list = None) -> str:

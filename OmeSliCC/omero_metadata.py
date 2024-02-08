@@ -30,15 +30,15 @@ def create_ome_metadata_from_omero(source: OmeSource,
     file_name = os.path.basename(output_filename)
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
-    name = toml.load("pyproject.toml")["project"]["name"]
-    version = toml.load("pyproject.toml")["project"]["version"]
+    software_name = toml.load("pyproject.toml")["project"]["name"]
+    software_version = toml.load("pyproject.toml")["project"]["version"]
 
     ome = XmlDict()
     ome['@xmlns'] = OME_URI
     ome['@xmlns:xsi'] = OME_XSI
     ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
     ome['@UUID'] = uuid
-    ome['@Creator'] = f'{name} {version}'
+    ome['@Creator'] = f'{software_name} {software_version}'
 
     instrument = None
     objective = None
@@ -81,7 +81,7 @@ def create_ome_metadata_from_omero(source: OmeSource,
         pixels0 = image_object.getPrimaryPixels()
 
         stage0 = image_object.getStageLabel()
-        if stage0 is not None:
+        if stage0:
             for plane0 in pixels0.copyPlaneInfo():
                 planes.append({
                     '@TheC': plane0.getTheC(),
@@ -170,12 +170,12 @@ def create_ome_metadata_from_omero(source: OmeSource,
             pixels['Plane'] = planes
 
         # Set image refs
-        if instrument is not None:
+        if instrument:
             image['InstrumentRef'] = {'@ID': instrument['@ID']}
-        if objective is not None:
+        if objective:
             image['ObjectiveSettings'] = {'@ID': objective['@ID']}
         # (end image refs)
-        if stage0 is not None:
+        if stage0:
             image['StageLabel'] = {'@Name': stage0.getName()}
         image['Pixels'] = pixels
         images.append(image)
@@ -198,7 +198,7 @@ def create_ome_metadata_from_omero(source: OmeSource,
             'Value': value
         })
     # add pyramid sizes
-    if pyramid_sizes_add is not None:
+    if pyramid_sizes_add:
         if 'MapAnnotation' not in annotations:
             annotations['MapAnnotation'] = []
         key_value_map = {'M': [{'@K': i + 1, '#text': f'{" ".join([str(size) for size in pyramid_size])}'}

@@ -4,6 +4,7 @@ import omero
 from omero.gateway import BlitzGateway
 import omero.model
 from types import TracebackType
+import re
 
 from OmeSliCC.omero_credentials import decrypt_credentials
 from OmeSliCC.util import *
@@ -68,43 +69,54 @@ class Omero:
         pixels_store.setPixelsId(image_object.getPixelsId(), False, self.conn.SERVICE_OPTS)
         return pixels_store
 
-    def get_annotation_image_ids(self) -> list:
+    def get_annotation_image_ids(self) -> dict:
+        images_final = {}
         input_omero = self.params['input'].get('omero', {})
-        include = input_omero['include']
-        exclude = input_omero.get('exclude', {})
-        target_labels = ensure_list(input_omero.get('labels', []))
+        include_params = input_omero['include']
+        include_regex = ensure_list(include_params.get('regex', []))
+        exclude_params = input_omero.get('exclude', {})
+        exclude_regex = ensure_list(exclude_params.get('regex', []))
         # include
-        image_ids = set(ensure_list(include.get('image', [])))
-        for dataset_id in ensure_list(include.get('dataset', [])):
-            image_ids.update(self._get_dataset_annotation_image_ids(dataset_id, target_labels))
-        for project_id in ensure_list(include.get('project', [])):
+        image_ids = set(ensure_list(include_params.get('image', [])))
+        images = {image_id: self.get_image_object(image_id) for image_id in image_ids}
+        for dataset_id in ensure_list(include_params.get('dataset', [])):
+            images.update(self._get_dataset_images(dataset_id))
+        for project_id in ensure_list(include_params.get('project', [])):
             project = self._get_project(project_id)
             for dataset in project.listChildren():
-                image_ids.update(self._get_dataset_annotation_image_ids(dataset.getId(), target_labels))
+                images.update(self._get_dataset_images(dataset.getId()))
         # exclude
-        for image_id in ensure_list(exclude.get('image', [])):
-            if image_id in image_ids:
-                image_ids.remove(image_id)
-        for dataset_id in ensure_list(exclude.get('dataset', [])):
-            for image_id in self._get_dataset_annotation_image_ids(dataset_id):
-                if image_id in image_ids:
-                    image_ids.remove(image_id)
-        for project_id in ensure_list(exclude.get('project', [])):
+        for image_id in ensure_list(exclude_params.get('image', [])):
+            images.pop(image_id, None)
+        for dataset_id in ensure_list(exclude_params.get('dataset', [])):
+            for image_id in self._get_dataset_images(dataset_id):
+                images.pop(image_id, None)
+        for project_id in ensure_list(exclude_params.get('project', [])):
             project = self._get_project(project_id)
             for dataset in project.listChildren():
-                for image_id in self._get_dataset_annotation_image_ids(dataset.getId()):
-                    if image_id in image_ids:
-                        image_ids.remove(image_id)
-        return list(image_ids)
+                for image_id in self._get_dataset_images(dataset.getId()):
+                    images.pop(image_id, None)
 
-    def _get_dataset_annotation_image_ids(self, dataset_id: int, target_labels: list = []) -> list:
+        for image_id, image in images.items():
+            name = image.getName()
+            print(name)
+            include = True
+            if include_regex:
+                include = False
+                for pattern in include_regex:
+                    if re.search(pattern, name, re.IGNORECASE):
+                        include = True
+            if exclude_regex:
+                for pattern in exclude_regex:
+                    if re.search(pattern, name, re.IGNORECASE):
+                        include = False
+            if include:
+                images_final[image_id] = image
+        return images_final
+
+    def _get_dataset_images(self, dataset_id: int) -> dict:
         dataset = self._get_dataset(dataset_id)
-        image_ids = []
-        for image_object in dataset.listChildren():
-            annotations = self._get_image_annotations(image_object, target_labels)
-            if len(annotations) == len(target_labels):
-                image_ids.append(image_object.getId())
-        return image_ids
+        return {image.getId(): image for image in dataset.listChildren()}
 
     def get_image_annotation(self, image_id: int, target_labels: list) -> tuple:
         image_object = self.get_image_object(image_id)
