@@ -1,3 +1,4 @@
+import dask.array
 import logging
 import numpy as np
 
@@ -152,13 +153,6 @@ class OmeSource:
     def get_source_dask(self):
         raise NotImplementedError('Implement method in subclass')
 
-    def get_output_dask(self):
-        data = self._get_output_dask()
-        return redimension_data(data, self.dimension_order, self.get_dimension_order())
-
-    def _get_output_dask(self):
-        raise NotImplementedError('Implement method in subclass')
-
     def get_mag(self) -> float:
         mag = self.source_mag
         # get effective mag at target pixel size
@@ -228,7 +222,7 @@ class OmeSource:
         min_quantile = 0.001
         max_quantile = 0.999
 
-        if 'window' in self.channels[channeli]:
+        if channeli < len(self.channels) and 'window' in self.channels[channeli]:
             return self.channels[channeli].get('window')
 
         dtype = self.get_pixel_type()
@@ -241,7 +235,7 @@ class OmeSource:
         nsizes = len(self.sizes)
         if nsizes > 1:
             image = self._asarray_level(nsizes - 1)
-            image = image[:, channeli:channeli+1, ...]
+            image = np.asarray(image[:, channeli:channeli+1, ...])
             min, max = get_image_quantile(image, min_quantile), get_image_quantile(image, max_quantile)
         else:
             # do not query full size image
@@ -342,6 +336,48 @@ class OmeSource:
         else:
             image = image0
         return image
+
+    def asarray_um(self, x_um: float, y_um: float, w_um: float, h_um: float,
+                   c: int = None, z: int = None, t: int = None):
+        pixel_size = self.get_pixel_size_micrometer()[:2]
+        x0, y0 = np.divide([x_um, y_um], pixel_size)
+        w, h = np.divide([w_um, h_um], pixel_size)
+        x1, y1 = x0 + w, y0 + h
+        return self.asarray(x0, y0, x1, y1, c, z, t)
+
+    def asdask(self, chunk_size: tuple) -> da.Array:
+        chunk_shape = list(np.flip(chunk_size))
+        while len(chunk_shape) < 3:
+            chunk_shape = [1] + chunk_shape
+        chunk_shape = [self.get_nchannels()] + chunk_shape
+        while len(chunk_shape) < 5:
+            chunk_shape = [1] + chunk_shape
+        chunks = np.ceil(np.flip(self.get_size_xyzct()) / chunk_shape).astype(int)
+
+        delayed_reader = dask.delayed(self.asarray)
+        dtype = self.get_pixel_type()
+
+        dask_times = []
+        for ti in range(chunks[0]):
+            dask_planes = []
+            for zi in range(chunks[2]):
+                dask_rows = []
+                for yi in range(chunks[3]):
+                    dask_tiles = []
+                    for xi in range(chunks[4]):
+                        x0, x1 = xi * chunk_shape[4], (xi + 1) * chunk_shape[4]
+                        y0, y1 = yi * chunk_shape[3], (yi + 1) * chunk_shape[3]
+                        z = zi * chunk_shape[2]
+                        t = ti * chunk_shape[0]
+                        dask_tile = da.from_delayed(delayed_reader(x0, y0, x1, y1, z=z, t=t), shape=chunk_shape,
+                                                    dtype=dtype)
+                        dask_tiles.append(dask_tile)
+                    dask_rows.append(da.concatenate(dask_tiles, axis=4))
+                dask_planes.append(da.concatenate(dask_rows, axis=3))
+            dask_times.append(da.concatenate(dask_planes, axis=1))
+        dask_data = da.concatenate(dask_times, axis=0)
+
+        return dask_data
 
     def clone_empty(self) -> np.ndarray:
         return np.zeros(self.get_shape(), dtype=self.get_pixel_type())

@@ -1,4 +1,5 @@
 import argparse
+import dask
 import glob
 import logging
 import os
@@ -34,6 +35,8 @@ def run_actions(params: dict):
         omero = Omero.Omero(params)
         omero.init()
         source_refs = omero.get_annotation_image_ids()
+        #dask.config.set(**{'array.slicing.split_large_chunks': False})  # Silence large size warning
+        #dask.config.set(scheduler='synchronous')
     elif isinstance(source_ref, list):
         # list of filenames
         source_refs = source_ref
@@ -83,6 +86,7 @@ def run_actions(params: dict):
     else:
         logging.warning('No files to process')
     if is_omero:
+        #dask.config.set(scheduler='threads')
         omero.close()
 
     logging.info('Done')

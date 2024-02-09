@@ -38,18 +38,26 @@ def create_transformation_metadata(dimension_order, pixel_size_um, scale):
 
 
 def create_channel_metadata(source):
-    channels = []
-    for channeli, channel0 in enumerate(source.get_channels()):
+    channels = source.get_channels()
+    nchannels = source.get_nchannels()
+
+    if len(channels) < nchannels == 3:
+        labels = ['Red', 'Green', 'Blue']
+        colors = [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1)]
+        channels = [{'label': label, 'color': color} for label, color in zip(labels, colors)]
+
+    omezarr_channels = []
+    for channeli, channel0 in enumerate(channels):
         channel = channel0.copy()
         if 'color' in channel:
             channel['color'] = rgba_to_hexrgb(channel['color'])
         if 'window' not in channel:
             channel['window'] = source.get_channel_window(channeli)
-        channels.append(channel)
+        omezarr_channels.append(channel)
 
     metadata = {
         'version': '0.4',
-        'channels': channels,
+        'channels': omezarr_channels,
     }
     return metadata
 

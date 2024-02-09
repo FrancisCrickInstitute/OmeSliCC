@@ -9,13 +9,13 @@ For support and discussion, please use the [Image.sc forum](https://forum.image.
 
 ## Main features
 
-- Import WSI files: Omero, Ome.Tiff, Tiff, Zarr *, Ome.Zarr/NGFF *, common slide formats, common image formats
-- Export images: Tiff, Ome.Tiff, Zarr *, Ome.Zarr *, common image formats, thumbnails
+- Import WSI files: Omero, Ome.Tiff, Tiff, Zarr, Ome.Zarr/NGFF, common slide formats, common image formats
+- Export images: Tiff, Ome.Tiff, Zarr, Ome.Zarr, common image formats, thumbnails
 - Zarr image compression (lossless/lossy)
 - Image scaling using target pixel size
 - Omero credentials helper
 
-*Zarr currently partially implemented. Also see [OME NGFF](https://ngff.openmicroscopy.org)
+For more info on OME/NGFF see [OME NGFF](https://ngff.openmicroscopy.org)
 
 ## Running OmeSliCC
 

@@ -95,6 +95,7 @@ def convert_image(source: OmeSource, params: dict, load_chunked: bool = False):
     if overwrite or not os.path.exists(output_filename):
         if load_chunked:
             image = get_source_image_chunked(source)
+            #image = get_source_image_dask(source)
         else:
             image = get_source_image(source)
         if 'ome.zarr' in output_format:
@@ -153,7 +154,11 @@ def combine_images(sources: list[OmeSource], params: dict):
 
 def get_source_image(source: OmeSource):
     return source.asarray()
-    #return source.get_output_dask()    # significantly slower
+
+
+def get_source_image_dask(source: OmeSource, chunk_size=(10240, 10240)):
+    image = source.asdask(chunk_size)
+    return image
 
 
 def get_source_image_chunked(source: OmeSource, chunk_size=(10240, 10240)):
@@ -248,6 +253,8 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
         photometric = PHOTOMETRIC.RGB
     else:
         photometric = PHOTOMETRIC.MINISBLACK
+        image = np.moveaxis(image, -1, 0)
+        dimension_order = 'cyx'
 
     if resolution is not None:
         # tifffile only supports x/y pyramid resolution

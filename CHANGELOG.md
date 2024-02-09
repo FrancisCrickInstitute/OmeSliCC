@@ -1,3 +1,9 @@
+#### Version 0.6.6
+- Rewritten TiffSource using dask/zarr functionality
+- Added high level Dask function
+- Completed Image Generator
+- Improved ome-zarr metadata for napari support
+
 #### Version 0.6.5
 - Expanded Omero image selection
 - Improved image info format, including pyramid sizes

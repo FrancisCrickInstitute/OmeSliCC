@@ -191,8 +191,6 @@ def image_reshape(image: np.ndarray, target_size: tuple) -> np.ndarray:
 
 
 def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 'yxc') -> np.ndarray:
-    if not isinstance(image, np.ndarray) and not isinstance(image, da.Array):
-        image = image.asarray()
     shape = image.shape
     x_index = dimension_order.index('x')
     y_index = dimension_order.index('y')
@@ -205,7 +203,11 @@ def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 
     image = ensure_unsigned_image(image)
     target_size = tuple(np.maximum(np.round(target_size0).astype(int), 1))
     if dimension_order.startswith('yx'):
-        new_image = cv.resize(image, target_size, interpolation=interpolation)
+        new_image = cv.resize(np.asarray(image), target_size, interpolation=interpolation)
+    elif dimension_order == 'cyx':
+        new_image = np.moveaxis(image, 0, -1)
+        new_image = cv.resize(np.asarray(new_image), target_size, interpolation=interpolation)
+        new_image = np.moveaxis(new_image, -1, 0)
     else:
         if 'z' in dimension_order:
             z_index = dimension_order.index('z')
@@ -275,15 +277,16 @@ def create_compression_filter(compression: list) -> tuple:
 def get_tiff_pages(tiff: TiffFile) -> list:
     pages = []
     found = False
-    for serie in tiff.series:
+    if tiff.series:
         # has series
-        for level in serie.levels:
+        baseline = tiff.series[0]
+        for level in baseline.levels:
             # has levels
             level_pages = []
             for page in level.pages:
                 found = True
                 level_pages.append(page)
-            if len(level_pages) > 0:
+            if level_pages:
                 pages.append(level_pages)
 
     if not found:

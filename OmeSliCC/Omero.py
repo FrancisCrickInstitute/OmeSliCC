@@ -97,9 +97,9 @@ class Omero:
                 for image_id in self._get_dataset_images(dataset.getId()):
                     images.pop(image_id, None)
 
+        # regex
         for image_id, image in images.items():
             name = image.getName()
-            print(name)
             include = True
             if include_regex:
                 include = False

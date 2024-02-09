@@ -37,15 +37,23 @@ class OmeroSource(OmeSource):
         image_object = self.omero.get_image_object(image_id)
         self.image_object = image_object
 
-        zsize = get_default(image_object.getPixelSizeZ(), 1)
+        zsize = get_default(image_object.getSizeZ(), 1)
         nchannels = np.sum([channel.getLogicalChannel().getSamplesPerPixel() for channel in image_object.getChannels()])
         pixel_type = np.dtype(image_object.getPixelsType())
         # currently only support/output yxc - allow default value
         #self.dimension_order = image_object.getPrimaryPixels().getDimensionOrder().getValue().lower()
+
         self.pixels_store = self.omero.create_pixels_store(image_object)
         for resolution in self.pixels_store.getResolutionDescriptions():
             self.sizes.append((resolution.sizeX, resolution.sizeY))
             self.sizes_xyzct.append((resolution.sizeX, resolution.sizeY, zsize, nchannels, 1))
+            self.pixel_types.append(pixel_type)
+            self.pixel_nbits.append(pixel_type.itemsize * 8)
+
+        if not self.sizes:
+            xsize, ysize = image_object.getSizeX(), image_object.getSizeY()
+            self.sizes.append((xsize, ysize))
+            self.sizes_xyzct.append((xsize, ysize, zsize, nchannels, 1))
             self.pixel_types.append(pixel_type)
             self.pixel_nbits.append(pixel_type.itemsize * 8)
 
