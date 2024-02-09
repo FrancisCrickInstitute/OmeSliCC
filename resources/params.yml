@@ -9,16 +9,18 @@ input:
     host: ssl://omero.server
     # include - Omero project id(s) / dataset id(s) / image id(s) to include
     include:
+      dummy: dummy
       project: [0, 1]
       dataset: [0, 1]
       image: [0, 1]
+      regex: []
     # exclude - Omero project id(s) / dataset id(s) / image id(s) to exclude
     exclude:
+      dummy: dummy
       project: [0, 1]
       dataset: [0, 1]
       image: [0, 1]
-    # labels - required Omero metadata labels (optional)
-    #labels: [label1,label2]
+      regex: []
   # pixel_size - source magnification (if not in metadata)
   #pixel_size: 1
 
@@ -41,7 +43,7 @@ output:
   # npyramid_add - number of pyramid size levels to add
   npyramid_add: 3
   # pyramid_downsample - factor each pyramid level is down-sampled
-  pyramid_downsample: 4.0
+  pyramid_downsample: 2
   # thumbnail_size - can be a factor between 0 and 1 or maximum pixel size (single value)
   thumbnail_size: 1000
   csv: resources/csv/labels.csv
