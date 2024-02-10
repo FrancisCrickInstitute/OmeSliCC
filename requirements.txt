@@ -3,9 +3,9 @@ pandas
 scikit-image
 scikit-learn
 opencv-python
-imagecodecs
+imagecodecs>=2023.3.16
 numcodecs
-tifffile
+tifffile>=2023.9.26
 zarr
 aiohttp
 omero-py

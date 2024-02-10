@@ -22,8 +22,8 @@ def load_as_zarr(path, x_um, y_um, w_um, h_um):
 
 
 def save_source_as_ome_tiff(output, source, output_params):
-    data = source.asarray()
-    #data = source.asdask(output_params['tile_size'])
+    #data = source.asarray()
+    data = source.asdask(output_params['tile_size'])
     save_image_as_tiff(source, data, output, output_params, ome=True)
 
 
@@ -50,9 +50,10 @@ def conversion_test():
     path2 = 'test1.ome.zarr'
     path3 = 'test2.ome.tiff'
     size = [1024, 1024]
-    output_params = {'tile_size': [256, 256], 'npyramid_add': 3, 'pyramid_downsample': 2}
+    tile_size = [256, 256]
+    output_params = {'tile_size': tile_size, 'npyramid_add': 3, 'pyramid_downsample': 2}
 
-    source = create_source(size, [256, 256], np.uint8, [(1, 'um')])
+    source = create_source(size, tile_size, np.uint8, [(1, 'um')])
     nchannels = source.get_nchannels()
     save_source_as_ome_tiff(path1, source, output_params)
 

@@ -1,3 +1,7 @@
+#### Version 0.6.7
+- Fixed bugs in asdask() and GeneratorSource
+- Pinned some versions in pip requirements 
+
 #### Version 0.6.6
 - Rewritten TiffSource using dask/zarr functionality
 - Added high level Dask function

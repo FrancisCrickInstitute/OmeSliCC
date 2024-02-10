@@ -58,11 +58,11 @@ class GeneratorSource(OmeSource):
         return np.stack(channels, axis=-1)
 
     def get_tile(self, indices, tile_size=None):
-        # tile in (z,),y,x,c
+        # indices / tile size in x,y(,z,...)
         if not tile_size:
             tile_size = np.flip(self.tile_shape)
-        range0 = np.flip(indices)
-        range1 = np.min([range0 + tile_size, self.size], 0)
+        range0 = indices
+        range1 = np.min([np.array(indices) + np.array(tile_size), self.size], 0)
         shape = list(reversed(range1 - range0))
         tile = np.fromfunction(self.calc_color, shape, dtype=int, range0=range0)
         # apply noise to each channel separately
@@ -77,14 +77,14 @@ class GeneratorSource(OmeSource):
     def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
                        c: int = None, z: int = None, t: int = None) -> np.ndarray:
         # ignore c
-        indices = [y0, x0]
-        tile_size = [y1 - y0, x1 - x0]
+        indices = [x0, y0]
+        tile_size = [x1 - x0, y1 - y0]
         if z:
-            indices = [0] + indices
-            tile_size = [1] + tile_size
+            indices += [0]
+            tile_size += [1]
         if t:
-            indices = [0] + indices
-            tile_size = [1] + tile_size
+            indices += [0]
+            tile_size += [1]
         data = self.get_tile(indices, tile_size)
         if not z:
             data = np.expand_dims(data, 0)
@@ -95,7 +95,7 @@ class GeneratorSource(OmeSource):
 
 
 if __name__ == '__main__':
-    # (tile) size in x,y(,z)
+    # (tile) size in x,y(,z,...)
     size = 256, 256, 256
     tile_size = 256, 256, 1
     dtype = np.uint8

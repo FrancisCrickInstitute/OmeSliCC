@@ -353,6 +353,7 @@ class OmeSource:
         while len(chunk_shape) < 5:
             chunk_shape = [1] + chunk_shape
         chunks = np.ceil(np.flip(self.get_size_xyzct()) / chunk_shape).astype(int)
+        w, h = self.get_size()
 
         delayed_reader = dask.delayed(self.asarray)
         dtype = self.get_pixel_type()
@@ -365,18 +366,24 @@ class OmeSource:
                 for yi in range(chunks[3]):
                     dask_tiles = []
                     for xi in range(chunks[4]):
-                        x0, x1 = xi * chunk_shape[4], (xi + 1) * chunk_shape[4]
-                        y0, y1 = yi * chunk_shape[3], (yi + 1) * chunk_shape[3]
-                        z = zi * chunk_shape[2]
-                        t = ti * chunk_shape[0]
-                        dask_tile = da.from_delayed(delayed_reader(x0, y0, x1, y1, z=z, t=t), shape=chunk_shape,
+                        shape = list(chunk_shape).copy()
+                        x0, x1 = xi * shape[4], (xi + 1) * shape[4]
+                        y0, y1 = yi * shape[3], (yi + 1) * shape[3]
+                        if x1 > w:
+                            x1 = w
+                            shape[4] = w - x0
+                        if y1 > h:
+                            y1 = h
+                            shape[3] = h - y0
+                        z = zi * shape[2]
+                        t = ti * shape[0]
+                        dask_tile = da.from_delayed(delayed_reader(x0, y0, x1, y1, z=z, t=t), shape=shape,
                                                     dtype=dtype)
                         dask_tiles.append(dask_tile)
                     dask_rows.append(da.concatenate(dask_tiles, axis=4))
                 dask_planes.append(da.concatenate(dask_rows, axis=3))
             dask_times.append(da.concatenate(dask_planes, axis=1))
         dask_data = da.concatenate(dask_times, axis=0)
-
         return dask_data
 
     def clone_empty(self) -> np.ndarray:
