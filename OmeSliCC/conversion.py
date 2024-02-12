@@ -204,9 +204,6 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
     compression = output_params.get('compression')
     combine_rgb = output_params.get('combine_rgb', True)
 
-    # move color channels to end:
-    image, dimension_order = source.get_yxc_image(image)
-
     npyramid_add = output_params.get('npyramid_add', 0)
     pyramid_downsample = output_params.get('pyramid_downsample')
     if npyramid_add > 0:
@@ -225,7 +222,7 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
     resolution, resolution_unit = get_resolution_from_pixel_size(source.get_pixel_size())
 
     save_tiff(output_filename, image, metadata=metadata, xml_metadata=xml_metadata,
-              dimension_order=dimension_order,
+              dimension_order=source.get_dimension_order(),
               resolution=resolution, resolution_unit=resolution_unit, tile_size=tile_size,
               compression=compression, combine_rgb=combine_rgb, pyramid_sizes_add=pyramid_sizes_add)
 
@@ -241,8 +238,8 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     nchannels = 1
     if 'c' in dimension_order:
         c_index = dimension_order.index('c')
-        if c_index < image.ndim:
-            nchannels = image.shape[c_index]
+        nchannels = image.shape[c_index]
+
     image = ensure_unsigned_image(image)
 
     if tile_size is not None and isinstance(tile_size, int):
@@ -251,10 +248,11 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     split_channels = not (combine_rgb and nchannels == 3)
     if nchannels == 3 and not split_channels:
         photometric = PHOTOMETRIC.RGB
+        c_index = dimension_order.index('c')
+        image = np.moveaxis(image, c_index, -1)
+        dimension_order = dimension_order.replace('c', '') + 'c'
     else:
         photometric = PHOTOMETRIC.MINISBLACK
-        image = np.moveaxis(image, -1, 0)
-        dimension_order = 'cyx'
 
     if resolution is not None:
         # tifffile only supports x/y pyramid resolution

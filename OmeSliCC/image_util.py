@@ -109,6 +109,22 @@ def redimension_data(data, old_order, new_order, **kwargs):
     return new_data
 
 
+def get_numpy_slicing(dimension_order, **slicing):
+    slices = []
+    for axis in dimension_order:
+        index = slicing.get(axis)
+        index0 = slicing.get(axis + '0')
+        index1 = slicing.get(axis + '1')
+        if index0 and index1:
+            slice1 = slice(int(index0), int(index1))
+        elif index is not None:
+            slice1 = int(index)
+        else:
+            slice1 = slice(None)
+        slices.append(slice1)
+    return tuple(slices)
+
+
 def get_image_quantile(image: np.ndarray, quantile: float, axis=None) -> float:
     value = np.quantile(image, quantile, axis=axis).astype(image.dtype)
     return value
@@ -194,6 +210,7 @@ def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 
     shape = image.shape
     x_index = dimension_order.index('x')
     y_index = dimension_order.index('y')
+    c_is_at_end = dimension_order.endswith('c')
     size = shape[x_index], shape[y_index]
     if np.mean(np.divide(size, target_size0)) < 1:
         interpolation = cv.INTER_CUBIC
@@ -209,21 +226,22 @@ def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 
         new_image = cv.resize(np.asarray(new_image), target_size, interpolation=interpolation)
         new_image = np.moveaxis(new_image, -1, 0)
     else:
-        if 'z' in dimension_order:
-            z_index = dimension_order.index('z')
-        if 't' in dimension_order:
-            t_index = dimension_order.index('t')
+        ts = image.shape[dimension_order.index('t')] if 't' in dimension_order else 1
+        zs = image.shape[dimension_order.index('z')] if 'z' in dimension_order else 1
         target_shape = list(image.shape).copy()
         target_shape[x_index] = target_size[0]
         target_shape[y_index] = target_size[1]
         new_image = np.zeros(target_shape, dtype=image.dtype)
-        for t in range(image.shape[t_index]):
-            for z in range(image.shape[z_index]):
-                image1 = image[t, :, z, ...]
-                image1 = np.moveaxis(image1, 0, -1)
+        for t in range(ts):
+            for z in range(zs):
+                slices = get_numpy_slicing(dimension_order, z=z, t=t)
+                image1 = image[slices]
+                if not c_is_at_end:
+                    image1 = np.moveaxis(image1, 0, -1)
                 new_image1 = np.atleast_3d(cv.resize(np.asarray(image1), target_size, interpolation=interpolation))
-                new_image1 = np.moveaxis(new_image1, -1, 0)
-                new_image[t, :, z, ...] = new_image1
+                if not c_is_at_end:
+                    new_image1 = np.moveaxis(new_image1, -1, 0)
+                new_image[slices] = new_image1
     new_image = convert_image_sign_type(new_image, dtype0)
     return new_image
 
@@ -263,6 +281,9 @@ def create_compression_filter(compression: list) -> tuple:
         elif '2k' in compression_type or '2000' in compression_type:
             from imagecodecs.numcodecs import Jpeg2k
             compression_filters = [Jpeg2k(level=level)]
+        elif 'jpegls' in compression_type:
+            from imagecodecs.numcodecs import Jpegls
+            compression_filters = [Jpegls(level=level)]
         elif 'jpegxr' in compression_type:
             from imagecodecs.numcodecs import Jpegxr
             compression_filters = [Jpegxr(level=level)]

@@ -36,7 +36,7 @@ def run_actions(params: dict):
         omero.init()
         source_refs = omero.get_annotation_image_ids()
         #dask.config.set(**{'array.slicing.split_large_chunks': False})  # Silence large size warning
-        #dask.config.set(scheduler='synchronous')
+        #dask.config.set(scheduler='synchronous')   # disable multi-threading for Omero / Dask
     elif isinstance(source_ref, list):
         # list of filenames
         source_refs = source_ref
@@ -110,7 +110,7 @@ if __name__ == '__main__':
                         handlers=[logging.StreamHandler(), logging.FileHandler(log_params['filename'], encoding='utf-8')],
                         encoding='utf-8')
 
-    for module in ['omero']:
+    for module in ['ome_zarr', 'omero']:
         logging.getLogger(module).setLevel(logging.WARNING)
 
     run_actions(params)

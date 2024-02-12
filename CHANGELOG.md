@@ -1,3 +1,8 @@
+#### Version 0.6.8
+- Simplified slicing in source classes
+- Bug fixes in image resizing and dimension orders
+- Pinned some versions in conda envs 
+
 #### Version 0.6.7
 - Fixed bugs in asdask() and GeneratorSource
 - Pinned some versions in pip requirements 

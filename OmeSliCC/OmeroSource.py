@@ -6,6 +6,7 @@ import omero.gateway
 from OmeSliCC import Omero
 from OmeSliCC.OmeSource import OmeSource
 from OmeSliCC.color_conversion import *
+from OmeSliCC.image_util import redimension_data
 from OmeSliCC.omero_metadata import create_ome_metadata_from_omero
 from OmeSliCC.util import *
 
@@ -40,8 +41,6 @@ class OmeroSource(OmeSource):
         zsize = get_default(image_object.getSizeZ(), 1)
         nchannels = np.sum([channel.getLogicalChannel().getSamplesPerPixel() for channel in image_object.getChannels()])
         pixel_type = np.dtype(image_object.getPixelsType())
-        # currently only support/output yxc - allow default value
-        #self.dimension_order = image_object.getPrimaryPixels().getDimensionOrder().getValue().lower()
 
         self.pixels_store = self.omero.create_pixels_store(image_object)
         for resolution in self.pixels_store.getResolutionDescriptions():
@@ -72,6 +71,9 @@ class OmeroSource(OmeSource):
                             target_pixel_size=target_pixel_size,
                             source_info_required=source_info_required)
 
+        # currently only support/output yxc
+        self.dimension_order = 'yxc'
+
     def _find_metadata(self):
         image_object = self.image_object
         self.source_pixel_size = [(get_default(image_object.getPixelSizeX(), 0), 'µm'),
@@ -98,9 +100,10 @@ class OmeroSource(OmeSource):
         image = np.array(PIL.Image.open(image_stream))
         return image
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
-                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
-        xyzct = list(self.sizes_xyzct[level]).copy()
+    def _asarray_level(self, level: int, **slicing) -> np.ndarray:
+        x0, x1 = slicing.get('x0', 0), slicing.get('x1', -1)
+        y0, y1 = slicing.get('y0', 0), slicing.get('y1', -1)
+        c, t, z = slicing.get('c'), slicing.get('t'), slicing.get('z')
         if x1 < 0 or y1 < 0:
             x1, y1 = self.sizes[level]
         if t is None:
@@ -110,8 +113,6 @@ class OmeroSource(OmeSource):
 
         pixels_store = self.pixels_store
         w, h = x1 - x0, y1 - y0
-        xyzct[0] = w
-        xyzct[1] = h
         if c is not None:
             channels = [c]
         else:
@@ -124,10 +125,8 @@ class OmeroSource(OmeSource):
             tile = np.frombuffer(tile0, dtype=image.dtype).reshape(h, w)
             image[..., c] = tile
 
-        image = np.expand_dims(image, 0)
-        image = np.moveaxis(image, -1, 0)
-        image = np.expand_dims(image, 0)
-        return image
+        out = redimension_data(image, self.dimension_order, self.get_dimension_order())
+        return out
 
     def close(self):
         self.pixels_store.close()

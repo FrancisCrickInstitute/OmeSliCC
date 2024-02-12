@@ -4,6 +4,7 @@ from ome_zarr.reader import Reader
 
 from OmeSliCC.OmeSource import OmeSource
 from OmeSliCC.color_conversion import hexrgb_to_rgba, int_to_rgba
+from OmeSliCC.image_util import get_numpy_slicing, redimension_data
 
 
 class OmeZarrSource(OmeSource):
@@ -104,32 +105,9 @@ class OmeZarrSource(OmeSource):
     def _get_output_dask(self):
         return self.levels[0]
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
-                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
-        if x1 < 0 or y1 < 0:
-            x1, y1 = self.sizes[level]
-        xyzct = self.sizes_xyzct[level]
+    def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         image = self.levels[level]
         dimension_order = self.dimension_order
-        if 'z' not in dimension_order:
-            image = np.expand_dims(image, 0)
-        if dimension_order.endswith('c'):
-            image = np.moveaxis(image, -1, 1)
-        elif 'c' not in dimension_order:
-            image = np.expand_dims(image, 0)
-        if 't' not in dimension_order:
-            image = np.expand_dims(image, 0)
-        if t is not None:
-            t0, t1 = t, t + 1
-        else:
-            t0, t1 = 0, xyzct[4]
-        if c is not None:
-            c0, c1 = c, c + 1
-        else:
-            c0, c1 = 0, xyzct[3]
-        if z is not None:
-            z0, z1 = z, z + 1
-        else:
-            z0, z1 = 0, xyzct[2]
-        image = image[t0:t1, c0:c1, z0:z1, y0:y1, x0:x1]
-        return np.asarray(image)
+        slicing = get_numpy_slicing(dimension_order, **slicing)
+        out = redimension_data(image[slicing], dimension_order, self.get_dimension_order())
+        return out

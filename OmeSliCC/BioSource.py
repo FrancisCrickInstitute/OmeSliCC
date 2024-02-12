@@ -5,6 +5,7 @@ from bioformats.formatreader import ImageReader
 
 from OmeSliCC import XmlDict
 from OmeSliCC.OmeSource import OmeSource
+from OmeSliCC.image_util import redimension_data
 
 
 class BioSource(OmeSource):
@@ -52,11 +53,17 @@ class BioSource(OmeSource):
                             target_pixel_size=target_pixel_size,
                             source_info_required=source_info_required)
 
+        self.dimension_order = 'yx'
+        if self.get_nchannels() > 1:
+            self.dimension_order += 'c'
+
     def _find_metadata(self):
         self._get_ome_metadate()
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
-                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
+    def _asarray_level(self, level: int, **slicing) -> np.ndarray:
+        x0, x1 = slicing.get('x0', 0), slicing.get('x1', -1)
+        y0, y1 = slicing.get('y0', 0), slicing.get('y1', -1)
+        c, t, z = slicing.get('c'), slicing.get('t'), slicing.get('z')
         if x1 < 0 or y1 < 0:
             x1, y1 = self.sizes[level]
         if t is None:
@@ -64,16 +71,10 @@ class BioSource(OmeSource):
         if z is None:
             z = 0
         xywh = (x0, y0, x1 - x0, y1 - y0)
-        image = self.reader.read(series=self.indexes[level], XYWH=xywh, rescale=False,      # don't 'rescale' to 0-1!
-                                 c=c, z=z, t=t)
-        ndim0 = image.ndim
-        image = np.expand_dims(image, 0)
-        if ndim0 == 2:
-            image = np.expand_dims(image, 0)
-        else:
-            image = np.moveaxis(image, -1, 0)
-        image = np.expand_dims(image, 0)
-        return image
+        # don't 'rescale' to 0-1!
+        image = self.reader.read(series=self.indexes[level], XYWH=xywh, c=c, z=z, t=t, rescale=False)
+        out = redimension_data(image, self.dimension_order, self.get_dimension_order())
+        return out
 
     def close(self):
         self.reader.close()

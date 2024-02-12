@@ -203,21 +203,11 @@ class TiffSource(OmeSource):
             del array
         self.arrays = []
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
-                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
+    def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         if self.decompressed:
-            array = self.arrays[level]
-            return array[y0:y1, x0:x1]
-
-        data = da.from_zarr(self.tiff.aszarr(level=level))
-        x0, x1, y0, y1 = np.round([x0, x1, y0, y1]).astype(int)
-        slices = []
-        for axis in self.dimension_order:
-            if axis == 'x':
-                slices.append(slice(x0, x1))
-            elif axis == 'y':
-                slices.append(slice(y0, y1))
-            else:
-                slices.append(slice(None))
-        out = redimension_data(data[tuple(slices)], self.dimension_order, self.get_dimension_order())
+            data = self.arrays[level]
+        else:
+            data = da.from_zarr(self.tiff.aszarr(level=level))
+        slices = get_numpy_slicing(self.dimension_order, **slicing)
+        out = redimension_data(data[slices], self.dimension_order, self.get_dimension_order())
         return out

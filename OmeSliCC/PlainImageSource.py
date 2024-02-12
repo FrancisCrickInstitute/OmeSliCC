@@ -93,11 +93,7 @@ class PlainImageSource(OmeSource):
         self.arrays = []
         self.loaded = False
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
-                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
-        if x1 < 0 or y1 < 0:
-            x1, y1 = self.sizes[level]
-
+    def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         nframes = self.image.n_frames
         if self.loaded:
             image = self.arrays[level]
@@ -110,12 +106,7 @@ class PlainImageSource(OmeSource):
         else:
             image = np.array(self.image)
 
-        if 'z' not in self.dimension_order:
-            image = np.expand_dims(image, 0)    # add Z
-        if 'c' in self.dimension_order:
-            image = np.moveaxis(image, -1, 0)   # move C to front
-        else:
-            image = np.expand_dims(image, 0)    # add C
-        image = np.expand_dims(image, 0)    # add T
-        image = image[..., y0:y1, x0:x1]
-        return image
+        dimension_order = self.dimension_order
+        slicing = get_numpy_slicing(dimension_order, **slicing)
+        out = redimension_data(image[slicing], dimension_order, self.get_dimension_order())
+        return out

@@ -311,9 +311,11 @@ class OmeSource:
 
         return new_image
 
-    def asarray(self, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
-                c: int = None, z: int = None, t: int = None,
-                pixel_size: list = []) -> np.ndarray:
+    def asarray(self, pixel_size: list = [], **slicing) -> np.ndarray:
+        # expects x0, x1, y0, y1, ...
+        x0, x1 = slicing.get('x0', 0), slicing.get('x1', -1)
+        y0, y1 = slicing.get('y0', 0), slicing.get('y1', -1)
+        c, t, z = slicing.get('c'), slicing.get('t'), slicing.get('z')
         # allow custom pixel size
         if pixel_size:
             level, factor, _ = get_best_level_factor(self, pixel_size)
@@ -329,7 +331,7 @@ class OmeSource:
             ox1, oy1 = np.round(np.divide([x1, y1], factor)).astype(int)
         else:
             ox0, oy0, ox1, oy1 = x0, y0, x1, y1
-        image0 = self._asarray_level(level, ox0, oy0, ox1, oy1, c, z, t)
+        image0 = self._asarray_level(level, x0=ox0, y0=oy0, x1=ox1, y1=oy1, c=c, z=z, t=t)
         if np.mean(factor) != 1:
             size1 = x1 - x0, y1 - y0
             image = image_resize(image0, size1, dimension_order=self.get_dimension_order())
@@ -337,13 +339,11 @@ class OmeSource:
             image = image0
         return image
 
-    def asarray_um(self, x_um: float, y_um: float, w_um: float, h_um: float,
-                   c: int = None, z: int = None, t: int = None):
+    def asarray_um(self, **slicing):
         pixel_size = self.get_pixel_size_micrometer()[:2]
-        x0, y0 = np.divide([x_um, y_um], pixel_size)
-        w, h = np.divide([w_um, h_um], pixel_size)
-        x1, y1 = x0 + w, y0 + h
-        return self.asarray(x0, y0, x1, y1, c, z, t)
+        slicing['x0'], slicing['x1'] = np.divide([slicing.get('x0'), slicing.get('x1')], pixel_size[0])
+        slicing['y0'], slicing['y1'] = np.divide([slicing.get('y0'), slicing.get('y1')], pixel_size[1])
+        return self.asarray(**slicing)
 
     def asdask(self, chunk_size: tuple) -> da.Array:
         chunk_shape = list(np.flip(chunk_size))
@@ -398,7 +398,7 @@ class OmeSource:
                 x0, y0 = chunkx * chunk_size[0], chunky * chunk_size[1]
                 x1, y1 = min((chunkx + 1) * chunk_size[0], w), min((chunky + 1) * chunk_size[1], h)
                 indices = 0, 0, 0, y0, x0
-                yield indices, self.asarray(x0, y0, x1, y1)
+                yield indices, self.asarray(x0=x0, x1=x1, y0=y0, y1=y1)
 
     def get_metadata(self) -> dict:
         return self.metadata
@@ -409,8 +409,7 @@ class OmeSource:
     def _find_metadata(self):
         raise NotImplementedError('Implement method in subclass')
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
-                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
+    def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         raise NotImplementedError('Implement method in subclass')
 
     def close(self):

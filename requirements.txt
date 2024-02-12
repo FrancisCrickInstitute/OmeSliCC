@@ -7,6 +7,7 @@ imagecodecs>=2023.3.16
 numcodecs
 tifffile>=2023.9.26
 zarr
+ome-zarr
 aiohttp
 omero-py
 rsa
