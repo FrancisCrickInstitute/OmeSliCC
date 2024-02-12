@@ -26,7 +26,7 @@ def simple_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsa
 
 def open_zarr_source(filename):
     source = OmeZarrSource(filename)
-    image = source._asarray_level(0, 15000, 15000, 16000, 16000)
+    image = source._asarray_level(0, x0=15000, x1=16000, y0=15000, y1=16000)
     show_image(image)
     image = source._asarray_level(4)
     show_image(image)

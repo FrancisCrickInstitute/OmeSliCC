@@ -115,7 +115,7 @@ def get_numpy_slicing(dimension_order, **slicing):
         index = slicing.get(axis)
         index0 = slicing.get(axis + '0')
         index1 = slicing.get(axis + '1')
-        if index0 and index1:
+        if index0 is not None and index1 is not None:
             slice1 = slice(int(index0), int(index1))
         elif index is not None:
             slice1 = int(index)

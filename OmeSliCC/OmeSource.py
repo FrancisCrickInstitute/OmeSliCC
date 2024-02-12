@@ -244,14 +244,6 @@ class OmeSource:
 
     def get_yxc_image(self, image, t=None, z=None, c=None):
         new_dimension_order = self.get_dimension_order()
-        xyzct = self.get_size_xyzct()
-        if xyzct[2] == 1:
-            z = 0
-        if xyzct[-2] == 1:
-            c = 0
-        if xyzct[-1] == 1:
-            t = 0
-
         if z is not None:
             image = image[:, :, z, ...]
             new_dimension_order = new_dimension_order.replace('z', '')
@@ -330,8 +322,8 @@ class OmeSource:
             ox0, oy0 = np.round(np.divide([x0, y0], factor)).astype(int)
             ox1, oy1 = np.round(np.divide([x1, y1], factor)).astype(int)
         else:
-            ox0, oy0, ox1, oy1 = x0, y0, x1, y1
-        image0 = self._asarray_level(level, x0=ox0, y0=oy0, x1=ox1, y1=oy1, c=c, z=z, t=t)
+            ox0, ox1, oy0, oy1 = x0, x1, y0, y1
+        image0 = self._asarray_level(level=level, x0=ox0, x1=ox1, y0=oy0, y1=oy1, c=c, z=z, t=t)
         if np.mean(factor) != 1:
             size1 = x1 - x0, y1 - y0
             image = image_resize(image0, size1, dimension_order=self.get_dimension_order())
@@ -364,7 +356,7 @@ class OmeSource:
             for zi in range(chunks[2]):
                 dask_rows = []
                 for yi in range(chunks[3]):
-                    dask_tiles = []
+                    dask_row = []
                     for xi in range(chunks[4]):
                         shape = list(chunk_shape).copy()
                         x0, x1 = xi * shape[4], (xi + 1) * shape[4]
@@ -377,12 +369,12 @@ class OmeSource:
                             shape[3] = h - y0
                         z = zi * shape[2]
                         t = ti * shape[0]
-                        dask_tile = da.from_delayed(delayed_reader(x0, y0, x1, y1, z=z, t=t), shape=shape,
-                                                    dtype=dtype)
-                        dask_tiles.append(dask_tile)
-                    dask_rows.append(da.concatenate(dask_tiles, axis=4))
+                        dask_tile = da.from_delayed(delayed_reader(x0=x0, x1=x1, y0=y0, y1=y1, z=z, t=t),
+                                                    shape=shape, dtype=dtype)
+                        dask_row.append(dask_tile)
+                    dask_rows.append(da.concatenate(dask_row, axis=4))
                 dask_planes.append(da.concatenate(dask_rows, axis=3))
-            dask_times.append(da.concatenate(dask_planes, axis=1))
+            dask_times.append(da.concatenate(dask_planes, axis=2))
         dask_data = da.concatenate(dask_times, axis=0)
         return dask_data
 

@@ -208,6 +208,8 @@ class TiffSource(OmeSource):
             data = self.arrays[level]
         else:
             data = da.from_zarr(self.tiff.aszarr(level=level))
+            if data.chunksize == data.shape:
+                data = data.rechunk()
         slices = get_numpy_slicing(self.dimension_order, **slicing)
         out = redimension_data(data[slices], self.dimension_order, self.get_dimension_order())
         return out

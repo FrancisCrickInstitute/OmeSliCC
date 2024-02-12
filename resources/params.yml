@@ -46,9 +46,12 @@ output:
   pyramid_downsample: 2
   # thumbnail_size - can be a factor between 0 and 1 or maximum pixel size (single value)
   thumbnail_size: 1000
+  # label reader output
   csv: resources/csv/labels.csv
+  # extra channel metadata (e.g. used for combine operation)
+  #extra_channel_metadata: [{'label':label1, 'color':[1, 1, 1, 1]}, {'label':label2, 'color':[0, 1, 0, 1]}]
 
-# actions can be: info, thumbnail, convert
+# actions can be: info, thumbnail, convert, combine
 actions: [convert]
 
 # Omero credentials

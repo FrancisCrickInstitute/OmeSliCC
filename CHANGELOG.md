@@ -1,3 +1,8 @@
+#### Version 0.6.9
+- Combine action now working: combine separate channel images into single multichannel image(s)
+- Multi-dimensional image generator now working (GeneratorSource)
+- Fixed bugs in image conversion, general dask generation, and thumbnails for non-RGB multi-channel images
+
 #### Version 0.6.8
 - Simplified slicing in source classes
 - Bug fixes in image resizing and dimension orders

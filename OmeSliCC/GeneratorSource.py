@@ -2,6 +2,8 @@ import numpy as np
 
 from OmeSliCC.OmeSource import OmeSource
 from OmeSliCC.OmeZarr import OmeZarr
+from OmeSliCC.conversion import save_tiff
+from OmeSliCC.image_util import get_numpy_slicing
 
 
 class GeneratorSource(OmeSource):
@@ -74,22 +76,23 @@ class GeneratorSource(OmeSource):
         tile = tile.astype(self.dtype)
         return tile
 
-    def _asarray_level(self, level: int, x0: float = 0, y0: float = 0, x1: float = -1, y1: float = -1,
-                       c: int = None, z: int = None, t: int = None) -> np.ndarray:
-        # ignore c
-        indices = [x0, y0]
-        tile_size = [x1 - x0, y1 - y0]
-        if z:
-            indices += [0]
-            tile_size += [1]
-        if t:
-            indices += [0]
-            tile_size += [1]
+    def _asarray_level(self, level: int = None, **slicing) -> np.ndarray:
+        # ignore level and c
+        slices = get_numpy_slicing('xyzt', **slicing)
+        indices, tile_size = [], []
+        for slice1, axis_size in zip(slices, self.size):
+            if axis_size > 0:
+                if isinstance(slice1, slice):
+                    indices.append(slice1.start)
+                    tile_size.append(slice1.stop - slice1.start)
+                else:
+                    indices.append(slice1)
+                    tile_size.append(1)
         data = self.get_tile(indices, tile_size)
-        if not z:
+        if data.ndim < 4:
             data = np.expand_dims(data, 0)
         data = np.moveaxis(data, -1, 0)
-        if not t:
+        if data.ndim < 5:
             data = np.expand_dims(data, 0)
         return data
 
@@ -99,18 +102,21 @@ if __name__ == '__main__':
     size = 256, 256, 256
     tile_size = 256, 256, 1
     dtype = np.uint8
-    pixel_size = ['1um']
+    pixel_size = [(1, 'um')]
     seed = 0
 
     shape = list(reversed(size)) + [3]
     tile_shape = list(reversed(tile_size[:2]))
 
     print('init')
-    generator = GeneratorSource(size, tile_size, dtype, pixel_size, seed)
+    source = GeneratorSource(size, tile_size, dtype, pixel_size, seed)
     print('init done')
 
-    #save_tiff('D:/slides/test.ome.tiff', generator.asarray(), shape, dtype, tile_size=tile_shape)
-    zarr = OmeZarr('D:/slides/test.ome.zarr')
-    zarr.write(generator.asarray(), generator, tile_size=tile_size, npyramid_add=3, pyramid_downsample=2)
+    data = source.asdask(tile_size)
+    print('create data done')
+    save_tiff('D:/slides/test.ome.tiff', data, dimension_order=source.get_dimension_order(),
+              tile_size=tile_shape, compression='LZW')
+    #zarr = OmeZarr('D:/slides/test.ome.zarr')
+    #zarr.write(data, source, tile_size=tile_size, npyramid_add=3, pyramid_downsample=2)
 
     print('done')

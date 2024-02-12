@@ -1,8 +1,9 @@
 # https://pyquestions.com/how-to-save-a-very-large-numpy-array-as-an-image-loading-as-little-as-possible-into-memory
 
 
-import os
+import logging
 import numpy as np
+import os
 from PIL import Image
 from tifffile import TiffWriter, TIFF, PHOTOMETRIC
 
@@ -76,9 +77,9 @@ def extract_thumbnail(source: OmeSource, params: dict):
     if nchannels not in [1, 3]:
         for channeli in range(nchannels):
             output_filename = os.path.join(output_folder, f'{get_filetitle(source_ref)}_channel{channeli}_thumb.tiff')
-            save_tiff(output_filename, thumb[..., channeli])
+            save_tiff(output_filename, thumb[..., channeli], dimension_order='yx')
     else:
-        save_tiff(output_filename, thumb)
+        save_tiff(output_filename, thumb, dimension_order='yxc')
 
 
 def convert_image(source: OmeSource, params: dict, load_chunked: bool = False):
@@ -111,26 +112,34 @@ def convert_image(source: OmeSource, params: dict, load_chunked: bool = False):
 def combine_images(sources: list[OmeSource], params: dict):
     source0 = sources[0]
     source_ref = source0.source_reference
-    nchannels = len(sources)
-    input_channels = ensure_list(params['input'].get('channels', []))
     output_params = params['output']
     output_folder = output_params['folder']
     output_format = output_params['format']
+
+    images = [get_source_image(source) for source in sources]
+    image = da.concatenate(images, axis=1)
+
+    channels = output_params.get('extra_channel_metadata', [])
+    if not channels:
+        channels = []
+        for source in sources:
+            for channeli, channel in enumerate(source.get_channels()):
+                label = channel.get('label', '')
+                if label == '' or label in [standard_type.name.lower() for standard_type in TIFF.PHOTOMETRIC]:
+                    channel = channel.copy()
+                    label = get_filetitle(source.source_reference).rstrip('.ome')
+                    if len(source.get_channels()) > 1:
+                        label += f'#{channeli}'
+                    channel['label'] = label
+                channels.append(channel)
+    nchannels = len(channels)
+
+    if image.shape[1] != nchannels:
+        logging.warning('#Comined image channels does not match #data channels')
+
     ome = ('ome' in output_format)
-    image = np.zeros(list(np.flip(source0.get_size())) + [nchannels], dtype=source0.get_pixel_type())
-    channels = []
-    for c, source in enumerate(sources):
-        image1 = get_source_image(source)
-        image[..., c] = image1
-        channel = source.get_channels()[0]
-        name = channel.get('@Name', '')
-        if name == '' or name in [standard_type.name.lower() for standard_type in TIFF.PHOTOMETRIC]:
-            if len(input_channels) > 0:
-                channel = channel.copy()
-                channel['@Name'] = input_channels[c]
-        channels.append(channel)
     filetitle = get_filetitle(source_ref).rstrip('.ome')
-    output_filename = str(os.path.join(output_folder, filetitle + '.' + output_format))
+    output_filename = str(os.path.join(output_folder, filetitle + '_combined.' + output_format))
     if 'zar' in output_format:
         new_source = OmeZarrSource(source_ref, source0.get_pixel_size())
         new_source.channels = channels
@@ -215,7 +224,6 @@ def save_image_as_tiff(source: OmeSource, image: np.ndarray, output_filename: st
         metadata = None
         xml_metadata = source.create_xml_metadata(output_filename, combine_rgb=combine_rgb,
                                                   pyramid_sizes_add=pyramid_sizes_add)
-        #print(xml_metadata)
     else:
         metadata = source.get_metadata()
         xml_metadata = None
@@ -231,6 +239,7 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
               dimension_order: str = 'yxc',
               resolution: tuple = None, resolution_unit: str = None, tile_size: tuple = None, compression: [] = None,
               combine_rgb=True, pyramid_sizes_add: list = []):
+    image = np.asarray(image)   # pre-computing is way faster than dask saving/scaling
     x_index = dimension_order.index('x')
     y_index = dimension_order.index('y')
     size = image.shape[x_index], image.shape[y_index]
@@ -239,6 +248,8 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     if 'c' in dimension_order:
         c_index = dimension_order.index('c')
         nchannels = image.shape[c_index]
+    else:
+        c_index = -1
 
     image = ensure_unsigned_image(image)
 
@@ -248,7 +259,6 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     split_channels = not (combine_rgb and nchannels == 3)
     if nchannels == 3 and not split_channels:
         photometric = PHOTOMETRIC.RGB
-        c_index = dimension_order.index('c')
         image = np.moveaxis(image, c_index, -1)
         dimension_order = dimension_order.replace('c', '') + 'c'
     else:

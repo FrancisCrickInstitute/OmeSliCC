@@ -39,6 +39,7 @@ The main sections are:
     - info: show input file information
 	- thumbnail: extract image thumbnail
 	- convert: convert to desired image output
+    - combine: combine separate channel images into multi-channel image(s)
 
 To encode credentials for Omero access:
 ```
