@@ -102,9 +102,6 @@ class OmeZarrSource(OmeSource):
     def get_source_dask(self):
         return self.levels
 
-    def _get_output_dask(self):
-        return self.levels[0]
-
     def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         image = self.levels[level]
         dimension_order = self.dimension_order

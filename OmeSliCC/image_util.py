@@ -219,7 +219,7 @@ def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 
     dtype0 = image.dtype
     image = ensure_unsigned_image(image)
     target_size = tuple(np.maximum(np.round(target_size0).astype(int), 1))
-    if dimension_order.startswith('yx'):
+    if dimension_order in ['yxc', 'yx']:
         new_image = cv.resize(np.asarray(image), target_size, interpolation=interpolation)
     elif dimension_order == 'cyx':
         new_image = np.moveaxis(image, 0, -1)

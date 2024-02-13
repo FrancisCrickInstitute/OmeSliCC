@@ -1,4 +1,5 @@
-import dask.array
+import dask
+import dask.array as da
 import logging
 import numpy as np
 
