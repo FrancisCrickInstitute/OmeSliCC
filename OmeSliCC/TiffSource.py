@@ -54,13 +54,12 @@ class TiffSource(OmeSource):
             self.metadata = tiff.imagej_metadata
         elif self.first_page.description:
             self.metadata = desc_to_dict(self.first_page.description)
-        else:
-            self.metadata = tags_to_dict(self.first_page.tags)
-            if 'FEI_TITAN' in self.metadata:
-                metadata = tifffile.xml2dict(self.metadata.pop('FEI_TITAN'))
-                if 'FeiImage' in metadata:
-                    metadata = metadata['FeiImage']
-                self.metadata.update(metadata)
+        self.tags = tags_to_dict(self.first_page.tags)
+        if 'FEI_TITAN' in self.tags:
+            metadata = tifffile.xml2dict(self.tags.pop('FEI_TITAN'))
+            if 'FeiImage' in metadata:
+                metadata = metadata['FeiImage']
+            self.metadata.update(metadata)
 
         if tiff.series:
             self.dimension_order = tiff.series[0].axes
@@ -120,8 +119,11 @@ class TiffSource(OmeSource):
 
         # from imageJ metadata
         pixel_size_z = None
-        if len(pixel_size) == 0 and self.metadata is not None and 'spacing' in self.metadata:
+        if self.metadata is not None and 'unit' in self.metadata:
             pixel_size_unit = self.metadata.get('unit', '')
+            if pixel_size_unit == 'micron':
+                pixel_size_unit = self.default_physical_unit
+        if len(pixel_size) == 0 and self.metadata is not None and 'spacing' in self.metadata:
             pixel_size_z = (self.metadata['spacing'], pixel_size_unit)
         # from description
         if len(pixel_size) < 2 and 'pixelWidth' in self.metadata:
@@ -130,26 +132,27 @@ class TiffSource(OmeSource):
             pixel_info = self.metadata['pixelHeight']
             pixel_size.append((pixel_info['value'], pixel_info['unit']))
         if len(pixel_size) < 2 and 'MPP' in self.metadata:
-            pixel_size.append((self.metadata['MPP'], 'µm'))
-            pixel_size.append((self.metadata['MPP'], 'µm'))
+            pixel_size.append((self.metadata['MPP'], self.default_physical_unit))
+            pixel_size.append((self.metadata['MPP'], self.default_physical_unit))
         # from page TAGS
         if len(pixel_size) < 2:
             if pixel_size_unit == '':
-                pixel_size_unit = self.metadata.get('ResolutionUnit', '')
+                pixel_size_unit = self.tags.get('ResolutionUnit', '')
                 if isinstance(pixel_size_unit, Enum):
                     pixel_size_unit = pixel_size_unit.name
                 pixel_size_unit = pixel_size_unit.lower()
                 if pixel_size_unit == 'none':
                     pixel_size_unit = ''
-            res0 = convert_rational_value(self.metadata.get('XResolution'))
+            res0 = convert_rational_value(self.tags.get('XResolution'))
             if res0 is not None and res0 != 0:
                 pixel_size.append((1 / res0, pixel_size_unit))
-            res0 = convert_rational_value(self.metadata.get('YResolution'))
+            res0 = convert_rational_value(self.tags.get('YResolution'))
             if res0 is not None and res0 != 0:
                 pixel_size.append((1 / res0, pixel_size_unit))
 
-        xpos = convert_rational_value(self.metadata.get('XPosition'))
-        ypos = convert_rational_value(self.metadata.get('YPosition'))
+        position = []
+        xpos = convert_rational_value(self.tags.get('XPosition'))
+        ypos = convert_rational_value(self.tags.get('YPosition'))
         if xpos is not None and ypos is not None:
             position = [(xpos, pixel_size_unit), (ypos, pixel_size_unit)]
 
@@ -168,6 +171,7 @@ class TiffSource(OmeSource):
         self.source_pixel_size = pixel_size
         self.source_mag = mag
         self.channels = channels
+        self.position = position
 
     def get_source_dask(self):
         return [da.from_zarr(self.tiff.aszarr(level=level)) for level in range(len(self.sizes))]

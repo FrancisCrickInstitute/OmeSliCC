@@ -127,6 +127,7 @@ def create_ome_metadata(source: OmeSource,
         if len(pixel_size) > 2 and pixel_size[2][1] != '':
             pixels['@PhysicalSizeZUnit'] = pixel_size[2][1]
 
+        # TODO: create plane metadata if not exists
         planes = ensure_list(pixels0.get('Plane', []))
         if len(planes) > 0:
             pixels['Plane'] = planes

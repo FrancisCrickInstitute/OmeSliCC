@@ -5,6 +5,7 @@ import logging
 import numpy as np
 import os
 from PIL import Image
+import psutil
 from tifffile import TiffWriter, TIFF, PHOTOMETRIC
 
 from OmeSliCC import Omero
@@ -140,22 +141,28 @@ def combine_images(sources: list[OmeSource], params: dict):
     ome = ('ome' in output_format)
     filetitle = get_filetitle(source_ref).rstrip('.ome')
     output_filename = str(os.path.join(output_folder, filetitle + '_combined.' + output_format))
+
+    new_source = OmeSource()
+    new_source.source_reference = output_filename
+    new_source.target_pixel_size = source0.get_pixel_size()
+    new_source.position = source0.position
+    new_source.channels = channels
+    new_source.sizes = [source0.get_size()]
+    sizes_xyzc = list(source0.get_size_xyzct())
+    sizes_xyzc[3] = nchannels
+    new_source.sizes_xyzct = [tuple(sizes_xyzc)]
+    new_source.pixel_types = source0.pixel_types
+    new_source.pixel_nbits = source0.pixel_nbits
+    new_source.best_level, new_source.best_factor, new_source.full_factor = 0, 1, 1
+    new_source.source_mag = source0.source_mag
+    new_source.output_dimension_order = source0.output_dimension_order
+
     if 'zar' in output_format:
-        new_source = OmeZarrSource(source_ref, source0.get_pixel_size())
-        new_source.channels = channels
-        size = list(new_source.sizes_xyzct[0])
-        size[3] = nchannels
-        new_source.sizes_xyzct[0] = size
         if 'ome.' in output_format:
             save_image_as_ome_zarr(new_source, image, output_filename, output_params)
         else:
             save_image_as_zarr(new_source, image, output_filename, output_params)
     elif 'tif' in output_format:
-        new_source = TiffSource(source_ref, source0.get_pixel_size())
-        new_source.channels = channels
-        size = list(new_source.sizes_xyzct[0])
-        size[3] = nchannels
-        new_source.sizes_xyzct[0] = size
         save_image_as_tiff(new_source, image, output_filename, output_params, ome=ome)
     else:
         save_image(image, output_filename, output_params)
@@ -239,7 +246,9 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
               dimension_order: str = 'yxc',
               resolution: tuple = None, resolution_unit: str = None, tile_size: tuple = None, compression: [] = None,
               combine_rgb=True, pyramid_sizes_add: list = []):
-    image = np.asarray(image)   # pre-computing is way faster than dask saving/scaling
+    image_size = image.size * image.itemsize
+    if image_size < psutil.virtual_memory().total:
+        image = np.asarray(image)   # pre-computing is way faster than dask saving/scaling
     x_index = dimension_order.index('x')
     y_index = dimension_order.index('y')
     size = image.shape[x_index], image.shape[y_index]

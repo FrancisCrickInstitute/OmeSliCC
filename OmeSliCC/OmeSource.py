@@ -34,6 +34,10 @@ class OmeSource:
     """#bits for all pages"""
     channels: list
     """channel information for all image channels"""
+    position: list
+    """source position information"""
+
+    default_physical_unit = 'µm'
 
     def __init__(self):
         self.metadata = {}
@@ -76,14 +80,22 @@ class OmeSource:
         self.source_pixel_size = []
         size = float(pixels.get('PhysicalSizeX', 0))
         if size > 0:
-            self.source_pixel_size.append((size, pixels.get('PhysicalSizeXUnit', 'µm')))
+            self.source_pixel_size.append((size, pixels.get('PhysicalSizeXUnit', self.default_physical_unit)))
         size = float(pixels.get('PhysicalSizeY', 0))
         if size > 0:
-            self.source_pixel_size.append((size, pixels.get('PhysicalSizeYUnit', 'µm')))
+            self.source_pixel_size.append((size, pixels.get('PhysicalSizeYUnit', self.default_physical_unit)))
         size = float(pixels.get('PhysicalSizeZ', 0))
         if size > 0:
-            self.source_pixel_size.append((size, pixels.get('PhysicalSizeZUnit', 'µm')))
+            self.source_pixel_size.append((size, pixels.get('PhysicalSizeZUnit', self.default_physical_unit)))
 
+        position = []
+        for plane in ensure_list(pixels.get('Plane', [])):
+            position = [(plane.get('PositionX'), plane.get('PositionXUnit')),
+                        (plane.get('PositionY'), plane.get('PositionYUnit')),
+                        (plane.get('PositionZ'), plane.get('PositionZUnit'))]
+            c, z, t = plane.get('TheC'), plane.get('TheZ'), plane.get('TheT')
+
+        self.position = position
         self.source_mag = 0
         objective_id = images.get('ObjectiveSettings', {}).get('ID', '')
         for objective in ensure_list(self.metadata.get('Instrument', {}).get('Objective', [])):
@@ -180,7 +192,7 @@ class OmeSource:
 
     def get_size(self) -> tuple:
         # size at target pixel size
-        return np.round(np.multiply(self.sizes[self.best_level], self.best_factor)).astype(int)
+        return tuple(np.round(np.multiply(self.sizes[self.best_level], self.best_factor)).astype(int))
 
     def get_size_xyzct(self) -> tuple:
         xyzct = list(self.sizes_xyzct[self.best_level]).copy()

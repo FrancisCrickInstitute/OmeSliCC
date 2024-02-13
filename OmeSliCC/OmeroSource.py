@@ -76,9 +76,9 @@ class OmeroSource(OmeSource):
 
     def _find_metadata(self):
         image_object = self.image_object
-        self.source_pixel_size = [(get_default(image_object.getPixelSizeX(), 0), 'µm'),
-                                  (get_default(image_object.getPixelSizeY(), 0), 'µm'),
-                                  (get_default(image_object.getPixelSizeZ(), 0), 'µm')]
+        self.source_pixel_size = [(get_default(image_object.getPixelSizeX(), 0), self.default_physical_unit),
+                                  (get_default(image_object.getPixelSizeY(), 0), self.default_physical_unit),
+                                  (get_default(image_object.getPixelSizeZ(), 0), self.default_physical_unit)]
         objective_settings = image_object.getObjectiveSettings()
         if objective_settings:
             self.source_mag = objective_settings.getObjective().getNominalMagnification()
