@@ -111,7 +111,6 @@ class OmeroSource(OmeSource):
         if z is None:
             z = 0
 
-        pixels_store = self.pixels_store
         w, h = x1 - x0, y1 - y0
         if c is not None:
             channels = [c]
@@ -119,7 +118,10 @@ class OmeroSource(OmeSource):
             channels = range(self.get_nchannels())
         shape = h, w, len(channels)
         image = np.zeros(shape, dtype=self.pixel_types[level])
-        pixels_store.setResolutionLevel(self.pixels_store_pyramid_order[level])
+        pixels_store = self.pixels_store
+        pixels_store_level = self.pixels_store_pyramid_order[level]
+        if pixels_store.getResolutionLevel() != pixels_store_level:
+            pixels_store.setResolutionLevel(pixels_store_level)
         for c in channels:
             tile0 = pixels_store.getTile(z, c, t, x0, y0, w, h)
             tile = np.frombuffer(tile0, dtype=image.dtype).reshape(h, w)
