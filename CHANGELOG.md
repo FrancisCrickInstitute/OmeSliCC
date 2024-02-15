@@ -1,3 +1,7 @@
+#### Version 0.6.10
+- Simplified rgb source rendering
+- Improved performance of precise resize operation using skimage
+
 #### Version 0.6.9
 - Combine action now working: combine separate channel images into single multichannel image(s)
 - Multi-dimensional image generator now working (GeneratorSource)

@@ -17,14 +17,14 @@ def load_as_zarr(path, x0_um, x1_um, y0_um, y1_um):
     source = TiffSource(path)
     data = source.asarray_um(x0=x0_um, x1=x1_um, y0=y0_um, y1=y1_um)
     image = np.asarray(data)
-    image = source.render(image)
+    image = source.render(image, source.get_dimension_order())
     show_image(image)
 
 
 def conversion_test():
-    path1 = 'test1.ome.tiff'
-    path2 = 'test1.ome.zarr'
-    path3 = 'test2.ome.tiff'
+    path1 = 'D:/slides/test1.ome.tiff'
+    path2 = 'D:/slides/test1.ome.zarr'
+    path3 = 'D:/slides/test2.ome.tiff'
     size = [1024, 1024]
     tile_size = [256, 256]
     output_params = {'tile_size': tile_size, 'npyramid_add': 3, 'pyramid_downsample': 2}
@@ -46,7 +46,7 @@ def conversion_test():
 
     data = source3.asarray(pixel_size=[10])
     assert data.ndim == 5
-    image, _ = source3.get_yxc_image(data, t=0, z=0)
+    image = redimension_data(data, source3.get_dimension_order(), 'yxc', t=0, z=0)
     assert image.ndim == 3 and image.shape[2] == nchannels
     x0, y0, x1, y1 = size[0] // 2, size[1] // 2, size[0], size[1]
     w, h = np.divide(size, 2).astype(int)
@@ -58,11 +58,12 @@ def conversion_test():
 
 def check_large_tiff_arrays(input):
     source = TiffSource(input, target_pixel_size=[(10, 'um')])
-    image = source.render(source.asarray())
+    dimension_order = source.get_dimension_order()
+    image = source.render(source.asarray(), dimension_order)
     show_image(image)
-    tile = source.render(source.asarray(x0=1100, x1=2100, y0=1200, y1=1400))
+    tile = source.render(source.asarray(x0=1100, x1=2100, y0=1200, y1=1400), dimension_order)
     show_image(tile)
-    tile = source.render(source.asarray(x0=1100, x1=2100, y0=1200, y1=1400, pixel_size=[10]))
+    tile = source.render(source.asarray(x0=1100, x1=2100, y0=1200, y1=1400, pixel_size=[10]), dimension_order)
     show_image(tile)
 
 

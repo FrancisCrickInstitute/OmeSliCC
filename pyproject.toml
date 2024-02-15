@@ -1,6 +1,6 @@
 [project]
 name = "OmeSliCC"
-version = "0.6.9"
+version = "0.6.10"
 description = "Ome(ro) Slide Image Conversion and Compression pipeline"
 readme = "README.md"
 license = {file = "LICENSE.md"}

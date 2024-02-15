@@ -14,23 +14,19 @@ from OmeSliCC.image_util import *
 
 
 def render_at_pixel_size(filename: str, source_pixel_size: list = None,
-                         target_pixel_size: list = None, pos: tuple = (0, 0, -1, -1)) -> np.ndarray:
+                         target_pixel_size: list = None, **indices) -> np.ndarray:
     if filename.endswith('.zarr'):
         source = OmeZarrSource(filename, source_pixel_size)
     else:
         source = TiffSource(filename, source_pixel_size)
-    image0 = source.asarray(pos[0], pos[1], pos[2], pos[3], pixel_size=target_pixel_size)
-    image = source.render(image0)
+    image0 = source.asarray(pixel_size=target_pixel_size, **indices)
+    image = source.render(image0, source.get_dimension_order())
     return image
 
 
-def test_load(filename: str, pixel_size: tuple = None, position: tuple = None, size: tuple = None) -> np.ndarray:
+def test_load(filename: str, pixel_size: tuple = None, **indices) -> np.ndarray:
     source = TiffSource(filename, pixel_size)
-    if position is None:
-        position = (0, 0)
-    if size is None:
-        size = source.get_size()
-    image = source.asarray(position[0], position[1], position[0] + size[0], position[1] + size[1])
+    image = source.asarray(**indices)
     return image
 
 
@@ -53,14 +49,16 @@ def test_extract_metadata(path: str):
     print(print_dict(metadata))
 
 
-def compare_image_tiles(filename1: str, filename2: str, bits_per_channel: int = 8, tile_size: tuple = (512, 512)) -> tuple:
+def compare_images(filename1: str, filename2: str, tile_size: tuple = None) -> dict:
     source1 = TiffSource(filename1)
     source2 = TiffSource(filename2)
-
     w, h = source1.get_size()
+    if tile_size is None:
+        tile_size = w, h
     tw, th = tile_size
     nx = int(np.ceil(w / tw))
     ny = int(np.ceil(h / th))
+    bits_per_channel = source1.pixel_nbits[0]
 
     difs_max = []
     difs_mean = []
@@ -72,8 +70,8 @@ def compare_image_tiles(filename1: str, filename2: str, bits_per_channel: int = 
             ry = y * th
             rx2 = min(rx + tw, w)
             ry2 = min(ry + th, h)
-            patch1 = source1.asarray(rx, ry, rx2, ry2)
-            patch2 = source2.asarray(rx, ry, rx2, ry2)
+            patch1 = source1.asarray(x0=rx, x1=rx2, y0=ry, y1=ry2)
+            patch2 = source2.asarray(x0=rx, x1=rx2, y0=ry, y1=ry2)
             dif, dif_max, dif_mean, _ = compare_image_dist(patch1, patch2)
             mse = np.mean(dif.astype(float) ** 2)
             difs_max.append(dif_max)
@@ -85,7 +83,7 @@ def compare_image_tiles(filename1: str, filename2: str, bits_per_channel: int = 
     maxval = 2 ** bits_per_channel - 1
     psnr = 20 * np.log10(maxval / np.sqrt(np.mean(mses)))    # recalculate PSNR based on mean MSE
     print(f'rgb dist max: {dif_max:.1f} mean: {dif_mean:.1f} PSNR: {psnr:.1f}')
-    return dif_max, dif_mean, psnr
+    return {'dif_max': dif_max, 'dif_mean': dif_mean, 'psnr': psnr}
 
 
 def test_read_source(image_filename: str, n: int = 1000):
@@ -112,7 +110,7 @@ def test_read_source(image_filename: str, n: int = 1000):
         yi = random.randrange(ny)
         x = xi * patch_size[0]
         y = yi * patch_size[1]
-        image = source.asarray(x, y, x + patch_size[0], y + patch_size[1])
+        image = source.asarray(x0=x, x1=x+patch_size[0], y0=y, y1=y+patch_size[1])
         image.shape
         #show_image(image)
     elapsed = timer() - start
@@ -168,11 +166,9 @@ def calc_images_fraction(pattern: str):
 
 
 if __name__ == '__main__':
-    image_dir = 'resources/images/'
-    patch_size = (256, 256)
     os.chdir('../')
-
     #path = 'E:/Personal/Crick/slides/test_images/19629.svs'
+    path = 'E:/Personal/Crick/slides/test_images/H&E K130_PR003.ome.tiff'
     #path = 'D:/slides/Pharos_test_images/01-08-23_test2__33.tiff'
     #path = 'D:/slides/Pharos_test_images/Testing7.tiff'
     #path = 'D:/slides/Pharos_test_images/image_navcam.tiff'
@@ -180,7 +176,7 @@ if __name__ == '__main__':
     #path = 'C:/temp/sbemimage_test/workspace/old OV000.tif'
     #path = 'D:/slides/EM04613/EM04613_04_20x_WF_Reflection-02-Stitching-01.ome.tif'
     #path = 'D:/slides/EM04613/EM04613_04_20x_WF_Reflection-02-Stitching-01.ome.zarr'
-    path = 'D:/slides/EM04573_01t/stitched_norm.ome.zarr'
+    patch_size = (256, 256)
 
     # perform test
     #print(tiff_info(path))

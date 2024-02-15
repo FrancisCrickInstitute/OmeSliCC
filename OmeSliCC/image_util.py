@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import PIL.Image
 from PIL.ExifTags import TAGS
 import tifffile
+from skimage.transform import downscale_local_mean
 from tifffile import TiffFile
 
 from OmeSliCC.util import *
@@ -83,7 +84,7 @@ def convert_image_sign_type(image0: np.ndarray, dtype: np.dtype) -> np.ndarray:
     return image
 
 
-def redimension_data(data, old_order, new_order, **kwargs):
+def redimension_data(data, old_order, new_order, **indices):
     # able to provide optional dimension values e.g. t=0, z=0
     if new_order == old_order:
         return data
@@ -94,7 +95,7 @@ def redimension_data(data, old_order, new_order, **kwargs):
     for o in old_order:
         if o not in new_order:
             index = order.index(o)
-            dim_value = kwargs.get(o, 0)
+            dim_value = indices.get(o, 0)
             new_data = np.take(new_data, indices=dim_value, axis=index)
             order = order.replace(o, '')
     # add
@@ -246,24 +247,11 @@ def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 
     return new_image
 
 
-def precise_resize(image: np.ndarray, scale: np.ndarray, use_max: bool = False) -> np.ndarray:
-    h, w = np.ceil(image.shape[:2] * scale).astype(int)
-    shape = list(image.shape).copy()
-    shape[:2] = h, w
-    new_image = np.zeros(shape, dtype=np.float32)
-    step_size = 1 / scale
-    for y in range(h):
-        for x in range(w):
-            y0, y1 = np.round([y * step_size[1], (y + 1) * step_size[1]]).astype(int)
-            x0, x1 = np.round([x * step_size[0], (x + 1) * step_size[0]]).astype(int)
-            image1 = image[y0:y1, x0:x1]
-            if image1.size > 0:
-                if use_max:
-                    value = np.max(image1, axis=(0, 1))
-                else:
-                    value = np.mean(image1, axis=(0, 1))
-                new_image[y, x] = value
-    return new_image.astype(image.dtype)
+def precise_resize(image: np.ndarray, factors) -> np.ndarray:
+    if image.ndim > len(factors):
+        factors = list(factors) + [1]
+    new_image = downscale_local_mean(np.asarray(image), tuple(factors)).astype(image.dtype)
+    return new_image
 
 
 def create_compression_filter(compression: list) -> tuple:
@@ -412,6 +400,15 @@ def compare_image_dist(image0: np.ndarray, image1: np.ndarray) -> tuple:
         rgb_max = np.max(rgb_dif)
         rgb_mean = np.mean(rgb_dif)
     return dif, rgb_max, rgb_mean, psnr
+
+
+def compare_image_dist_simple(image0: np.ndarray, image1: np.ndarray) -> dict:
+    dif = cv.absdiff(image0, image1)
+    psnr = cv.PSNR(image0, image1)
+    rgb_dif = np.linalg.norm(dif, axis=2)
+    dif_max = np.max(rgb_dif)
+    dif_mean = np.mean(rgb_dif)
+    return {'dif_max': dif_max, 'dif_mean': dif_mean, 'psnr': psnr}
 
 
 def calc_fraction_used(image: np.ndarray, threshold: float = 0.1) -> float:
