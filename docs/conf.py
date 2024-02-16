@@ -20,10 +20,11 @@ import toml
 
 # -- Project information -----------------------------------------------------
 
-project = toml.load("pyproject.toml")["project"]["name"]
+project_toml = toml.load("../pyproject.toml")
+project = project_toml["project"]["name"]
 author = 'Francis Crick Institute'
 
-VERSION = toml.load("../pyproject.toml")["project"]["version"]
+VERSION = project_toml["project"]["version"]
 # The short X.Y version
 version = VERSION.split()[0]
 # The full version, including alpha/beta/rc tags
