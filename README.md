@@ -11,6 +11,7 @@ For support and discussion, please use the [Image.sc forum](https://forum.image.
 
 - Import WSI files: Omero, Ome.Tiff, Tiff, Zarr, Ome.Zarr/NGFF, common slide formats, common image formats
 - Export images: Tiff, Ome.Tiff, Zarr, Ome.Zarr, common image formats, thumbnails
+- Integrated Dask support
 - Zarr image compression (lossless/lossy)
 - Image scaling using target pixel size
 - Omero credentials helper

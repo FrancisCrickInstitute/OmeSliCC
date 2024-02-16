@@ -169,7 +169,11 @@ def combine_images(sources: list[OmeSource], params: dict):
 
 
 def get_source_image(source: OmeSource):
-    return source.asarray()
+    image = source.asarray()
+    image_size = image.size * image.itemsize
+    if image_size < psutil.virtual_memory().total:
+        image = np.asarray(image)   # pre-computing is way faster than dask saving/scaling
+    return image
 
 
 def get_source_image_dask(source: OmeSource, chunk_size=(10240, 10240)):
@@ -246,9 +250,6 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
               dimension_order: str = 'yxc',
               resolution: tuple = None, resolution_unit: str = None, tile_size: tuple = None, compression: [] = None,
               combine_rgb=True, pyramid_sizes_add: list = []):
-    image_size = image.size * image.itemsize
-    if image_size < psutil.virtual_memory().total:
-        image = np.asarray(image)   # pre-computing is way faster than dask saving/scaling
     x_index = dimension_order.index('x')
     y_index = dimension_order.index('y')
     size = image.shape[x_index], image.shape[y_index]
