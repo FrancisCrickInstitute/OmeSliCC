@@ -80,7 +80,7 @@ pygments_style = 'sphinx'
 html_theme = 'alabaster'
 
 html_theme_options = {
-    'logo': '../resources/logo.png',
+    'logo': 'logo.png',
     'fixed_sidebar': True,
     'description': 'Ome(ro) Slide Image Conversion and Compression pipeline',
     'github_user': 'OmeSliCC',

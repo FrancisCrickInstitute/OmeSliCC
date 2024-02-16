@@ -1,7 +1,7 @@
 # OmeSliCC
 ## Ome(ro) Slide Image Conversion and Compression pipeline
 
-<img src="resources/logo.png" width=200 alt="OmeSliCC logo" />
+![OmeSliCC logo](docs/_static/logo.png)
 
 OmeSliCC is designed to convert slides from common formats, to optimal OME formats for deep learning.
 
