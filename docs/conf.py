@@ -16,13 +16,14 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-from src.constants import VERSION
+import toml
 
 # -- Project information -----------------------------------------------------
 
-project = 'OmeSliCC'
+project = toml.load("pyproject.toml")["project"]["name"]
 author = 'Francis Crick Institute'
 
+VERSION = toml.load("../pyproject.toml")["project"]["version"]
 # The short X.Y version
 version = VERSION.split()[0]
 # The full version, including alpha/beta/rc tags
