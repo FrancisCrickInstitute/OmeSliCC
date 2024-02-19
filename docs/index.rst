@@ -8,8 +8,6 @@ Welcome to OmeSliCC's documentation
 
 .. autosummary::
 
-   run
-   run.run_actions
 
 .. toctree::
    :maxdepth: 2
