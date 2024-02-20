@@ -2,13 +2,15 @@ Welcome to OmeSliCC's documentation
 ===================================
 
 .. autosummary::
-   :toctree: generated
+    :toctree: generated
 
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
 
 
 .. automodule:: OmeSliCC
-   :members:
+    :members:
+    :undoc-members:
+    :show-inheritance:
