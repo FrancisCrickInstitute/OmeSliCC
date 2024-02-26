@@ -1,3 +1,6 @@
+#### Version 0.6.11
+- Restored TiffSource legacy loading compressed / decompress options
+
 #### Version 0.6.10
 - Simplified rgb source rendering
 - Improved performance of precise resize operation using skimage

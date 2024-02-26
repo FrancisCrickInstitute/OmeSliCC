@@ -21,7 +21,7 @@ def load_as_zarr(path, x0_um, x1_um, y0_um, y1_um):
     show_image(image)
 
 
-def conversion_test():
+def generated_conversion_test():
     path1 = 'D:/slides/test1.ome.tiff'
     path2 = 'D:/slides/test1.ome.zarr'
     path3 = 'D:/slides/test2.ome.tiff'
@@ -67,17 +67,26 @@ def check_large_tiff_arrays(input):
     show_image(tile)
 
 
+def check_cached_loading(path):
+    source = TiffSource(path)
+    dimension_order = source.get_dimension_order()
+    source.load()
+    data = source.render(source.asarray(x0=1100, x1=2100, y0=1200, y1=1400, pixel_size=[10]), dimension_order)
+    source.unload()
+    show_image(data)
+
+
 if __name__ == '__main__':
     path = 'D:/slides/EM04573_01small.ome.tif'
     path2 = 'D:/slides/test.ome.zarr'
     path3 = 'D:/slides/test.ome.tiff'
-    output_params = {'tile_size': [256, 256], 'npyramid_add': 3, 'pyramid_downsample': 2}
+    output_params = {'tile_size': [256, 256], 'npyramid_add': 3, 'pyramid_downsample': 2, 'compression': 'LZW'}
 
     load_as_zarr('D:/slides/EM04573_01/EM04573_01.ome.tif', 20400, 20900, 13000, 13500)
 
-    conversion_test()
-
     check_large_tiff_arrays(path)
+
+    check_cached_loading(path)
 
     progress = tqdm(range(2))
     source = TiffSource(path)
@@ -87,5 +96,7 @@ if __name__ == '__main__':
     source2 = OmeZarrSource(path2)
     save_image_as_tiff(source, source.asarray(), path3, output_params, ome=True)
     progress.update(1)
+
+    generated_conversion_test()
 
     print('Done')

@@ -1,6 +1,7 @@
 # https://pypi.org/project/tifffile/
 
 
+from concurrent.futures import ThreadPoolExecutor
 import dask.array as da
 from enum import Enum
 import numpy as np
@@ -38,6 +39,7 @@ class TiffSource(OmeSource):
         super().__init__()
         self.loaded = False
         self.decompressed = False
+        self.executor = None
         self.data = bytes()
         self.arrays = []
 
@@ -177,16 +179,17 @@ class TiffSource(OmeSource):
         return [da.from_zarr(self.tiff.aszarr(level=level)) for level in range(len(self.sizes))]
 
     def load(self, decompress: bool = False):
-        self.fh.seek(0)
-        self.data = self.fh.read()
-        self.loaded = True
         if decompress:
             self.decompress()
+        else:
+            self.fh.seek(0)
+            self.data = self.fh.read()
+        self.loaded = True
 
     def unload(self):
-        self.loaded = False
         del self.data
         self.clear_decompress()
+        self.loaded = False
 
     def decompress(self):
         self.clear_decompress()
@@ -202,18 +205,141 @@ class TiffSource(OmeSource):
         self.decompressed = True
 
     def clear_decompress(self):
-        self.decompressed = False
         for array in self.arrays:
             del array
         self.arrays = []
+        self.decompressed = False
 
     def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         if self.decompressed:
             data = self.arrays[level]
+        elif self.loaded:
+            data = self._decompress(level, **slicing)
         else:
             data = da.from_zarr(self.tiff.aszarr(level=level))
             if data.chunksize == data.shape:
                 data = data.rechunk()
-        slices = get_numpy_slicing(self.dimension_order, **slicing)
-        out = redimension_data(data[slices], self.dimension_order, self.get_dimension_order())
+
+        if self.loaded:
+            out = data
+        else:
+            slices = get_numpy_slicing(self.dimension_order, **slicing)
+            out = redimension_data(data[slices], self.dimension_order, self.get_dimension_order())
         return out
+
+    def _decompress(self, level: int, **slicing) -> np.ndarray:
+        # based on tiffile asarray
+
+        if self.executor is None:
+            max_workers = (os.cpu_count() or 1) + 4
+            self.executor = ThreadPoolExecutor(max_workers)
+
+        x0, x1 = slicing.get('x0', 0), slicing.get('x1', -1)
+        y0, y1 = slicing.get('y0', 0), slicing.get('y1', -1)
+        c, t, z = slicing.get('c'), slicing.get('t'), slicing.get('z')
+        if x1 < 0 or y1 < 0:
+            x1, y1 = self.sizes[level]
+
+        dw = x1 - x0
+        dh = y1 - y0
+        xyzct = list(self.sizes_xyzct[level]).copy()
+        nz = xyzct[2]
+        nc = xyzct[3]
+
+        pages = self.pages[level]
+        if nz == self.npages and z is not None:
+            pages = [pages[z]]
+        elif t is not None:
+            pages = [pages[t]]
+        page = pages[0] if isinstance(pages, list) else pages
+        tile_height = page.chunks[page.dims.index('height')]
+        tile_width = page.chunks[page.dims.index('width')]
+        tile_y0, tile_x0 = y0 // tile_height, x0 // tile_width
+        tile_y1, tile_x1 = np.ceil([y1 / tile_height, x1 / tile_width]).astype(int)
+        w = (tile_x1 - tile_x0) * tile_width
+        h = (tile_y1 - tile_y0) * tile_height
+        tile_per_line = int(np.ceil(page.imagewidth / tile_width))
+        xyzct[0] = w
+        xyzct[1] = h
+
+        # Match internal Tiff page dimensions [separate sample, depth, length, width, contig sample]
+        n = self.npages
+        d = self.depth
+        s = nc
+        if self.npages == s > 1:
+            # in case channels represented as pages
+            s = 1
+        shape = n, d, h, w, s
+        out = np.zeros(shape, page.dtype)
+
+        dataoffsets = []
+        databytecounts = []
+        tile_locations = []
+        for i, page in enumerate(pages):
+            for y in range(tile_y0, tile_y1):
+                for x in range(tile_x0, tile_x1):
+                    index = int(y * tile_per_line + x)
+                    if index < len(page.databytecounts):
+                        offset = page.dataoffsets[index]
+                        count = page.databytecounts[index]
+                        if count > 0:
+                            dataoffsets.append(offset)
+                            databytecounts.append(count)
+                            target_y = (y - tile_y0) * tile_height
+                            target_x = (x - tile_x0) * tile_width
+                            tile_locations.append((i, 0, target_y, target_x, 0))
+
+            self._decode(page, dataoffsets, databytecounts, tile_locations, out)
+
+        target_y0 = y0 - tile_y0 * tile_height
+        target_x0 = x0 - tile_x0 * tile_width
+        image = out[:, :, target_y0: target_y0 + dh, target_x0: target_x0 + dw, :]
+        # 'ndyxs' -> 'tzyxc'
+        if image.shape[0] == nc > 1:
+            image = np.swapaxes(image, 0, -1)
+        elif image.shape[0] == nz > 1:
+            image = np.swapaxes(image, 0, 1)
+        # 'tzyxc' -> 'tczyx'
+        image = np.moveaxis(image, -1, 1)
+        return image
+
+    def _decode(self, page: TiffPage, dataoffsets: list, databytecounts: list, tile_locations: list, out: np.ndarray):
+        def process_decoded(decoded, index, out=out):
+            segment, indices, shape = decoded
+            s = tile_locations[index]
+            e = np.array(s) + ([1] + list(shape))
+            # Note: numpy is not thread-safe
+            out[s[0]: e[0],
+                s[1]: e[1],
+                s[2]: e[2],
+                s[3]: e[3],
+                s[4]: e[4]] = segment
+
+        for _ in self._segments(
+                process_function=process_decoded,
+                page=page,
+                dataoffsets=dataoffsets,
+                databytecounts=databytecounts
+        ):
+            pass
+
+    def _segments(self, process_function: callable, page: TiffPage, dataoffsets: list, databytecounts: list) -> tuple:
+        # based on tiffile segments
+        def decode(args, page=page, process_function=process_function):
+            decoded = page.decode(*args, jpegtables=page.jpegtables)
+            return process_function(decoded, args[1])
+
+        tile_segments = []
+        for index in range(len(dataoffsets)):
+            offset = dataoffsets[index]
+            bytecount = databytecounts[index]
+            if self.loaded:
+                segment = self.data[offset:offset + bytecount]
+            else:
+                fh = page.parent.filehandle
+                fh.seek(offset)
+                segment = fh.read(bytecount)
+            tile_segment = (segment, index)
+            tile_segments.append(tile_segment)
+            # yield decode(tile_segment)
+        yield from self.executor.map(decode, tile_segments, timeout=10)
