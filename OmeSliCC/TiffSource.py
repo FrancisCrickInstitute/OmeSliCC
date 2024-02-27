@@ -19,10 +19,10 @@ class TiffSource(OmeSource):
 
     filename: str
     """original filename"""
-    loaded: bool
-    """if image data is loaded"""
+    compressed: bool
+    """if image data is loaded compressed"""
     decompressed: bool
-    """if image data is decompressed"""
+    """if image data is loaded decompressed"""
     pages: list
     """list of all relevant TiffPages"""
     data: bytes
@@ -37,7 +37,7 @@ class TiffSource(OmeSource):
                  source_info_required: bool = False):
 
         super().__init__()
-        self.loaded = False
+        self.compressed = False
         self.decompressed = False
         self.executor = None
         self.data = bytes()
@@ -176,23 +176,34 @@ class TiffSource(OmeSource):
         self.position = position
 
     def get_source_dask(self):
-        return [da.from_zarr(self.tiff.aszarr(level=level)) for level in range(len(self.sizes))]
+        return self._load_as_dask()
+
+    def _load_as_dask(self):
+        if len(self.arrays) == 0:
+            for level in range(len(self.sizes)):
+                data = da.from_zarr(self.tiff.aszarr(level=level))
+                if data.chunksize == data.shape:
+                    data = data.rechunk()
+                self.arrays.append(data)
+        return self.arrays
 
     def load(self, decompress: bool = False):
         if decompress:
             self.decompress()
+            self.decompressed = True
         else:
             self.fh.seek(0)
             self.data = self.fh.read()
-        self.loaded = True
+            self.compressed = True
 
     def unload(self):
         del self.data
-        self.clear_decompress()
-        self.loaded = False
+        self.clear_arrays()
+        self.compressed = False
+        self.decompressed = False
 
     def decompress(self):
-        self.clear_decompress()
+        self.clear_arrays()
         for page in self.pages:
             if isinstance(page, list):
                 array = []
@@ -202,29 +213,19 @@ class TiffSource(OmeSource):
             else:
                 array = page.asarray()
             self.arrays.append(array)
-        self.decompressed = True
 
-    def clear_decompress(self):
+    def clear_arrays(self):
         for array in self.arrays:
             del array
         self.arrays = []
-        self.decompressed = False
 
     def _asarray_level(self, level: int, **slicing) -> np.ndarray:
-        if self.decompressed:
-            data = self.arrays[level]
-        elif self.loaded:
-            data = self._decompress(level, **slicing)
+        if self.compressed and not self.decompressed:
+            out = self._decompress(level, **slicing)
         else:
-            data = da.from_zarr(self.tiff.aszarr(level=level))
-            if data.chunksize == data.shape:
-                data = data.rechunk()
-
-        if self.loaded:
-            out = data
-        else:
+            self._load_as_dask()
             slices = get_numpy_slicing(self.dimension_order, **slicing)
-            out = redimension_data(data[slices], self.dimension_order, self.get_dimension_order())
+            out = redimension_data(self.arrays[level][slices], self.dimension_order, self.get_dimension_order())
         return out
 
     def _decompress(self, level: int, **slicing) -> np.ndarray:
@@ -333,7 +334,7 @@ class TiffSource(OmeSource):
         for index in range(len(dataoffsets)):
             offset = dataoffsets[index]
             bytecount = databytecounts[index]
-            if self.loaded:
+            if self.compressed:
                 segment = self.data[offset:offset + bytecount]
             else:
                 fh = page.parent.filehandle

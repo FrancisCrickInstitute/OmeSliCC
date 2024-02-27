@@ -1,5 +1,5 @@
 import numpy as np
-from tqdm import tqdm
+import time
 
 from OmeSliCC.GeneratorSource import GeneratorSource
 from OmeSliCC.OmeZarrSource import OmeZarrSource
@@ -13,7 +13,7 @@ def create_source(size, tile_size, dtype, pixel_size):
     return source
 
 
-def load_as_zarr(path, x0_um, x1_um, y0_um, y1_um):
+def load_as_zarr_um(path, x0_um, x1_um, y0_um, y1_um):
     source = TiffSource(path)
     data = source.asarray_um(x0=x0_um, x1=x1_um, y0=y0_um, y1=y1_um)
     image = np.asarray(data)
@@ -60,42 +60,80 @@ def check_large_tiff_arrays(input):
     source = TiffSource(input, target_pixel_size=[(10, 'um')])
     dimension_order = source.get_dimension_order()
     image = source.render(source.asarray(), dimension_order)
+    x, y = source.get_size()
     show_image(image)
-    tile = source.render(source.asarray(x0=1100, x1=2100, y0=1200, y1=1400), dimension_order)
+    tile = source.render(source.asarray(x0=x//2, x1=x//2+1000, y0=y//2, y1=y//2+1000), dimension_order)
     show_image(tile)
-    tile = source.render(source.asarray(x0=1100, x1=2100, y0=1200, y1=1400, pixel_size=[10]), dimension_order)
+    tile = source.render(source.asarray(x0=x//2, x1=x//2+1000, y0=y//2, y1=y//2+1000, pixel_size=[10]), dimension_order)
     show_image(tile)
 
 
 def check_cached_loading(path):
     source = TiffSource(path)
     dimension_order = source.get_dimension_order()
-    source.load()
-    data = source.render(source.asarray(x0=1100, x1=2100, y0=1200, y1=1400, pixel_size=[10]), dimension_order)
-    source.unload()
+    pixel_size = [1]
+    x, y = np.array(source.get_size()) * source.get_pixel_size_micrometer() / pixel_size / 2
+
+    print('Read as dask')
+    start = time.process_time()
+    source._load_as_dask()
+    print(f'Load process time:', time.process_time() - start)
+    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size), dimension_order)
     show_image(data)
+    random_access_test(source, n=100)
+
+    print('Read compressed')
+    start = time.process_time()
+    source.load()
+    print(f'Load process time:', time.process_time() - start)
+    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size), dimension_order)
+    show_image(data)
+    random_access_test(source, n=100)
+
+    print('Read decompressed')
+    start = time.process_time()
+    source.load(decompress=True)
+    print(f'Load process time:', time.process_time() - start)
+    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size), dimension_order)
+    show_image(data)
+    random_access_test(source, n=100)
+
+    source.unload()
+
+
+def random_access_test(source, patch_size=1000, n=1000):
+    size = source.get_size()
+    start = time.process_time()
+    for _ in range(n):
+        x, y = np.random.randint(np.array(size) - patch_size)
+        patch = np.asarray(source.asarray(x0=x, x1=x+patch_size, y0=y, y1=y+patch_size))
+    print(f'Read {n} patches process time:', time.process_time() - start)
 
 
 if __name__ == '__main__':
-    path = 'D:/slides/EM04573_01small.ome.tif'
+    path_large = 'D:/slides/EM04573_01/EM04573_01.ome.tif'
+    path_medium = 'D:/slides/EM04676_02/combined.ome.tiff'
+    path_small = 'D:/slides/EM04573_01small.ome.tif'
     path2 = 'D:/slides/test.ome.zarr'
     path3 = 'D:/slides/test.ome.tiff'
     output_params = {'tile_size': [256, 256], 'npyramid_add': 3, 'pyramid_downsample': 2, 'compression': 'LZW'}
 
-    load_as_zarr('D:/slides/EM04573_01/EM04573_01.ome.tif', 20400, 20900, 13000, 13500)
+    load_as_zarr_um(path_large, 20400, 20900, 13000, 13500)
 
-    check_large_tiff_arrays(path)
+    check_large_tiff_arrays(path_large)
 
-    check_cached_loading(path)
+    check_cached_loading(path_medium)
 
-    progress = tqdm(range(2))
-    source = TiffSource(path)
+    print('Conversion start')
+    start = time.process_time()
+    source = TiffSource(path_small)
     save_image_as_ome_zarr(source, source.asarray(), path2, output_params)
-    progress.update(0)
+    print('Saved zarr process time:', time.process_time() - start)
 
+    start = time.process_time()
     source2 = OmeZarrSource(path2)
     save_image_as_tiff(source, source.asarray(), path3, output_params, ome=True)
-    progress.update(1)
+    print('Saved tiff process time:', time.process_time() - start)
 
     generated_conversion_test()
 
