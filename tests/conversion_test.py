@@ -17,7 +17,7 @@ def load_as_zarr_um(path, x0_um, x1_um, y0_um, y1_um):
     source = TiffSource(path)
     data = source.asarray_um(x0=x0_um, x1=x1_um, y0=y0_um, y1=y1_um)
     image = np.asarray(data)
-    image = source.render(image, source.get_dimension_order())
+    image = source.render(image)
     show_image(image)
 
 
@@ -58,19 +58,17 @@ def generated_conversion_test():
 
 def check_large_tiff_arrays(input):
     source = TiffSource(input, target_pixel_size=[(10, 'um')])
-    dimension_order = source.get_dimension_order()
-    image = source.render(source.asarray(), dimension_order)
+    image = source.render(source.asarray())
     x, y = source.get_size()
     show_image(image)
-    tile = source.render(source.asarray(x0=x//2, x1=x//2+1000, y0=y//2, y1=y//2+1000), dimension_order)
+    tile = source.render(source.asarray(x0=x//2, x1=x//2+1000, y0=y//2, y1=y//2+1000))
     show_image(tile)
-    tile = source.render(source.asarray(x0=x//2, x1=x//2+1000, y0=y//2, y1=y//2+1000, pixel_size=[10]), dimension_order)
+    tile = source.render(source.asarray(x0=x//2, x1=x//2+1000, y0=y//2, y1=y//2+1000, pixel_size=[10]))
     show_image(tile)
 
 
 def check_cached_loading(path):
     source = TiffSource(path)
-    dimension_order = source.get_dimension_order()
     pixel_size = [1]
     x, y = np.array(source.get_size()) * source.get_pixel_size_micrometer() / pixel_size / 2
 
@@ -78,7 +76,7 @@ def check_cached_loading(path):
     start = time.process_time()
     source._load_as_dask()
     print(f'Load process time:', time.process_time() - start)
-    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size), dimension_order)
+    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size))
     show_image(data)
     random_access_test(source, n=100)
 
@@ -86,7 +84,7 @@ def check_cached_loading(path):
     start = time.process_time()
     source.load()
     print(f'Load process time:', time.process_time() - start)
-    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size), dimension_order)
+    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size))
     show_image(data)
     random_access_test(source, n=100)
 
@@ -94,7 +92,7 @@ def check_cached_loading(path):
     start = time.process_time()
     source.load(decompress=True)
     print(f'Load process time:', time.process_time() - start)
-    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size), dimension_order)
+    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size))
     show_image(data)
     random_access_test(source, n=100)
 

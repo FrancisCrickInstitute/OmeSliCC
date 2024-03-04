@@ -257,7 +257,9 @@ class OmeSource:
             min, max = start, end
         return {'start': start, 'end': end, 'min': min, 'max': max}
 
-    def render(self, image: np.ndarray, source_dimension_order: str, t: int = 0, z: int = 0, channels: list = []) -> np.ndarray:
+    def render(self, image: np.ndarray, source_dimension_order: str = None, t: int = 0, z: int = 0, channels: list = []) -> np.ndarray:
+        if source_dimension_order is None:
+            source_dimension_order = self.get_dimension_order()
         image = redimension_data(image, source_dimension_order, 'yxc', t=t, z=z)
         new_image = np.zeros(list(image.shape[:2]) + [3], dtype=np.float32)
         tot_alpha = 0
