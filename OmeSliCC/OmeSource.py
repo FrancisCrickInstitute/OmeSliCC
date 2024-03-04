@@ -263,7 +263,7 @@ class OmeSource:
         tot_alpha = 0
         n = len(self.channels)
 
-        is_rgb = (self.get_nchannels() == 3 and (n <= 1 or n == 3))
+        is_rgb = (self.get_nchannels() in (3, 4) and (n <= 1 or n == 3))
         do_normalisation = (image.dtype.itemsize == 2)
 
         if not is_rgb:

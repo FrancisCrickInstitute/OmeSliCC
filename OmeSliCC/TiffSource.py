@@ -34,12 +34,13 @@ class TiffSource(OmeSource):
                  filename: str,
                  source_pixel_size: list = None,
                  target_pixel_size: list = None,
-                 source_info_required: bool = False):
+                 source_info_required: bool = False,
+                 executor: ThreadPoolExecutor = None):
 
         super().__init__()
         self.compressed = False
         self.decompressed = False
-        self.executor = None
+        self.executor = executor
         self.data = bytes()
         self.arrays = []
 
