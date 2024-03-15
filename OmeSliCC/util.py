@@ -60,17 +60,20 @@ def desc_to_dict(desc: str) -> dict:
 
 def print_dict(dct: dict, indent: int = 0) -> str:
     s = ''
-    for key, value in dct.items():
-        s += '\n'
-        if not isinstance(value, list):
-            s += '\t' * indent + str(key) + ': '
-        if isinstance(value, dict):
-            s += print_dict(value, indent=indent + 1)
-        elif isinstance(value, list):
-            for v in value:
-                s += print_dict(v)
-        else:
-            s += str(value)
+    if isinstance(dct, dict):
+        for key, value in dct.items():
+            s += '\n'
+            if not isinstance(value, list):
+                s += '\t' * indent + str(key) + ': '
+            if isinstance(value, dict):
+                s += print_dict(value, indent=indent + 1)
+            elif isinstance(value, list):
+                for v in value:
+                    s += print_dict(v)
+            else:
+                s += str(value)
+    else:
+        s += str(dct)
     return s
 
 

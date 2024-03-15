@@ -287,9 +287,14 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
 
     #scaler = Scaler(downscale=..., max_layer=len(pyramid_sizes_add))   # use ome-zarr-py dask scaling
 
-    # set ome=False to provide custom OME xml in description
-    xml_metadata_bytes = xml_metadata.encode() if xml_metadata is not None else None
-    with TiffWriter(filename, ome=False, bigtiff=bigtiff) as writer:
+    if xml_metadata is not None:
+        # set ome=False to provide custom OME xml in description
+        xml_metadata_bytes = xml_metadata.encode()
+        is_ome = False
+    else:
+        xml_metadata_bytes = None
+        is_ome = None
+    with TiffWriter(filename, ome=is_ome, bigtiff=bigtiff) as writer:
         writer.write(image, photometric=photometric, subifds=len(pyramid_sizes_add),
                      resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression,
                      metadata=metadata, description=xml_metadata_bytes)

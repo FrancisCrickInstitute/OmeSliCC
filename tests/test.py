@@ -10,6 +10,7 @@ from timeit import default_timer as timer
 
 from OmeSliCC.OmeZarrSource import OmeZarrSource
 from OmeSliCC.TiffSource import TiffSource
+from OmeSliCC.conversion import save_tiff
 from OmeSliCC.image_util import *
 
 
@@ -165,8 +166,16 @@ def calc_images_fraction(pattern: str):
             print(e)
 
 
+def create_ome_tiff(filename):
+    data = np.zeros((16, 16, 3), dtype=np.uint8)
+    metadata = {'annotations': [{'a': 1}]}
+    save_tiff(filename, data, metadata=metadata)
+
+
 if __name__ == '__main__':
     os.chdir('../')
+    output_filename = 'D:/slides/metadata_test.ome.tiff'
+
     #path = 'E:/Personal/Crick/slides/test_images/19629.svs'
     path = 'E:/Personal/Crick/slides/test_images/H&E K130_PR003.ome.tiff'
     #path = 'D:/slides/Pharos_test_images/01-08-23_test2__33.tiff'
@@ -179,7 +188,9 @@ if __name__ == '__main__':
     patch_size = (256, 256)
 
     # perform test
+    create_ome_tiff(output_filename)
+    print(tiff_info(output_filename))
     #print(tiff_info(path))
     #test_extract_metadata(path)
     #test_load(path)
-    show_image(render_at_pixel_size(path, target_pixel_size=[(10, 10)]))
+    #show_image(render_at_pixel_size(path, target_pixel_size=[(10, 10)]))
