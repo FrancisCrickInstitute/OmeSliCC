@@ -113,7 +113,6 @@ class TiffSource(OmeSource):
 
     def _find_metadata(self):
         pixel_size = []
-        pixel_size_unit = ''
         page = self.first_page
         # from OME metadata
         if page.is_ome:
@@ -122,10 +121,13 @@ class TiffSource(OmeSource):
 
         # from imageJ metadata
         pixel_size_z = None
-        if self.metadata is not None and 'unit' in self.metadata:
-            pixel_size_unit = self.metadata.get('unit', '')
-            if pixel_size_unit == 'micron':
-                pixel_size_unit = self.default_physical_unit
+        pixel_size_unit = self.metadata.get('unit', '').encode().decode('unicode_escape')
+        if pixel_size_unit == 'micron':
+            pixel_size_unit = self.default_physical_unit
+        for scale in self.metadata.get('scales', '').split(','):
+            scale = scale.strip()
+            if scale != '':
+                pixel_size.append((float(scale), pixel_size_unit))
         if len(pixel_size) == 0 and self.metadata is not None and 'spacing' in self.metadata:
             pixel_size_z = (self.metadata['spacing'], pixel_size_unit)
         # from description
