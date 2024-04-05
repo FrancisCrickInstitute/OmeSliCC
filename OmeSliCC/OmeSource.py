@@ -290,7 +290,7 @@ class OmeSource:
                     if alpha == 0:
                         alpha = 1
                     alpha_color = np.multiply(color, alpha).astype(np.float32)
-                    new_image += np.atleast_3d(channel_values) * alpha_color
+                    new_image = new_image + np.atleast_3d(channel_values) * alpha_color
                     tot_alpha += alpha
             new_image = float2int_image(new_image / tot_alpha)
         elif do_normalisation:
