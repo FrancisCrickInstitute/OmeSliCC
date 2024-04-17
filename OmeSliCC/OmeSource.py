@@ -261,25 +261,25 @@ class OmeSource:
         if source_dimension_order is None:
             source_dimension_order = self.get_dimension_order()
         image = redimension_data(image, source_dimension_order, 'yxc', t=t, z=z)
-        new_image = np.zeros(list(image.shape[:2]) + [3], dtype=np.float32)
-        tot_alpha = 0
+        total_image = None
         n = len(self.channels)
-
         is_rgb = (self.get_nchannels() in (3, 4) and (n <= 1 or n == 3))
-        do_normalisation = (image.dtype.itemsize == 2)
+        needs_normalisation = (image.dtype.itemsize == 2)
 
         if not is_rgb:
+            tot_alpha = 0
             for channeli, channel in enumerate(self.channels):
                 if not channels or channeli in channels:
                     if n == 1:
                         channel_values = image
                     else:
                         channel_values = image[..., channeli]
-                    if do_normalisation:
+                    if needs_normalisation:
                         window = self.get_channel_window(channeli)
                         channel_values = normalise_values(channel_values, window['min'], window['max'])
                     else:
                         channel_values = int2float_image(channel_values)
+                    new_channel_image = np.atleast_3d(channel_values)
                     color = channel.get('color')
                     if color:
                         rgba = color
@@ -289,17 +289,21 @@ class OmeSource:
                     alpha = rgba[3]
                     if alpha == 0:
                         alpha = 1
-                    alpha_color = np.multiply(color, alpha).astype(np.float32)
-                    new_image = new_image + np.atleast_3d(channel_values) * alpha_color
+                    new_channel_image = new_channel_image * np.multiply(color, alpha).astype(np.float32)
+                    if total_image is None:
+                        total_image = new_channel_image
+                    else:
+                        total_image += new_channel_image
                     tot_alpha += alpha
-            new_image = float2int_image(new_image / tot_alpha)
-        elif do_normalisation:
+            if tot_alpha != 1:
+                total_image /= tot_alpha
+            final_image = float2int_image(total_image)
+        elif needs_normalisation:
             window = self.get_channel_window(0)
-            new_image = float2int_image(normalise_values(image, window['min'], window['max']))
+            final_image = float2int_image(normalise_values(image, window['min'], window['max']))
         else:
-            new_image = image
-
-        return new_image
+            final_image = image
+        return final_image
 
     def asarray(self, pixel_size: list = [], **slicing) -> np.ndarray:
         # expects x0, x1, y0, y1, ...

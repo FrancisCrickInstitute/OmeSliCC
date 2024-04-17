@@ -37,18 +37,20 @@ def show_image_gray(image: np.ndarray):
     plt.show()
 
 
-def int2float_image(image: np.ndarray) -> np.ndarray:
-    if image.dtype.kind != 'f':
-        maxval = 2 ** (8 * image.dtype.itemsize) - 1
+def int2float_image(image):
+    source_dtype = image.dtype
+    if not source_dtype.kind == 'f':
+        maxval = 2 ** (8 * source_dtype.itemsize) - 1
         return image / np.float32(maxval)
     else:
         return image
 
 
-def float2int_image(image: np.ndarray, dtype: np.dtype = np.dtype(np.uint8)) -> np.ndarray:
-    if not (image.dtype.kind == 'i' or image.dtype.kind == 'u') and not dtype.kind == 'f':
-        maxval = 2 ** (8 * dtype.itemsize) - 1
-        return (image * maxval).astype(dtype)
+def float2int_image(image, target_dtype=np.dtype(np.uint8)):
+    source_dtype = image.dtype
+    if source_dtype.kind not in ('i', 'u') and not target_dtype.kind == 'f':
+        maxval = 2 ** (8 * target_dtype.itemsize) - 1
+        return (image * maxval).astype(target_dtype)
     else:
         return image
 
@@ -60,28 +62,29 @@ def ensure_unsigned_type(dtype: np.dtype) -> np.dtype:
     return new_dtype
 
 
-def ensure_unsigned_image(image0: np.ndarray) -> np.ndarray:
-    dtype0 = image0.dtype
-    dtype = ensure_unsigned_type(dtype0)
-    if dtype != dtype0:
+def ensure_unsigned_image(image: np.ndarray) -> np.ndarray:
+    source_dtype = image.dtype
+    dtype = ensure_unsigned_type(source_dtype)
+    if dtype != source_dtype:
         # conversion without overhead
         offset = 2 ** (8 * dtype.itemsize - 1)
-        image = image0.astype(dtype) + offset
+        new_image = image.astype(dtype) + offset
     else:
-        image = image0
-    return image
+        new_image = image
+    return new_image
 
 
-def convert_image_sign_type(image0: np.ndarray, dtype: np.dtype) -> np.ndarray:
-    if image0.dtype.kind == dtype.kind:
-        image = image0
-    elif image0.dtype.kind == 'i':
-        image = ensure_unsigned_image(image0)
+def convert_image_sign_type(image: np.ndarray, target_dtype: np.dtype) -> np.ndarray:
+    source_dtype = image.dtype
+    if source_dtype.kind == target_dtype.kind:
+        new_image = image
+    elif source_dtype.kind == 'i':
+        new_image = ensure_unsigned_image(image)
     else:
         # conversion without overhead
-        offset = 2 ** (8 * dtype.itemsize - 1)
-        image = (image0 - offset).astype(dtype)
-    return image
+        offset = 2 ** (8 * target_dtype.itemsize - 1)
+        new_image = (image - offset).astype(target_dtype)
+    return new_image
 
 
 def redimension_data(data, old_order, new_order, **indices):
