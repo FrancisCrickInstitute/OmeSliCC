@@ -168,6 +168,28 @@ def combine_images(sources: list[OmeSource], params: dict):
         save_image(image, output_filename, output_params)
 
 
+def store_tiles(sources: list[OmeSource], output_filename: str, params: dict,
+                composition_metadata: list = [], image_operations: list = []):
+    output_params = params['output']
+    tile_size = output_params.get('tile_size')
+    compression = output_params.get('compression')
+    npyramid_add = output_params.get('npyramid_add', 0)
+    pyramid_downsample = output_params.get('pyramid_downsample')
+
+    translations = []
+    pixel_size = sources[0].get_pixel_size_micrometer()
+    for meta in composition_metadata:
+        bounds = meta['Bounds']
+        translation = bounds['StartX'], bounds['StartY']
+        translation_um = np.multiply(translation, pixel_size[:2])
+        translations.append(translation_um)
+
+    zarr = OmeZarr(output_filename)
+    zarr.write(sources, tile_size=tile_size, compression=compression,
+               npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
+               translations=translations, image_operations=image_operations)
+
+
 def get_source_image(source: OmeSource):
     image = source.asarray()
     image_size = image.size * image.itemsize
@@ -202,8 +224,8 @@ def save_image_as_ome_zarr(source: OmeSource, data: np.ndarray, output_filename:
     pyramid_downsample = output_params.get('pyramid_downsample')
 
     zarr = OmeZarr(output_filename)
-    zarr.write(data, source, tile_size=tile_size, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
-               compression=compression)
+    zarr.write(source, tile_size=tile_size, compression=compression,
+               npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
 
 
 def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str, output_params: dict):

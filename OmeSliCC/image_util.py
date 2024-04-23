@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import PIL.Image
 from PIL.ExifTags import TAGS
 import tifffile
+from scipy.ndimage import gaussian_filter
 from skimage.transform import downscale_local_mean
 from tifffile import TiffFile
 
@@ -427,6 +428,37 @@ def calc_fraction_used(image: np.ndarray, threshold: float = 0.1) -> float:
                 good += 1
     fraction = good / total
     return fraction
+
+
+def blur_image_single(image, sigma):
+    return gaussian_filter(image, sigma)
+
+
+def blur_image(image, sigma):
+    nchannels = image.shape[2] if image.ndim == 3 else 1
+    if nchannels not in [1, 3]:
+        new_image = np.zeros_like(image)
+        for channeli in range(nchannels):
+            new_image[..., channeli] = blur_image_single(image[..., channeli], sigma)
+    else:
+        new_image = blur_image_single(image, sigma)
+    return new_image
+
+
+def calc_tiles_median(images):
+    out_image = np.zeros_like(images[0])
+    median_image = np.median(images, 0, out_image)
+    return median_image
+
+
+def calc_tiles_quantiles(images, quantiles):
+    out_quantiles = []
+    quantile_images = np.quantile(images, quantiles, 0)
+    for quantile_image in quantile_images:
+        maxval = 2 ** (8 * images[0].dtype.itemsize) - 1
+        image = (quantile_image / maxval).astype(np.float32)
+        out_quantiles.append(image)
+    return out_quantiles
 
 
 def save_image(image: np.ndarray, filename: str, output_params: dict = {}):
