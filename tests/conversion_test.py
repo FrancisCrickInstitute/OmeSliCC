@@ -1,3 +1,4 @@
+import dask.array.image as dask_image
 import numpy as np
 import time
 
@@ -108,6 +109,15 @@ def random_access_test(source, patch_size=1000, n=1000):
     print(f'Read {n} patches process time:', time.process_time() - start)
 
 
+def dask_load_test(filename):
+    tiff = TiffFile(filename)
+    #data_series_asarray = tiff.series[0].asarray()  # numpy array (loads array!)
+    #data_dask_imread = dask_image.imread(filename)  # dask array uses skimage.io.imread internally, loads array anyway!
+    #data_dask_imread
+    data_aszarr = da.from_zarr(tiff.aszarr(level=0))  # dask array (lazy loading)
+    data_aszarr
+
+
 if __name__ == '__main__':
     path_large = 'D:/slides/EM04573_01/EM04573_01.ome.tif'
     path_medium = 'D:/slides/EM04676_02/combined.ome.tiff'
@@ -115,6 +125,8 @@ if __name__ == '__main__':
     path2 = 'D:/slides/test.ome.zarr'
     path3 = 'D:/slides/test.ome.tiff'
     output_params = {'tile_size': [256, 256], 'npyramid_add': 3, 'pyramid_downsample': 2, 'compression': 'LZW'}
+
+    dask_load_test(path_large)
 
     load_as_zarr_um(path_large, 20400, 20900, 13000, 13500)
 
