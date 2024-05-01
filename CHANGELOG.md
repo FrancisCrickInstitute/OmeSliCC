@@ -1,3 +1,9 @@
+#### Version 0.6.12
+- Simplified dask functions
+- Improved image rendering function including performance
+- Various bug fixes, better tiff metadata handling
+- Experimental code for storing separate tile images as ome-zarr including metadata
+
 #### Version 0.6.11
 - Restored TiffSource legacy loading compressed / decompress options
 
