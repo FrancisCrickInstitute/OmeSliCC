@@ -1,3 +1,8 @@
+#### Version 0.6.13
+- Added image check of converted image
+- Added break on error option
+- Various improvements on array data and metadata
+
 #### Version 0.6.12
 - Simplified dask functions
 - Improved image rendering function including performance
