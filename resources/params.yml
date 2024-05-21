@@ -34,6 +34,8 @@ output:
   format: ome.tiff
   # overwrite - overwrite existing files in output folder
   overwrite: True
+  # break_on_error - stop processing when error occurs
+  break_on_error: False
   # combine_rgb - combine rgb channels
   combine_rgb: True
   # tile_size - size for optional tiling

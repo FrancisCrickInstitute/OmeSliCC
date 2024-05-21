@@ -25,10 +25,13 @@ def run_actions(params: dict):
     params: parameters defining pipeline input, output and actions
     """
     input_params = params['input']
+    output_params = params['output']
     source_ref = input_params.get('source')
     actions = ensure_list(params.get('actions'))
     is_omero = input_params.get('omero') is not None
     multi_file = ('combine' in actions)
+    break_on_error = output_params.get('break_on_error')
+    braked_on_error = False
     omero = None
 
     if is_omero:
@@ -81,8 +84,14 @@ def run_actions(params: dict):
                         combine_images(sources, params)
                     source.close()
                 except Exception as e:
-                    logging.exception(str(e) + ' in ' + str(source_ref))
-            logging.info(f'Done {action}')
+                    logging.exception(str(e) + '\nin ' + str(source_ref))
+                    if break_on_error:
+                        braked_on_error = True
+                        break
+            if braked_on_error:
+                logging.warning(f'Interrupted {action} due to error')
+            else:
+                logging.info(f'Done {action}')
     else:
         logging.warning('No files to process')
     if is_omero:

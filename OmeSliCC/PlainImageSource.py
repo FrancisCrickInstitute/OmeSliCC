@@ -46,6 +46,8 @@ class PlainImageSource(OmeSource):
             dimension_order += 'c'
         self.dimension_order = dimension_order
 
+        self.is_rgb = nchannels in (3, 4)
+
         self._init_metadata(filename,
                             source_pixel_size=source_pixel_size,
                             target_pixel_size=target_pixel_size,
@@ -106,7 +108,7 @@ class PlainImageSource(OmeSource):
         else:
             image = np.array(self.image)
 
-        dimension_order = self.dimension_order
-        slicing = get_numpy_slicing(dimension_order, **slicing)
-        out = redimension_data(image[slicing], dimension_order, self.get_dimension_order())
+        redim = redimension_data(image, self.dimension_order, self.get_dimension_order())
+        slicing = get_numpy_slicing(self.get_dimension_order(), **slicing)
+        out = redim[slicing]
         return out

@@ -23,6 +23,7 @@ class OmeZarrSource(OmeSource):
         super().__init__()
 
         self.levels = []
+        nchannels = 1
         try:
             reader = Reader(parse_url(filename))
             # nodes may include images, labels etc
@@ -47,8 +48,11 @@ class OmeZarrSource(OmeSource):
                 self.sizes.append((xyzct[0], xyzct[1]))
                 self.pixel_types.append(data.dtype)
                 self.pixel_nbits.append(data.dtype.itemsize * 8)
+                nchannels = xyzct[3]
         except Exception as e:
             raise FileNotFoundError(f'Read error: {e}')
+
+        self.is_rgb = nchannels in (3, 4)
 
         self._init_metadata(filename,
                             source_pixel_size=source_pixel_size,
@@ -91,7 +95,7 @@ class OmeZarrSource(OmeSource):
                             color = hexrgb_to_rgba(color)
                         channel['color'] = color
         if len(channels) == 0:
-            if nchannels == 3:
+            if self.is_rgb:
                 channels = [{'label': ''}]
             else:
                 channels = [{'label': ''}] * nchannels
@@ -103,8 +107,7 @@ class OmeZarrSource(OmeSource):
         return self.levels
 
     def _asarray_level(self, level: int, **slicing) -> np.ndarray:
-        image = self.levels[level]
-        dimension_order = self.dimension_order
-        slicing = get_numpy_slicing(dimension_order, **slicing)
-        out = redimension_data(image[slicing], dimension_order, self.get_dimension_order())
+        redim = redimension_data(self.levels[level], self.dimension_order, self.get_dimension_order())
+        slices = get_numpy_slicing(self.get_dimension_order(), **slicing)
+        out = redim[slices]
         return out

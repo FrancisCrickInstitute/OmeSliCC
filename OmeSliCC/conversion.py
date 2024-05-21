@@ -108,6 +108,7 @@ def convert_image(source: OmeSource, params: dict, load_chunked: bool = False):
             save_image_as_tiff(source, image, output_filename, output_params, ome=ome)
         else:
             save_image(image, output_filename, output_params)
+        check_image(source, image, output_filename)
 
 
 def combine_images(sources: list[OmeSource], params: dict):
@@ -283,8 +284,6 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
     else:
         c_index = -1
 
-    image = ensure_unsigned_image(image)
-
     if tile_size is not None and isinstance(tile_size, int):
         tile_size = [tile_size] * 2
 
@@ -325,3 +324,21 @@ def save_tiff(filename: str, image: np.ndarray, metadata: dict = None, xml_metad
             #image = scaler.resize_image(image)    # significantly slower
             writer.write(image, photometric=photometric, subfiletype=1,
                          resolution=resolution, resolutionunit=resolution_unit, tile=tile_size, compression=compression)
+
+
+def check_image(source, image, converted_filename):
+    error_message = None
+    try:
+        dummy_params = {'input': {}, 'output': {}}
+        converted_source = create_source(converted_filename, dummy_params)
+        w, h = converted_source.get_size()
+        x1, y1 = min(16, w), min(16, h)
+        slicing = {'x0': 0, 'x1': x1, 'y0': 0, 'y1': y1, 'z': 0, 't': 0}
+        slices = get_numpy_slicing(source.get_dimension_order(), **slicing)
+        patch_original = image[slices]
+        patch_converted = converted_source.asarray(**slicing)
+        np.testing.assert_allclose(patch_original, patch_converted, verbose=False)
+    except Exception as e:
+        error_message = str(e)
+    if error_message:
+        raise ValueError(f'Converted image check\n{error_message}')

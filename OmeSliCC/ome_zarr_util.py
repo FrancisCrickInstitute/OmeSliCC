@@ -65,11 +65,8 @@ def create_channel_metadata(source):
     omezarr_channels = []
     for channeli, channel0 in enumerate(channels):
         channel = channel0.copy()
-        if 'color' in channel:
-            color = rgba_to_hexrgb(channel['color'])
-        else:
-            color = ''
-        channel['color'] = color
+        color = channel.get('color', (1, 1, 1, 1))
+        channel['color'] = rgba_to_hexrgb(color)
         if 'window' not in channel:
             channel['window'] = source.get_channel_window(channeli)
         omezarr_channels.append(channel)

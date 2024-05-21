@@ -53,6 +53,8 @@ class BioSource(OmeSource):
                             target_pixel_size=target_pixel_size,
                             source_info_required=source_info_required)
 
+        self.is_rgb = self.get_nchannels() in (3, 4)
+
         self.dimension_order = 'yx'
         if self.get_nchannels() > 1:
             self.dimension_order += 'c'

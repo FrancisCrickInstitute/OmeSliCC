@@ -38,6 +38,8 @@ class GeneratorSource(OmeSource):
         else:
             self.max_val = 1
 
+        self.is_rgb = True
+
         if seed is not None:
             np.random.seed(seed)
 

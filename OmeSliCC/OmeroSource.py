@@ -66,6 +66,8 @@ class OmeroSource(OmeSource):
             # default order
             self.pixels_store_pyramid_order = list(range(nlevels))
 
+        self.is_rgb = nchannels in (3, 4)
+
         self._init_metadata(image_object.getName(),
                             source_pixel_size=source_pixel_size,
                             target_pixel_size=target_pixel_size,
