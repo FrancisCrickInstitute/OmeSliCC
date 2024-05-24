@@ -218,7 +218,11 @@ class TiffSource(OmeSource):
             if isinstance(page, list):
                 array = []
                 for page1 in page:
-                    array.append(page1.asarray())
+                    data = page1.asarray()
+                    if len(page) > 1:
+                        array.append(data)
+                    else:
+                        array = data
                 array = np.asarray(array)
             else:
                 array = page.asarray()
@@ -264,8 +268,7 @@ class TiffSource(OmeSource):
         elif t is not None:
             pages = [pages[t]]
         page = pages[0] if isinstance(pages, list) else pages
-        tile_height = page.chunks[page.dims.index('height')]
-        tile_width = page.chunks[page.dims.index('width')]
+        tile_height, tile_width = page.chunks[:2]
         tile_y0, tile_x0 = y0 // tile_height, x0 // tile_width
         tile_y1, tile_x1 = np.ceil([y1 / tile_height, x1 / tile_width]).astype(int)
         w = (tile_x1 - tile_x0) * tile_width

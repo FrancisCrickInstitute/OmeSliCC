@@ -215,7 +215,7 @@ def image_resize(image: np.ndarray, target_size0: tuple, dimension_order: str = 
     shape = image.shape
     x_index = dimension_order.index('x')
     y_index = dimension_order.index('y')
-    c_is_at_end = dimension_order.endswith('c')
+    c_is_at_end = ('c' in dimension_order and dimension_order.endswith('c'))
     size = shape[x_index], shape[y_index]
     if np.mean(np.divide(size, target_size0)) < 1:
         interpolation = cv.INTER_CUBIC

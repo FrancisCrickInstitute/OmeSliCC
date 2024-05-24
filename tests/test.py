@@ -21,7 +21,7 @@ def render_at_pixel_size(filename: str, source_pixel_size: list = None,
     else:
         source = TiffSource(filename, source_pixel_size)
     image0 = source.asarray(pixel_size=target_pixel_size, **indices)
-    image = source.render(image0, source.get_dimension_order())
+    image = source.render(image0)
     return image
 
 

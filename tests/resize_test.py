@@ -41,7 +41,7 @@ if __name__ == '__main__':
     patch_size = (256, 256)
 
     source = TiffSource(path)
-    image = source.render(source.asarray(), source.get_dimension_order())
+    image = source.render(source.asarray())
     image1 = precise_downscale0(image, patch_size)
     image2 = precise_downscale(image, patch_size)
     new_size = tuple(np.flip(image2.shape[:2]))

@@ -68,34 +68,38 @@ def check_large_tiff_arrays(input):
     show_image(tile)
 
 
-def check_cached_loading(path):
+def check_cached_loading(path, test_speed=False):
     source = TiffSource(path)
-    pixel_size = [1]
-    x, y = np.array(source.get_size()) * source.get_pixel_size_micrometer() / pixel_size / 2
+    pixel_size = [0.1]
+    x, y = np.array(source.get_size()) * source.get_pixel_size_micrometer()[:2] / pixel_size / 2
+    x1, y1 = x * 1.1, y * 1.1
 
     print('Read as dask')
     start = time.process_time()
     source._load_as_dask()
     print(f'Load process time:', time.process_time() - start)
-    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size))
+    data = source.render(source.asarray(x0=x, x1=x1, y0=y, y1=y1, pixel_size=pixel_size))
     show_image(data)
-    random_access_test(source, n=100)
+    if test_speed:
+        random_access_test(source, n=100)
 
     print('Read compressed')
     start = time.process_time()
     source.load()
     print(f'Load process time:', time.process_time() - start)
-    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size))
+    data = source.render(source.asarray(x0=x, x1=x1, y0=y, y1=y1, pixel_size=pixel_size))
     show_image(data)
-    random_access_test(source, n=100)
+    if test_speed:
+        random_access_test(source, n=100)
 
     print('Read decompressed')
     start = time.process_time()
     source.load(decompress=True)
     print(f'Load process time:', time.process_time() - start)
-    data = source.render(source.asarray(x0=x, x1=x+100, y0=y, y1=y+100, pixel_size=pixel_size))
+    data = source.render(source.asarray(x0=x, x1=x1, y0=y, y1=y1, pixel_size=pixel_size))
     show_image(data)
-    random_access_test(source, n=100)
+    if test_speed:
+        random_access_test(source, n=100)
 
     source.unload()
 
@@ -120,19 +124,22 @@ def dask_load_test(filename):
 
 if __name__ == '__main__':
     path_large = 'D:/slides/EM04573_01/EM04573_01.ome.tif'
-    path_medium = 'D:/slides/EM04676_02/combined.ome.tiff'
+    #path_medium = 'D:/slides/EM04676_02/combined.ome.tiff'
+    #path_medium = 'E:/Personal/Crick/slides/NIH/CS_20231216_K891_V003.ome.tiff'
+    path_medium = 'E:/Personal/Crick/slides/test_images/output/K891_V003.ome.tiff'
+
     path_small = 'D:/slides/EM04573_01small.ome.tif'
     path2 = 'D:/slides/test.ome.zarr'
     path3 = 'D:/slides/test.ome.tiff'
     output_params = {'tile_size': [256, 256], 'npyramid_add': 3, 'pyramid_downsample': 2, 'compression': 'LZW'}
 
-    dask_load_test(path_large)
+    #dask_load_test(path_large)
 
-    load_as_zarr_um(path_large, 20400, 20900, 13000, 13500)
+    #load_as_zarr_um(path_large, 20400, 20900, 13000, 13500)
 
-    check_large_tiff_arrays(path_large)
+    #check_large_tiff_arrays(path_large)
 
-    check_cached_loading(path_medium)
+    check_cached_loading(path_medium, test_speed=False)
 
     print('Conversion start')
     start = time.process_time()
