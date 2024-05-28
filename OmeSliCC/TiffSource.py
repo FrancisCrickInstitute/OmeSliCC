@@ -273,7 +273,9 @@ class TiffSource(OmeSource):
         tile_y1, tile_x1 = np.ceil([y1 / tile_height, x1 / tile_width]).astype(int)
         w = (tile_x1 - tile_x0) * tile_width
         h = (tile_y1 - tile_y0) * tile_height
+        niter_channels = nc if page.dims[0] == 'sample' else 1
         tile_per_line = int(np.ceil(page.imagewidth / tile_width))
+        tile_per_channel = tile_per_line * int(np.ceil(page.imagelength / tile_height))
         xyzct[0] = w
         xyzct[1] = h
 
@@ -290,19 +292,20 @@ class TiffSource(OmeSource):
         dataoffsets = []
         databytecounts = []
         tile_locations = []
-        for i, page in enumerate(pages):
-            for y in range(tile_y0, tile_y1):
-                for x in range(tile_x0, tile_x1):
-                    index = int(y * tile_per_line + x)
-                    if index < len(page.databytecounts):
-                        offset = page.dataoffsets[index]
-                        count = page.databytecounts[index]
-                        if count > 0:
-                            dataoffsets.append(offset)
-                            databytecounts.append(count)
-                            target_y = (y - tile_y0) * tile_height
-                            target_x = (x - tile_x0) * tile_width
-                            tile_locations.append((i, 0, target_y, target_x, 0))
+        for pagei, page in enumerate(pages):
+            for channeli in range(niter_channels):
+                for y in range(tile_y0, tile_y1):
+                    for x in range(tile_x0, tile_x1):
+                        index = channeli * tile_per_channel + y * tile_per_line + x
+                        if index < len(page.databytecounts):
+                            offset = page.dataoffsets[index]
+                            count = page.databytecounts[index]
+                            if count > 0:
+                                dataoffsets.append(offset)
+                                databytecounts.append(count)
+                                target_y = (y - tile_y0) * tile_height
+                                target_x = (x - tile_x0) * tile_width
+                                tile_locations.append((pagei, 0, target_y, target_x, channeli))
 
             self._decode(page, dataoffsets, databytecounts, tile_locations, out)
 

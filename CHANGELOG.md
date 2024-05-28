@@ -1,3 +1,6 @@
+#### Version 0.6.14
+- Fixed bug in TiffSource legacy loading compressed option
+
 #### Version 0.6.13
 - Added image check of converted image
 - Added break on error option

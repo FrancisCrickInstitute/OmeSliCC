@@ -125,8 +125,8 @@ def dask_load_test(filename):
 if __name__ == '__main__':
     path_large = 'D:/slides/EM04573_01/EM04573_01.ome.tif'
     #path_medium = 'D:/slides/EM04676_02/combined.ome.tiff'
-    #path_medium = 'E:/Personal/Crick/slides/NIH/CS_20231216_K891_V003.ome.tiff'
-    path_medium = 'E:/Personal/Crick/slides/test_images/output/K891_V003.ome.tiff'
+    path_medium = 'E:/Personal/Crick/slides/NIH/CS_20231216_K891_V003.ome.tiff'
+    #path_medium = 'E:/Personal/Crick/slides/test_images/output/K891_V003.ome.tiff'
 
     path_small = 'D:/slides/EM04573_01small.ome.tif'
     path2 = 'D:/slides/test.ome.zarr'
