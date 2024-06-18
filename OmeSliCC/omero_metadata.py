@@ -48,6 +48,13 @@ def create_ome_metadata_from_omero(source: OmeSource,
         objectives0 = instrument0.getObjectives()
         if objectives0 is not None:
             objective0 = objectives0[0]
+            wd = objective0.getWorkingDistance()
+            if wd is not None:
+                working_distance = wd.getValue()
+                working_distance_unit = wd.getSymbol()
+            else:
+                working_distance = None
+                working_distance_unit = None
             objective = {
                 '@ID': 'Objective:0',
                 '@Manufacturer': objective0.getManufacturer(),
@@ -57,8 +64,8 @@ def create_ome_metadata_from_omero(source: OmeSource,
                 '@NominalMagnification': source.get_mag(),
                 '@CalibratedMagnification': source.get_mag(),
                 '@LensNA': objective0.getLensNA(),
-                '@WorkingDistance': objective0.getWorkingDistance().getValue(),
-                '@WorkingDistanceUnit': objective0.getWorkingDistance().getSymbol(),
+                '@WorkingDistance': working_distance,
+                '@WorkingDistanceUnit': working_distance_unit,
                 '@Iris': objective0.getIris(),
             }
             correction = objective0.getCorrection().getValue()
