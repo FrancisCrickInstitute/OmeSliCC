@@ -197,6 +197,14 @@ class TiffSource(OmeSource):
                 self.arrays.append(data)
         return self.arrays
 
+    def _load_as_zarr(self):
+        if len(self.arrays) == 0:
+            import zarr
+            store = self.tiff.aszarr(multiscales=True)
+            group = zarr.group(store=store)
+            self.arrays = [arr for _, arr in group.arrays()]  # read-only zarr arrays
+        return self.arrays
+
     def load(self, decompress: bool = False):
         if decompress:
             self.decompress()

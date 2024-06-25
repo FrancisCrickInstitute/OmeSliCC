@@ -8,7 +8,6 @@ from PIL import Image
 import psutil
 from tifffile import TiffWriter, TIFF, PHOTOMETRIC
 
-from OmeSliCC import Omero
 from OmeSliCC.OmeSource import OmeSource, get_resolution_from_pixel_size
 from OmeSliCC.OmeZarr import OmeZarr
 from OmeSliCC.PlainImageSource import PlainImageSource
@@ -19,7 +18,7 @@ from OmeSliCC.image_util import *
 from OmeSliCC.util import *
 
 
-def create_source(source_ref: str, params: dict, omero: Omero = None) -> OmeSource:
+def create_source(source_ref: str, params: dict, omero = None) -> OmeSource:
     source_pixel_size = split_value_unit_list(params['input'].get('pixel_size'))
     target_pixel_size = split_value_unit_list(params['output'].get('pixel_size'))
     ext = os.path.splitext(source_ref)[1].lower()

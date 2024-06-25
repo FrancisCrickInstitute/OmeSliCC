@@ -4,13 +4,16 @@ import imagecodecs
 from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegls, Jpegxr, Jpegxl
 from numcodecs import register_codec
 import numpy as np
-import matplotlib.pyplot as plt
 import PIL.Image
 from PIL.ExifTags import TAGS
 import tifffile
 from scipy.ndimage import gaussian_filter
 from skimage.transform import downscale_local_mean
 from tifffile import TiffFile
+try:
+    import matplotlib.pyplot as plt
+except:
+    print('matplotlib not installed')
 
 from OmeSliCC.util import *
 

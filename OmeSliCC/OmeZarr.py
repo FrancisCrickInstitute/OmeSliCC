@@ -24,8 +24,8 @@ class OmeZarr:
         if compression_filters is not None:
             storage_options['filters'] = compression_filters
 
-        zarr_root = zarr.open_group(parse_url(self.filename, mode="w").store,
-                                    mode="w", storage_options=storage_options)
+        zarr_root = zarr.open_group(store=parse_url(self.filename, mode="w").store, mode="w", storage_options=storage_options, zarr_version=3)
+        #zarr_root = zarr.open_group(FSStore(self.filename), mode="w", storage_options=storage_options, zarr_version=3)
         root_path = ''
 
         multiple_images = isinstance(sources, list)

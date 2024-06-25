@@ -1,5 +1,5 @@
 import argparse
-import dask
+#import dask
 import glob
 import logging
 import os
@@ -8,7 +8,6 @@ import validators
 import yaml
 from tqdm import tqdm
 
-import OmeSliCC.Omero
 from OmeSliCC.conversion import *
 from OmeSliCC.util import *
 from OmeSliCC.parameters import *
@@ -35,7 +34,8 @@ def run_actions(params: dict):
     omero = None
 
     if is_omero:
-        omero = Omero.Omero(params)
+        from OmeSliCC.Omero import Omero
+        omero = Omero(params)
         omero.init()
         source_refs = omero.get_annotation_image_ids()
         #dask.config.set(**{'array.slicing.split_large_chunks': False})  # Silence large size warning

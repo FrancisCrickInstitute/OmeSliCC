@@ -1,12 +1,10 @@
-name: omeslicc_env
+name: omesliccv3_env
 channels:
- - zacsimile
  - ome
  - conda-forge
- - bioconda
  - defaults
 dependencies:
- - python=3.9
+ - python=3.10
  - pip
  - numpy
  - pandas
@@ -16,10 +14,8 @@ dependencies:
  - numcodecs
  - dask
  - tifffile>=2023.9.26
- - zarr
  - ome-zarr
  - aiohttp
- - omero-py
  - rsa
  - tqdm
  - psutil
@@ -31,4 +27,5 @@ dependencies:
  - pip:
    - opencv-python
    - xmltodict
-   - python-bioformats
+   - zarr==3.0.0a0
+   - "--editable=git+https://github.com/will-moore/ome-zarr-py.git@zarr_v3_support#egg=ome-zarr"
