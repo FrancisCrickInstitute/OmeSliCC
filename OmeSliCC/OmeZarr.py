@@ -19,13 +19,17 @@ class OmeZarr:
 
         compressor, compression_filters = create_compression_filter(compression)
         storage_options = {'dimension_separator': '/', 'chunks': tile_size}
+        # Zarr V3 testing
+        #storage_options = {'chunks': tile_size}
         if compressor is not None:
             storage_options['compressor'] = compressor
         if compression_filters is not None:
             storage_options['filters'] = compression_filters
+        self.storage_options = storage_options
 
-        zarr_root = zarr.open_group(store=parse_url(self.filename, mode="w").store, mode="w", storage_options=storage_options, zarr_version=3)
-        #zarr_root = zarr.open_group(FSStore(self.filename), mode="w", storage_options=storage_options, zarr_version=3)
+        zarr_root = zarr.open_group(store=parse_url(self.filename, mode="w").store, mode="w", storage_options=storage_options)
+        # Zarr V3 testing
+        #zarr_root = zarr.open_group(store=parse_url(self.filename, mode="w").store, mode="w", zarr_version=3)
         root_path = ''
 
         multiple_images = isinstance(sources, list)
@@ -80,3 +84,7 @@ class OmeZarr:
 
         write_image(image=data, group=zarr_root, axes=axes, coordinate_transformations=pixel_size_scales,
                     scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add), overwrite=True)
+        # Zarr V3 testing
+        #write_image(image=data, group=zarr_root, axes=axes, coordinate_transformations=pixel_size_scales,
+        #            scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add),
+        #            storage_options=self.storage_options)

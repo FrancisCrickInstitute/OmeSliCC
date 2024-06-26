@@ -1,3 +1,4 @@
+#import dask.array as da
 import numpy as np
 from ome_zarr.io import parse_url
 from ome_zarr.reader import Reader
@@ -25,7 +26,10 @@ class OmeZarrSource(OmeSource):
         self.levels = []
         nchannels = 1
         try:
-            reader = Reader(parse_url(filename))
+            location = parse_url(filename)
+            if location is None:
+                raise FileNotFoundError(f'Error parsing ome-zarr file {filename}')
+            reader = Reader(location)
             # nodes may include images, labels etc
             # first node will be the image pixel data
             image_node = list(reader())[0]
@@ -38,6 +42,8 @@ class OmeZarrSource(OmeSource):
             self.dimension_order = ''.join([axis.get('name') for axis in axes])
 
             for data in image_node.data:
+                #if isinstance(data, np.ndarray):
+                #    data = da.from_array(data)
                 self.levels.append(data)
 
                 xyzct = [1, 1, 1, 1, 1]
