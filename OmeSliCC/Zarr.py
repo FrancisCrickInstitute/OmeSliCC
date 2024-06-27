@@ -1,6 +1,7 @@
 import numpy as np
 import pathlib
 import zarr
+from zarr.store import make_store_path
 
 from OmeSliCC.image_util import *
 from OmeSliCC.ome_zarr_util import *
@@ -13,15 +14,19 @@ class Zarr:
         self.ome = ('ome' == self.filename.split('.')[1].lower())
         self.data = []
 
-    def create(self, source, tile_size=None,
-               npyramid_add=0, pyramid_downsample=2, compression=[]):
+    def create(self, source, tile_size=None, npyramid_add=0, pyramid_downsample=2, compression=[],
+               v3=False):
         # create empty dataset
         dimension_order = source.get_dimension_order()
         self.dimension_order = dimension_order
         self.npyramid_add = npyramid_add
         self.pyramid_downsample = pyramid_downsample
-        file_url = pathlib.Path(self.filename).as_uri()
-        self.zarr_root = zarr.open_group(file_url, mode='w', storage_options={'dimension_separator': '/'})
+        if v3:
+            store_path = make_store_path(self.filename, mode='w')
+            self.zarr_root = zarr.Group.create(store=store_path, zarr_format=3)
+        else:
+            file_url = pathlib.Path(self.filename, mode='w').as_uri()
+            self.zarr_root = zarr.open_group(store=file_url, mode='w', storage_options={'dimension_separator': '/'})
         xyzct = source.get_size_xyzct()
         shape0 = [xyzct['xyzct'.index(dimension)] for dimension in dimension_order]
         dtype = source.pixel_types[0]
@@ -37,8 +42,15 @@ class Zarr:
             tile_size = [1, 1, 1] + list(np.flip(tile_size))
         for pathi in range(1 + npyramid_add):
             shape = calc_shape_scale(shape0, dimension_order, scale)
-            self.data.append(self.zarr_root.create_dataset(str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
-                                                           compressor=compressor, filters=compression_filters))
+            if v3:
+                shape = np.array(shape).tolist()    # convert to basic int
+                tile_size = np.array(tile_size).tolist()  # convert to basic int
+                dataset = self.zarr_root.create_array(str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
+                                                      compressor=compressor, codecs=compression_filters)
+            else:
+                dataset = self.zarr_root.create_dataset(str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
+                                                        compressor=compressor, filters=compression_filters)
+            self.data.append(dataset)
             # used for ome metadata:
             datasets.append({
                 'path': str(pathi),

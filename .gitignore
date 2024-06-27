@@ -142,3 +142,4 @@ docs/doctrees/
 sphinx/_build/
 resources/
 !resources/params.yml
+/src/ome-zarr

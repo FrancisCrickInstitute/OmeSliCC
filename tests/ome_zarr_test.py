@@ -1,13 +1,13 @@
 import numpy as np
 from tqdm import tqdm
 
+from OmeSliCC.conversion import create_source, save_image_as_zarr
 from OmeSliCC.image_util import *
-from OmeSliCC.TiffSource import TiffSource
 from OmeSliCC.Zarr import Zarr
 from OmeSliCC.OmeZarrSource import OmeZarrSource
 
 
-def simple_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsample):
+def create_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsample):
     w, h = source.get_size()
     zarr = Zarr(output_filename)
     zarr.create(source, tile_size=[1, 1, 1, tile_size, tile_size],
@@ -24,7 +24,7 @@ def simple_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsa
             zarr.set(x0, y0, x1, y1, image)
 
 
-def open_zarr_source(filename):
+def open_omezarr_source(filename):
     source = OmeZarrSource(filename)
     image = source._asarray_level(0, x0=15000, x1=16000, y0=15000, y1=16000)
     show_image(image)
@@ -32,13 +32,29 @@ def open_zarr_source(filename):
     show_image(image)
 
 
+def save_zarr_v3(source, data, filename, output_params):
+    save_image_as_zarr(source, data, filename, output_params, v3=True)
+
+
 if __name__ == '__main__':
-    source = TiffSource('E:/Personal/Crick/slides/TCGA_KIRC/0f450938-5604-4af6-8783-c385ea647569/TCGA-A3-3358-01Z-00-DX1.1bd1c720-f6db-4837-8f83-e7476dd2b0a3.svs')
+    #filename = 'E:/Personal/Crick/slides/TCGA_KIRC/0f450938-5604-4af6-8783-c385ea647569/TCGA-A3-3358-01Z-00-DX1.1bd1c720-f6db-4837-8f83-e7476dd2b0a3.svs'
+    filename = 'E:/Personal/Crick/slides/test_images/zarr test.zarr'
+    source = create_source(filename, {})
     w, h = source.get_size()
     output_filename = 'D:/slides/test/test.ome.zarr'
     npyramid_add = 4
     pyramid_downsample = 2
-    tile_size = 2048
+    tile_size = 16
+    compression = None
+    output_params = {
+        'tile_size': [tile_size, tile_size],
+        'npyramid_add': npyramid_add,
+        'pyramid_downsample': pyramid_downsample,
+        'compression': compression
+    }
 
-    simple_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsample)
-    open_zarr_source(output_filename)
+    #create_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsample)
+    #open_omezarr_source(output_filename)
+
+    data = source.get_source_dask()[0]
+    save_zarr_v3(source, data, output_filename, output_params)

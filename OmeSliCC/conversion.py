@@ -18,9 +18,9 @@ from OmeSliCC.image_util import *
 from OmeSliCC.util import *
 
 
-def create_source(source_ref: str, params: dict, omero = None) -> OmeSource:
-    source_pixel_size = split_value_unit_list(params['input'].get('pixel_size'))
-    target_pixel_size = split_value_unit_list(params['output'].get('pixel_size'))
+def create_source(source_ref: str, params: dict, omero=None) -> OmeSource:
+    source_pixel_size = split_value_unit_list(params.get('input', {}).get('pixel_size'))
+    target_pixel_size = split_value_unit_list(params.get('output', {}).get('pixel_size'))
     ext = os.path.splitext(source_ref)[1].lower()
     if omero is not None:
         from OmeSliCC.OmeroSource import OmeroSource
@@ -228,7 +228,8 @@ def save_image_as_ome_zarr(source: OmeSource, data: np.ndarray, output_filename:
                npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
 
 
-def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str, output_params: dict):
+def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str, output_params: dict,
+                       v3: bool = False):
     # ome-zarr: https://ngff.openmicroscopy.org/latest/
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
@@ -237,7 +238,7 @@ def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str
 
     zarr = Zarr(output_filename)
     zarr.create(source, tile_size=tile_size, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
-                compression=compression)
+                compression=compression, v3=v3)
     zarr.set(data)
 
 
