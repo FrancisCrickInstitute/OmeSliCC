@@ -1,7 +1,8 @@
 import numpy as np
+import os.path
 import pathlib
+import shutil
 import zarr
-from zarr.store import make_store_path
 
 from OmeSliCC.image_util import *
 from OmeSliCC.ome_zarr_util import *
@@ -22,8 +23,11 @@ class Zarr:
         self.npyramid_add = npyramid_add
         self.pyramid_downsample = pyramid_downsample
         if v3:
-            store_path = make_store_path(self.filename, mode='w')
-            self.zarr_root = zarr.Group.create(store=store_path, zarr_format=3)
+            import zarrita
+            store_path = zarrita.store.make_store_path(self.filename, mode='w')
+            if os.path.exists(self.filename):
+                shutil.rmtree(str(store_path.store.root))
+            self.zarr_root = zarr.Group.create(store=store_path)
         else:
             file_url = pathlib.Path(self.filename, mode='w').as_uri()
             self.zarr_root = zarr.open_group(store=file_url, mode='w', storage_options={'dimension_separator': '/'})
@@ -43,10 +47,13 @@ class Zarr:
         for pathi in range(1 + npyramid_add):
             shape = calc_shape_scale(shape0, dimension_order, scale)
             if v3:
+                import zarrita
                 shape = np.array(shape).tolist()    # convert to basic int
                 tile_size = np.array(tile_size).tolist()  # convert to basic int
-                dataset = self.zarr_root.create_array(str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
-                                                      compressor=compressor, codecs=compression_filters)
+                #dataset = self.zarr_root.create_array(str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
+                #                                      compressor=compressor, codecs=compression_filters)
+                dataset = zarrita.Array.create(store_path / str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
+                                               compressor=compressor, codecs=compression_filters)
             else:
                 dataset = self.zarr_root.create_dataset(str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
                                                         compressor=compressor, filters=compression_filters)

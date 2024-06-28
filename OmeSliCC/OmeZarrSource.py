@@ -1,6 +1,5 @@
-#import dask.array as da
 import numpy as np
-from ome_zarr.io import parse_url
+from ome_zarr.io import parse_url, ZarrLocation
 from ome_zarr.reader import Reader
 
 from OmeSliCC.OmeSource import OmeSource
@@ -26,7 +25,8 @@ class OmeZarrSource(OmeSource):
         self.levels = []
         nchannels = 1
         try:
-            location = parse_url(filename)
+            #location = parse_url(filename)
+            location = ZarrLocation(filename)
             if location is None:
                 raise FileNotFoundError(f'Error parsing ome-zarr file {filename}')
             reader = Reader(location)
