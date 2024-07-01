@@ -24,10 +24,10 @@ class Zarr:
         self.pyramid_downsample = pyramid_downsample
         if v3:
             import zarrita
-            store_path = zarrita.store.make_store_path(self.filename, mode='w')
+            store_path = zarrita.store.make_store_path(self.filename)
             if os.path.exists(self.filename):
                 shutil.rmtree(str(store_path.store.root))
-            self.zarr_root = zarr.Group.create(store=store_path)
+            self.zarr_root = zarrita.Group.create(store=store_path, exists_ok=True)
         else:
             file_url = pathlib.Path(self.filename, mode='w').as_uri()
             self.zarr_root = zarr.open_group(store=file_url, mode='w', storage_options={'dimension_separator': '/'})
@@ -35,7 +35,6 @@ class Zarr:
         shape0 = [xyzct['xyzct'.index(dimension)] for dimension in dimension_order]
         dtype = source.pixel_types[0]
         pixel_size_um = source.get_pixel_size_micrometer()
-        compressor, compression_filters = create_compression_filter(compression)
         scale = 1
         datasets = []
         if tile_size:
@@ -50,11 +49,11 @@ class Zarr:
                 import zarrita
                 shape = np.array(shape).tolist()    # convert to basic int
                 tile_size = np.array(tile_size).tolist()  # convert to basic int
-                #dataset = self.zarr_root.create_array(str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
-                #                                      compressor=compressor, codecs=compression_filters)
-                dataset = zarrita.Array.create(store_path / str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
-                                               compressor=compressor, codecs=compression_filters)
+                codecs = create_compression_codecs(compression)
+                dataset = self.zarr_root.create_array(str(pathi), shape=shape, chunk_shape=tile_size, dtype=dtype,
+                                                      codecs=codecs)
             else:
+                compressor, compression_filters = create_compression_filter(compression)
                 dataset = self.zarr_root.create_dataset(str(pathi), shape=shape, chunks=tile_size, dtype=dtype,
                                                         compressor=compressor, filters=compression_filters)
             self.data.append(dataset)
@@ -93,5 +92,6 @@ class Zarr:
                 data1 = image_resize(data, new_size, dimension_order=self.dimension_order)
             else:
                 data1 = data
-            self.data[pathi][..., sy0:sy1, sx0:sx1] = data1
+            #self.data[pathi][..., sy0:sy1, sx0:sx1] = data1
+            self.data[pathi] = data1
             scale /= self.pyramid_downsample

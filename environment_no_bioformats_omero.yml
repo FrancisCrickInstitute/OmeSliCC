@@ -1,0 +1,30 @@
+name: omeslicc_env
+channels:
+ - ome
+ - conda-forge
+ - defaults
+dependencies:
+ - python=3.10
+ - pip
+ - numpy
+ - pandas
+ - scikit-image
+ - scikit-learn
+ - imagecodecs>=2023.3.16
+ - numcodecs
+ - dask
+ - tifffile>=2023.9.26
+ - zarr
+ - ome-zarr
+ - aiohttp
+ - rsa
+ - tqdm
+ - psutil
+ - PyYAML
+ - Pillow
+ - imageio
+ - validators
+ - toml
+ - pip:
+   - opencv-python
+   - xmltodict

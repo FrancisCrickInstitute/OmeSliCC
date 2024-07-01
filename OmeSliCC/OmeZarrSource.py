@@ -1,5 +1,5 @@
 import numpy as np
-from ome_zarr.io import parse_url, ZarrLocation
+from ome_zarr.io import parse_url
 from ome_zarr.reader import Reader
 
 from OmeSliCC.OmeSource import OmeSource
@@ -25,8 +25,7 @@ class OmeZarrSource(OmeSource):
         self.levels = []
         nchannels = 1
         try:
-            #location = parse_url(filename)
-            location = ZarrLocation(filename)
+            location = parse_url(filename)
             if location is None:
                 raise FileNotFoundError(f'Error parsing ome-zarr file {filename}')
             reader = Reader(location)
@@ -110,7 +109,8 @@ class OmeZarrSource(OmeSource):
         self.source_mag = 0
 
     def get_source_dask(self):
-        return self.levels
+        return [redimension_data(level, self.dimension_order, self.get_dimension_order())
+                for level in self.levels]
 
     def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         redim = redimension_data(self.levels[level], self.dimension_order, self.get_dimension_order())

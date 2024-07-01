@@ -290,6 +290,35 @@ def create_compression_filter(compression: list) -> tuple:
     return compressor, compression_filters
 
 
+def create_compression_codecs(compression: list) -> list:
+    codecs = None
+    compression = ensure_list(compression)
+    if compression is not None and len(compression) > 0:
+        compression_type = compression[0].lower()
+        if len(compression) > 1:
+            level = int(compression[1])
+        else:
+            level = None
+        if 'lzw' in compression_type:
+            from imagecodecs.numcodecs import Lzw
+            codecs = [Lzw()]
+        elif '2k' in compression_type or '2000' in compression_type:
+            from imagecodecs.numcodecs import Jpeg2k
+            codecs = [Jpeg2k(level=level)]
+        elif 'jpegls' in compression_type:
+            from imagecodecs.numcodecs import Jpegls
+            codecs = [Jpegls(level=level)]
+        elif 'jpegxr' in compression_type:
+            from imagecodecs.numcodecs import Jpegxr
+            codecs = [Jpegxr(level=level)]
+        elif 'jpegxl' in compression_type:
+            from imagecodecs.numcodecs import Jpegxl
+            codecs = [Jpegxl(level=level)]
+        else:
+            codecs = [compression]
+    return codecs
+
+
 def get_tiff_pages(tiff: TiffFile) -> list:
     pages = []
     found = False

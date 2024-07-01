@@ -42,7 +42,6 @@ if __name__ == '__main__':
     #filename = 'E:/Personal/Crick/slides/test_images/zarr test.zarr'
     filename = 'https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr'
     source = create_source(filename, {})
-    #source = ZarrSource(filename)
     w, h = source.get_size()
     output_filename = 'D:/slides/test/' + os.path.basename(filename)
     npyramid_add = 4
