@@ -19,6 +19,7 @@ class OmeZarr:
 
         compressor, compression_filters = create_compression_filter(compression)
         storage_options = {'dimension_separator': '/', 'chunks': tile_size}
+        ome_version = '0.4'
         # Zarr V3 testing
         #storage_options = {'chunks': tile_size}
         if compressor is not None:
@@ -58,7 +59,7 @@ class OmeZarr:
                 multi_metadata.append(meta)
         if multiple_images:
             zarr_root.attrs['multiscales'] = multi_metadata
-        zarr_root.attrs['omero'] = create_channel_metadata(sources[0])
+        zarr_root.attrs['omero'] = create_channel_metadata(sources[0], ome_version)
 
     def write_dataset(self, zarr_root, data, source,
                       npyramid_add=0, pyramid_downsample=2, translation=[]):

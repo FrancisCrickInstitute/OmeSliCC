@@ -17,6 +17,17 @@ def ensure_list(x) -> list:
         return [x]
 
 
+def reorder(items: list, old_order: str, new_order: str, default_value: int = 0) -> list:
+    new_items = []
+    for label in new_order:
+        if label in old_order:
+            item = items[old_order.index(label)]
+        else:
+            item = default_value
+        new_items.append(item)
+    return new_items
+
+
 def filter_dict(dict0: dict) -> dict:
     new_dict = {}
     for key, value0 in dict0.items():

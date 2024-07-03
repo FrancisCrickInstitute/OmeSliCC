@@ -5,6 +5,7 @@ from ome_zarr.reader import Reader
 from OmeSliCC.OmeSource import OmeSource
 from OmeSliCC.color_conversion import hexrgb_to_rgba, int_to_rgba
 from OmeSliCC.image_util import get_numpy_slicing, redimension_data
+from OmeSliCC.util import reorder
 
 
 class OmeZarrSource(OmeSource):
@@ -14,6 +15,12 @@ class OmeZarrSource(OmeSource):
     """original filename / URL"""
     levels: list
     """list of all image arrays for different sizes"""
+    level_scales: list
+    """list of all image (xy) scales"""
+    shapes: list
+    """list of image shapes"""
+    chunk_shapes: list
+    """list of image chunk shapes"""
 
     def __init__(self, filename: str,
                  source_pixel_size: list = None,
@@ -23,6 +30,9 @@ class OmeZarrSource(OmeSource):
         super().__init__()
 
         self.levels = []
+        self.level_scales = []
+        self.shapes = []
+        self.chunk_shapes = []
         nchannels = 1
         try:
             location = parse_url(filename)
@@ -41,18 +51,19 @@ class OmeZarrSource(OmeSource):
             self.dimension_order = ''.join([axis.get('name') for axis in axes])
 
             for data in image_node.data:
-                #if isinstance(data, np.ndarray):
-                #    data = da.from_array(data)
                 self.levels.append(data)
 
                 xyzct = [1, 1, 1, 1, 1]
                 for i, n in enumerate(data.shape):
-                    xyzct_index = 'xyzct'.index(self.dimension_order[i])
+                    xyzct_index = self.default_properties_order.index(self.dimension_order[i])
                     xyzct[xyzct_index] = n
                 self.sizes_xyzct.append(xyzct)
                 self.sizes.append((xyzct[0], xyzct[1]))
                 self.pixel_types.append(data.dtype)
                 self.pixel_nbits.append(data.dtype.itemsize * 8)
+                self.level_scales.append(np.divide(self.sizes_xyzct[0][0], xyzct[0]))
+                self.shapes.append(np.flip(reorder(data.shape, self.dimension_order, self.default_properties_order)))
+                self.chunk_shapes.append(np.flip(reorder(data.chunksize, self.dimension_order, self.default_properties_order)))
                 nchannels = xyzct[3]
         except Exception as e:
             raise FileNotFoundError(f'Read error: {e}')
@@ -72,14 +83,13 @@ class OmeZarrSource(OmeSource):
 
         units = [axis.get('unit', '') for axis in metadata.get('axes', [])]
 
-        scale1 = [0, 0, 0, 0, 0]
+        scale1 = [1, 1, 1, 1, 1]
         # get pixelsize using largest/first scale
         transform = self.metadata.get('coordinateTransformations', [])
         if transform:
-            transform = transform[0]
-            for transform_element in transform:
-                if 'scale' in transform_element:
-                    scale1 = transform_element['scale']
+            for transform1 in transform[0]:
+                if transform1['type'] == 'scale':
+                    scale1 = transform1['scale']
             for axis in 'xyz':
                 if axis in axes:
                     index = axes.index(axis)

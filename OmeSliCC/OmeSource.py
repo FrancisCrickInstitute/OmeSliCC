@@ -38,6 +38,7 @@ class OmeSource:
     position: list
     """source position information"""
 
+    default_properties_order = 'xyzct'
     default_physical_unit = 'µm'
 
     def __init__(self):

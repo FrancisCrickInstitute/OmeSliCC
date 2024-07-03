@@ -53,7 +53,7 @@ def create_transformation_metadata(dimension_order, pixel_size_um, scale, transl
     return metadata
 
 
-def create_channel_metadata(source):
+def create_channel_metadata(source, ome_version):
     channels = source.get_channels()
     nchannels = source.get_nchannels()
 
@@ -72,18 +72,29 @@ def create_channel_metadata(source):
         omezarr_channels.append(channel)
 
     metadata = {
-        'version': '0.4',
+        'version': ome_version,
         'channels': omezarr_channels,
     }
     return metadata
 
 
-def calc_shape_scale(shape0, dimension_order, scale):
+def scale_dimensions_xy(shape0, dimension_order, scale):
     shape = []
     if scale == 1:
         return shape0
     for shape1, dimension in zip(shape0, dimension_order):
-        if dimension in ['x', 'y']:
-            shape1 = int(round(shape1 * scale))
+        if dimension[0] in ['x', 'y']:
+            shape1 = int(shape1 * scale)
         shape.append(shape1)
+    return shape
+
+
+def scale_dimensions_dict(shape0, scale):
+    shape = {}
+    if scale == 1:
+        return shape0
+    for dimension, shape1 in shape0.items():
+        if dimension[0] in ['x', 'y']:
+            shape1 = int(shape1 * scale)
+        shape[dimension] = shape1
     return shape

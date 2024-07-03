@@ -2,10 +2,9 @@ import os.path
 import numpy as np
 from tqdm import tqdm
 
-from OmeSliCC.conversion import create_source, save_image_as_zarr
 from OmeSliCC.image_util import *
-from OmeSliCC.Zarr import Zarr
 from OmeSliCC.OmeZarrSource import OmeZarrSource
+from OmeSliCC.Zarr import Zarr
 
 
 def create_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsample):
@@ -33,30 +32,35 @@ def open_omezarr_source(filename):
     show_image(image)
 
 
-def save_zarr_v3(source, data, filename, output_params):
-    save_image_as_zarr(source, data, filename, output_params, v3=True)
+def convert_ome_zarr_v2_to_v3(filename):
+    source = OmeZarrSource(filename)
+    zarr = Zarr(output_filename, ome=True, v3=True)
+    print(source.shapes, source.chunk_shapes, source.level_scales)
+    zarr.create(source, shapes=source.shapes, chunk_shapes=source.chunk_shapes, level_scales=source.level_scales,
+                compression=compression)
+    for level, data in enumerate(source.get_source_dask()):
+        zarr.set_level(level, data)
 
 
 if __name__ == '__main__':
     #filename = 'E:/Personal/Crick/slides/TCGA_KIRC/0f450938-5604-4af6-8783-c385ea647569/TCGA-A3-3358-01Z-00-DX1.1bd1c720-f6db-4837-8f83-e7476dd2b0a3.svs'
     #filename = 'E:/Personal/Crick/slides/test_images/zarr test.zarr'
-    filename = 'https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr'
-    source = create_source(filename, {})
-    w, h = source.get_size()
+    filename = 'D:/slides/6001240.zarr'
+    #filename = 'https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr'
     output_filename = 'D:/slides/test/' + os.path.basename(filename)
     npyramid_add = 4
     pyramid_downsample = 2
     tile_size = 16
     compression = None
     output_params = {
-        'tile_size': [tile_size, tile_size],
+        'tile_size': tile_size,
         'npyramid_add': npyramid_add,
         'pyramid_downsample': pyramid_downsample,
         'compression': compression
     }
-
     #create_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsample)
     #open_omezarr_source(output_filename)
 
-    data = source.get_source_dask()[0]
-    save_zarr_v3(source, data, output_filename, output_params)
+    convert_ome_zarr_v2_to_v3(filename)
+
+    print('done')
