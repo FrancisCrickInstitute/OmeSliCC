@@ -99,7 +99,15 @@ class TiffSource(OmeSource):
                     depth *= self.depth
                 bitspersample = page.dtype.itemsize * 8
             if tiff.is_ome:
-                pixels = self.metadata.get('Image', {}).get('Pixels', {})
+                images = self.metadata.get('Image', {})
+                image = images
+                if isinstance(images, list):
+                    for image in images:
+                        name = image.get('Name', '')
+                        if name in filename:
+                            break
+
+                pixels = image.get('Pixels', {})
                 depth = int(pixels.get('SizeZ', depth))
                 nchannels = int(pixels.get('SizeC', nchannels))
                 nt = int(pixels.get('SizeT', nt))

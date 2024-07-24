@@ -1,6 +1,7 @@
 # https://pyquestions.com/how-to-save-a-very-large-numpy-array-as-an-image-loading-as-little-as-possible-into-memory
 
 
+#import glob
 import logging
 import numpy as np
 import os
@@ -116,11 +117,31 @@ def combine_images(sources: list[OmeSource], params: dict):
     output_params = params['output']
     output_folder = output_params['folder']
     output_format = output_params['format']
+    extra_metadata = output_params.get('extra_metadata', {})
 
     images = [get_source_image(source) for source in sources]
     image = da.concatenate(images, axis=1)
 
-    channels = output_params.get('extra_channel_metadata', [])
+    # Experimental metadata
+    #metadatas = []
+    #for source in sources:
+    #    image_filename = source.source_reference
+    #    filepattern = os.path.splitext(image_filename)[0].rstrip('.ome') + '*'
+    #    for metadata_filename in glob.glob(filepattern):
+    #        if metadata_filename != image_filename:
+    #            metadata = file_to_dict(metadata_filename)
+    #            if metadata is not None:
+    #                metadatas.append(metadata)
+
+    new_source = OmeSource()
+    ome = ('ome' in output_format)
+    filetitle = get_filetitle(source_ref).rstrip('.ome')
+    output_filename = str(os.path.join(output_folder, filetitle + '_combined.' + output_format))
+    new_source.source_reference = output_filename
+    new_source.target_pixel_size = source0.get_pixel_size()
+    new_source.position = source0.position
+
+    channels = extra_metadata.get('channels', [])
     if not channels:
         channels = []
         for source in sources:
@@ -138,15 +159,8 @@ def combine_images(sources: list[OmeSource], params: dict):
     if image.shape[1] != nchannels:
         logging.warning('#Comined image channels does not match #data channels')
 
-    ome = ('ome' in output_format)
-    filetitle = get_filetitle(source_ref).rstrip('.ome')
-    output_filename = str(os.path.join(output_folder, filetitle + '_combined.' + output_format))
-
-    new_source = OmeSource()
-    new_source.source_reference = output_filename
-    new_source.target_pixel_size = source0.get_pixel_size()
-    new_source.position = source0.position
     new_source.channels = channels
+
     new_source.sizes = [source0.get_size()]
     sizes_xyzc = list(source0.get_size_xyzct())
     sizes_xyzc[3] = nchannels

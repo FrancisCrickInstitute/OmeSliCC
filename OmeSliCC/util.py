@@ -1,7 +1,10 @@
 import ast
+import json
 import os
 import re
 import numpy as np
+import xmltodict
+import yaml
 
 
 def get_default(x, default):
@@ -26,6 +29,18 @@ def reorder(items: list, old_order: str, new_order: str, default_value: int = 0)
             item = default_value
         new_items.append(item)
     return new_items
+
+
+def file_to_dict(filename: str) -> dict:
+    ext = os.path.splitext(filename)[1]
+    content = open(filename, 'r').read()
+    if ext == '.xml':
+        data = xmltodict.parse(content)
+    elif ext in ['.yml', '.yaml']:
+        data = yaml.safe_load(content)
+    else:   # assume json
+        data = json.loads(content)
+    return data
 
 
 def filter_dict(dict0: dict) -> dict:
