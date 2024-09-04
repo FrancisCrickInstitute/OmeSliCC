@@ -47,7 +47,7 @@ class GeneratorSource(OmeSource):
                                   for dim in np.flip(size)]
 
     def _find_metadata(self):
-        self._get_ome_metadate()
+        self._get_ome_metadata()
 
     def calc_color(self, *args, **kwargs):
         channels = []

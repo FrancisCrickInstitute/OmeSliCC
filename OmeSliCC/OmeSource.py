@@ -76,7 +76,7 @@ class OmeSource:
                 logging.warning(msg)
         self._init_sizes()
 
-    def _get_ome_metadate(self):
+    def _get_ome_metadata(self):
         images = ensure_list(self.metadata.get('Image', {}))[0]
         pixels = images.get('Pixels', {})
         self.source_pixel_size = []

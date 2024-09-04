@@ -60,7 +60,7 @@ class BioSource(OmeSource):
             self.dimension_order += 'c'
 
     def _find_metadata(self):
-        self._get_ome_metadate()
+        self._get_ome_metadata()
 
     def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         x0, x1 = slicing.get('x0', 0), slicing.get('x1', -1)

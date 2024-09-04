@@ -131,7 +131,7 @@ class TiffSource(OmeSource):
         page = self.first_page
         # from OME metadata
         if page.is_ome:
-            self._get_ome_metadate()
+            self._get_ome_metadata()
             return
 
         # from imageJ metadata
