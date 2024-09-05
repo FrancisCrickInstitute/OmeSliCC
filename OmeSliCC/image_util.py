@@ -322,7 +322,7 @@ def create_compression_codecs(compression: list) -> list:
 def get_tiff_pages(tiff: TiffFile) -> list:
     pages = []
     found = False
-    if tiff.series:
+    if tiff.series and not tiff.is_mmstack:
         # has series
         baseline = tiff.series[0]
         for level in baseline.levels:

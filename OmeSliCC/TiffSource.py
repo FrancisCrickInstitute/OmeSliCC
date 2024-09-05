@@ -51,10 +51,32 @@ class TiffSource(OmeSource):
         self.first_page = tiff.pages.first
         if tiff.is_ome and tiff.ome_metadata is not None:
             xml_metadata = tiff.ome_metadata
-            self.metadata = XmlDict.xml2dict(xml_metadata)
+            self.metadata = tifffile.xml2dict(xml_metadata)
             if 'OME' in self.metadata:
                 self.metadata = self.metadata['OME']
                 self.has_ome_metadata = True
+            if 'BinaryOnly' in self.metadata:
+                # binary image only; get metadata from metadata file instead
+                self.has_ome_metadata = False
+                metdata_filename = os.path.join(os.path.dirname(filename),
+                                                self.metadata['BinaryOnly'].get('MetadataFile'))
+                if os.path.isfile(metdata_filename):
+                    metdata_tiff = TiffFile(metdata_filename)
+                    if metdata_tiff.is_ome and metdata_tiff.ome_metadata is not None:
+                        xml_metadata = metdata_tiff.ome_metadata
+                        self.metadata = tifffile.xml2dict(xml_metadata)
+                        if 'OME' in self.metadata:
+                            self.metadata = self.metadata['OME']
+                            images = self.metadata.get('Image')
+                            if isinstance(images, list):
+                                for image in images:
+                                    if image.get('Name', '').lower() == get_filetitle(filename).lower():
+                                        self.metadata['Image'] = image
+                                        break
+                            self.has_ome_metadata = True
+
+        if self.has_ome_metadata:
+            pass
         elif tiff.is_imagej:
             self.metadata = tiff.imagej_metadata
         elif self.first_page.description:
@@ -72,12 +94,13 @@ class TiffSource(OmeSource):
             photometric = series0.keyframe.photometric
         self.pages = get_tiff_pages(tiff)
         for page0 in self.pages:
-            npages = len(page0)
-            self.npages = npages
             if isinstance(page0, list):
                 page = page0[0]
+                npages = len(page0)
             else:
                 page = page0
+                npages = 1
+            self.npages = npages
             if not self.dimension_order:
                 self.dimension_order = page.axes
                 photometric = page.photometric
@@ -98,16 +121,8 @@ class TiffSource(OmeSource):
                     self.depth = shape[2]
                     depth *= self.depth
                 bitspersample = page.dtype.itemsize * 8
-            if tiff.is_ome:
-                images = self.metadata.get('Image', {})
-                image = images
-                if isinstance(images, list):
-                    for image in images:
-                        name = image.get('Name', '')
-                        if name in filename:
-                            break
-
-                pixels = image.get('Pixels', {})
+            if self.has_ome_metadata:
+                pixels = ensure_list(self.metadata.get('Image', {}))[0].get('Pixels', {})
                 depth = int(pixels.get('SizeZ', depth))
                 nchannels = int(pixels.get('SizeC', nchannels))
                 nt = int(pixels.get('SizeT', nt))
@@ -128,9 +143,8 @@ class TiffSource(OmeSource):
 
     def _find_metadata(self):
         pixel_size = []
-        page = self.first_page
         # from OME metadata
-        if page.is_ome:
+        if self.has_ome_metadata:
             self._get_ome_metadata()
             return
 
@@ -139,10 +153,11 @@ class TiffSource(OmeSource):
         pixel_size_unit = self.metadata.get('unit', '').encode().decode('unicode_escape')
         if pixel_size_unit == 'micron':
             pixel_size_unit = self.default_physical_unit
-        for scale in self.metadata.get('scales', '').split(','):
-            scale = scale.strip()
-            if scale != '':
-                pixel_size.append((float(scale), pixel_size_unit))
+        if 'scales' in self.metadata:
+            for scale in self.metadata['scales'].split(','):
+                scale = scale.strip()
+                if scale != '':
+                    pixel_size.append((float(scale), pixel_size_unit))
         if len(pixel_size) == 0 and self.metadata is not None and 'spacing' in self.metadata:
             pixel_size_z = (self.metadata['spacing'], pixel_size_unit)
         # from description
@@ -156,13 +171,12 @@ class TiffSource(OmeSource):
             pixel_size.append((self.metadata['MPP'], self.default_physical_unit))
         # from page TAGS
         if len(pixel_size) < 2:
-            if pixel_size_unit == '':
-                pixel_size_unit = self.tags.get('ResolutionUnit', '')
-                if isinstance(pixel_size_unit, Enum):
-                    pixel_size_unit = pixel_size_unit.name
-                pixel_size_unit = pixel_size_unit.lower()
-                if pixel_size_unit == 'none':
-                    pixel_size_unit = ''
+            pixel_size_unit = self.tags.get('ResolutionUnit', '')
+            if isinstance(pixel_size_unit, Enum):
+                pixel_size_unit = pixel_size_unit.name
+            pixel_size_unit = pixel_size_unit.lower()
+            if pixel_size_unit == 'none':
+                pixel_size_unit = ''
             res0 = convert_rational_value(self.tags.get('XResolution'))
             if res0 is not None and res0 != 0:
                 pixel_size.append((1 / res0, pixel_size_unit))

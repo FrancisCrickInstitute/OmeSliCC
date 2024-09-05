@@ -243,10 +243,11 @@ class OmeSource:
 
         dtype = self.get_pixel_type()
         if dtype.kind == 'f':
-            info = np.finfo(dtype)
+            # info = np.finfo(dtype)
+            start, end = 0, 1
         else:
             info = np.iinfo(dtype)
-        start, end = info.min, info.max
+            start, end = info.min, info.max
 
         nsizes = len(self.sizes)
         if nsizes > 1:

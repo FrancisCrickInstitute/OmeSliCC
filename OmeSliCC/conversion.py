@@ -33,8 +33,11 @@ def create_source(source_ref: str, params: dict, omero=None) -> OmeSource:
     elif ext in Image.registered_extensions().keys():
         source = PlainImageSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
     else:
-        from OmeSliCC.BioSource import BioSource
-        source = BioSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
+        try:
+            from OmeSliCC.BioSource import BioSource
+            source = BioSource(source_ref, source_pixel_size=source_pixel_size, target_pixel_size=target_pixel_size)
+        except ImportError:
+            raise NotImplementedError('Unsupported: Bioformats not installed')
     return source
 
 
