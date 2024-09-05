@@ -1,3 +1,6 @@
+#### Version 0.6.15
+- Various fixes to Tiff tag metadata
+
 #### Version 0.6.14
 - Fixed bug in TiffSource legacy loading compressed option
 
