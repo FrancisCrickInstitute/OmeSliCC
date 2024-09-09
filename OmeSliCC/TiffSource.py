@@ -51,7 +51,7 @@ class TiffSource(OmeSource):
         self.first_page = tiff.pages.first
         if tiff.is_ome and tiff.ome_metadata is not None:
             xml_metadata = tiff.ome_metadata
-            self.metadata = tifffile.xml2dict(xml_metadata)
+            self.metadata = XmlDict.xml2dict(xml_metadata)
             if 'OME' in self.metadata:
                 self.metadata = self.metadata['OME']
                 self.has_ome_metadata = True
@@ -64,7 +64,7 @@ class TiffSource(OmeSource):
                     metdata_tiff = TiffFile(metdata_filename)
                     if metdata_tiff.is_ome and metdata_tiff.ome_metadata is not None:
                         xml_metadata = metdata_tiff.ome_metadata
-                        self.metadata = tifffile.xml2dict(xml_metadata)
+                        self.metadata = XmlDict.xml2dict(xml_metadata)
                         if 'OME' in self.metadata:
                             self.metadata = self.metadata['OME']
                             images = self.metadata.get('Image')
@@ -132,7 +132,7 @@ class TiffSource(OmeSource):
             self.pixel_nbits.append(bitspersample)
 
         self.fh = tiff.filehandle
-        self.dimension_order = self.dimension_order.lower().replace('s', 'c')
+        self.dimension_order = self.dimension_order.lower().replace('s', 'c').replace('r', '')
 
         self.is_rgb = (photometric in (PHOTOMETRIC.RGB, PHOTOMETRIC.PALETTE) and nchannels in (3, 4))
 
@@ -213,7 +213,13 @@ class TiffSource(OmeSource):
     def _load_as_dask(self):
         if len(self.arrays) == 0:
             for level in range(len(self.sizes)):
-                data = da.from_zarr(self.tiff.aszarr(level=level))
+                if self.tiff.is_mmstack:
+                    page = self.pages[level]
+                    if isinstance(page, list):
+                        page = page[0]
+                    data = da.from_zarr(page.aszarr())
+                else:
+                    data = da.from_zarr(self.tiff.aszarr(level=level))
                 if data.chunksize == data.shape:
                     data = data.rechunk()
                 self.arrays.append(data)
