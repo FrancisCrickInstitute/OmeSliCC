@@ -188,9 +188,9 @@ if __name__ == '__main__':
     patch_size = (256, 256)
 
     # perform test
+    #print(tiff_info(path))
     create_ome_tiff(output_filename)
     print(tiff_info(output_filename))
-    #print(tiff_info(path))
     #test_extract_metadata(path)
     #test_load(path)
     #show_image(render_at_pixel_size(path, target_pixel_size=[(10, 10)]))
