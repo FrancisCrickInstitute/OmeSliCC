@@ -45,6 +45,7 @@ class Zarr:
         shape0 = [xyzct['xyzct'.index(dimension)] for dimension in dimension_order]
         dtype = source.pixel_types[0]
         pixel_size_um = source.get_pixel_size_micrometer()
+        translation_um = source.get_position_micrometer()
         scale = 1
         datasets = []
         if tile_size and len(tile_size) < 5:
@@ -80,7 +81,7 @@ class Zarr:
             # used for ome metadata:
             datasets.append({
                 'path': str(level),
-                'coordinateTransformations': create_transformation_metadata(dimension_order, pixel_size_um, scale)
+                'coordinateTransformations': create_transformation_metadata(dimension_order, pixel_size_um, scale, translation_um)
             })
             scale /= pyramid_downsample
 

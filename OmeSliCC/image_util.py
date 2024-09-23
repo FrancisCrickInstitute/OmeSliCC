@@ -320,6 +320,7 @@ def create_compression_codecs(compression: list) -> list:
 
 
 def get_tiff_pages(tiff: TiffFile) -> list:
+    # TODO: review so this works for multi-level ome-tiff, tiff-stack, and z pages tiff, then later check for mmstack
     pages = []
     found = False
     if tiff.series and not tiff.is_mmstack:

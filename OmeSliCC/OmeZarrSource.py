@@ -77,25 +77,31 @@ class OmeZarrSource(OmeSource):
 
     def _find_metadata(self):
         pixel_size = []
+        position = []
         channels = []
         metadata = self.metadata
         axes = self.dimension_order
 
         units = [axis.get('unit', '') for axis in metadata.get('axes', [])]
 
-        scale1 = [1, 1, 1, 1, 1]
+        scale1 = [1] * len(metadata.get('axes'))
+        position1 = [0] * len(metadata.get('axes'))
         # get pixelsize using largest/first scale
         transform = self.metadata.get('coordinateTransformations', [])
         if transform:
             for transform1 in transform[0]:
                 if transform1['type'] == 'scale':
                     scale1 = transform1['scale']
+                if transform1['type'] == 'translation':
+                    position1 = transform1['translation']
             for axis in 'xyz':
                 if axis in axes:
                     index = axes.index(axis)
                     pixel_size.append((scale1[index], units[index]))
+                    position.append((position1[index], units[index]))
                 else:
                     pixel_size.append((1, ''))
+                    position.append((0, ''))
         nchannels = self.sizes_xyzct[0][3]
         # look for channel metadata
         for data in self.root_metadata.values():
@@ -117,10 +123,10 @@ class OmeZarrSource(OmeSource):
         self.source_pixel_size = pixel_size
         self.channels = channels
         self.source_mag = 0
+        self.position = position
 
     def get_source_dask(self):
-        return [redimension_data(level, self.dimension_order, self.get_dimension_order())
-                for level in self.levels]
+        return self.levels
 
     def _asarray_level(self, level: int, **slicing) -> np.ndarray:
         redim = redimension_data(self.levels[level], self.dimension_order, self.get_dimension_order())

@@ -160,7 +160,7 @@ def combine_images(sources: list[OmeSource], params: dict):
     nchannels = len(channels)
 
     if image.shape[1] != nchannels:
-        logging.warning('#Comined image channels does not match #data channels')
+        logging.warning('#Combined image channels does not match #data channels')
 
     new_source.channels = channels
 
