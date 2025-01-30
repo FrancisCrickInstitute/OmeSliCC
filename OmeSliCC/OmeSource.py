@@ -102,6 +102,7 @@ class OmeSource:
             if 'PositionZ' in plane:
                 position.append((float(plane.get('PositionZ')), plane.get('PositionZUnit')))
             #c, z, t = plane.get('TheC'), plane.get('TheZ'), plane.get('TheT')
+            break
         self.position = position
 
         rotation = None
