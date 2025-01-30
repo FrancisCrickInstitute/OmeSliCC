@@ -37,6 +37,8 @@ class OmeSource:
     """channel information for all image channels"""
     position: list
     """source position information"""
+    rotation: float
+    """source rotation information"""
 
     default_properties_order = 'xyzct'
     default_physical_unit = 'µm'
@@ -100,8 +102,37 @@ class OmeSource:
             if 'PositionZ' in plane:
                 position.append((float(plane.get('PositionZ')), plane.get('PositionZUnit')))
             #c, z, t = plane.get('TheC'), plane.get('TheZ'), plane.get('TheT')
-
         self.position = position
+
+        rotation = None
+        annotations = self.metadata.get('StructuredAnnotations')
+        if annotations is not None:
+            if not isinstance(annotations, (list, tuple)):
+                annotations = [annotations]
+            for annotation_item in annotations:
+                for annotation in annotation_item.values():
+                    value = annotation.get('Value')
+                    unit = None
+                    if isinstance(value, dict) and 'Modulo' in value:
+                        modulo = value.get('Modulo', {}).get('ModuloAlongZ', {})
+                        unit = modulo.get('Unit')
+                        value = modulo.get('Label')
+                    elif isinstance(value, str) and value.lower().startswith('angle'):
+                        if ':' in value:
+                            value = value.split(':')[1].split()
+                        elif '=' in value:
+                            value = value.split('=')[1].split()
+                        else:
+                            value = value.split()[1:]
+                        if len(value) >= 2:
+                            unit = value[1]
+                        value = value[0]
+                    if value is not None:
+                        rotation = float(value)
+                        if 'rad' in unit.lower():
+                            rotation = np.rad2deg(rotation)
+        self.rotation = rotation
+
         self.source_mag = 0
         objective_id = images.get('ObjectiveSettings', {}).get('ID', '')
         for objective in ensure_list(self.metadata.get('Instrument', {}).get('Objective', [])):
@@ -215,8 +246,14 @@ class OmeSource:
     def get_pixel_size_micrometer(self):
         return get_value_units_micrometer(self.get_pixel_size())
 
+    def get_position(self) -> list:
+        return self.position
+
     def get_position_micrometer(self):
-        return get_value_units_micrometer(self.position)
+        return get_value_units_micrometer(self.get_position())
+
+    def get_rotation(self) -> float:
+        return self.rotation
 
     def get_shape(self, dimension_order: str = None, xyzct: tuple = None) -> tuple:
         shape = []
@@ -306,10 +343,12 @@ class OmeSource:
                     tot_alpha += alpha
             if tot_alpha != 1:
                 total_image /= tot_alpha
-            final_image = float2int_image(total_image)
+            final_image = float2int_image(total_image,
+                                          target_dtype=image.dtype)
         elif needs_normalisation:
             window = self.get_channel_window(0)
-            final_image = float2int_image(normalise_values(image, window['min'], window['max']))
+            final_image = float2int_image(normalise_values(image, window['min'], window['max']),
+                                          target_dtype=image.dtype)
         else:
             final_image = image
         return final_image

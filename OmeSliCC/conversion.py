@@ -142,7 +142,8 @@ def combine_images(sources: list[OmeSource], params: dict):
     output_filename = str(os.path.join(output_folder, filetitle + '_combined.' + output_format))
     new_source.source_reference = output_filename
     new_source.target_pixel_size = source0.get_pixel_size()
-    new_source.position = source0.position
+    new_source.position = source0.get_position()
+    new_source.rotation = source0.get_rotation()
 
     channels = extra_metadata.get('channels', [])
     if not channels:
