@@ -397,3 +397,7 @@ class TiffSource(OmeSource):
             tile_segments.append(tile_segment)
             # yield decode(tile_segment)
         yield from self.executor.map(decode, tile_segments, timeout=10)
+
+    def close(self):
+        self.tiff.close()
+        self.fh.close()
