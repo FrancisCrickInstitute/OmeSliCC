@@ -1,0 +1,25 @@
+site_name: OmeSliCC
+site_url: https://omeslicc.github.io/omeslicc
+site_description: Ome(ro) Slide Image Conversion and Compression pipeline
+
+repo_name: OmeSliCC
+repo_url: https://github.com/FrancisCrickInstitute/OmeSliCC
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_submodules: true
+
+nav:
+  - overview.md
+  - references.md
+
+theme:
+  name: material
+  color_mode: auto
+  user_color_mode_toggle: true
+  logo: images/logo.png
