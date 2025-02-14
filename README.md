@@ -55,7 +55,7 @@ python extract_omero_labels.py --params path/to/params.yml
 ```
 ## Documentation
 
-See [ReadTheDocs](https://omeslicc.readthedocs.io/)
+See [documentation](https://franciscrickinstitute.github.io/OmeSliCC)
 
 ## Changelog
 
