@@ -55,6 +55,8 @@ class OmeSource:
         self.pixel_types = []
         self.pixel_nbits = []
         self.channels = []
+        self.position = None
+        self.rotation = None
 
     def _init_metadata(self,
                        source_reference: str,
