@@ -14,8 +14,8 @@ class OmeZarr:
         self.filename = filename
 
     def write(self, sources, tile_size=[], compression=[],
-              npyramid_add=0, pyramid_downsample=2, translations=[],
-              image_operations=[]):
+              npyramid_add=0, pyramid_downsample=2,
+              translations=[], image_operations=[]):
 
         compressor, compression_filters = create_compression_filter(compression)
         storage_options = {'dimension_separator': '/', 'chunks': tile_size}
@@ -44,16 +44,16 @@ class OmeZarr:
                 data = image_operation(data)
             if multiple_images:
                 root_path = str(index)
-                root = zarr_root.create_group(root_path)
+                group = zarr_root.create_group(root_path)
             else:
-                root = zarr_root
+                group = zarr_root
             if index < len(translations):
                 translation_um = translations[index]
             else:
                 translation_um = source.get_position_micrometer()
-            self.write_dataset(root, data, source, npyramid_add, pyramid_downsample, translation_um)
+            self.write_dataset(group, data, source, npyramid_add, pyramid_downsample, translation_um)
             if multiple_images:
-                meta = root.attrs['multiscales'][0].copy()
+                meta = group.attrs['multiscales'][0].copy()
                 for dataset_meta in meta['datasets']:
                     dataset_meta['path'] = f'{root_path}/{dataset_meta["path"]}'
                 multi_metadata.append(meta)
@@ -61,7 +61,7 @@ class OmeZarr:
             zarr_root.attrs['multiscales'] = multi_metadata
         zarr_root.attrs['omero'] = create_channel_metadata(sources[0], ome_version)
 
-    def write_dataset(self, zarr_root, data, source,
+    def write_dataset(self, zarr_group, data, source,
                       npyramid_add=0, pyramid_downsample=2, translation_um=[]):
 
         pixel_size_um = source.get_pixel_size_micrometer()
@@ -83,9 +83,9 @@ class OmeZarr:
             if pyramid_downsample:
                 scale /= pyramid_downsample
 
-        write_image(image=data, group=zarr_root, axes=axes, coordinate_transformations=pixel_size_scales,
+        write_image(image=data, group=zarr_group, axes=axes, coordinate_transformations=pixel_size_scales,
                     scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add), overwrite=True)
         # Zarr V3 testing
-        #write_image(image=data, group=zarr_root, axes=axes, coordinate_transformations=pixel_size_scales,
+        #write_image(image=data, group=zarr_group, axes=axes, coordinate_transformations=pixel_size_scales,
         #            scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add),
         #            storage_options=self.storage_options)

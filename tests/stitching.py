@@ -66,7 +66,7 @@ def create_normalisation_images(composition_metadata, quantiles, scale=1.0):
         norm_images = []
         for image in norm_images0:
             if scale != 1:
-                image = image_resize(image, size0, preserve_range=True)
+                image = image_resize(image, size0)
             norm_images.append(image)
         channel_images.append(norm_images)
 
@@ -104,14 +104,17 @@ if __name__ == '__main__':
     metadata_filename = 'D:/slides/EM04573_01t/EM04573_01_20x_beads-07_info_ome_tiff.xml'
     composition_metadata = xml2dict(open(metadata_filename, encoding='utf8').read())['ExportDocument']['Image']
 
-    params = {'output': {}}
-    output_filename = 'D:/slides/tiles.ome.zarr'
+    tile_filenames=tile_filenames[:3]
 
-    flatfield_quantiles = [0.05]
-    flatfield_scale = 1.0
-    norm_images = get_normalisation_images(composition_metadata, flatfield_quantiles, scale=flatfield_scale)
-    dark = norm_images[0]
+    params = {'output': {}}
+    output_filename = 'D:/slides/EM04573_01t/tiles.ome.zarr'
+
+    #flatfield_quantiles = [0.05]
+    #flatfield_scale = 1.0
+    #norm_images = get_normalisation_images(composition_metadata, flatfield_quantiles, scale=flatfield_scale)
+    #dark = norm_images[0]
 
     sources = [TiffSource(tile_filename) for tile_filename in tqdm(tile_filenames)]
 
-    store_tiles(sources, output_filename, params, composition_metadata, image_operations=[do_flatfield_correction])
+    #store_tiles(sources, output_filename, params, composition_metadata, image_operations=[do_flatfield_correction])
+    store_tiles(sources, output_filename, params, composition_metadata)
