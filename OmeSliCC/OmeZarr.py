@@ -39,6 +39,8 @@ class OmeZarr:
             sources = [sources]
 
         for index, source in enumerate(sources):
+            dimension_order = source.get_dimension_order()
+            pixel_size_um = source.get_pixel_size_micrometer()
             data = source.asarray()
             for image_operation in image_operations:
                 data = image_operation(data)
@@ -51,7 +53,8 @@ class OmeZarr:
                 translation_um = translations[index]
             else:
                 translation_um = source.get_position_micrometer()
-            self.write_dataset(group, data, source, npyramid_add, pyramid_downsample, translation_um)
+            self.write_dataset(group, data, dimension_order, pixel_size_um,
+                               npyramid_add, pyramid_downsample, translation_um)
             if multiple_images:
                 meta = group.attrs['multiscales'][0].copy()
                 for dataset_meta in meta['datasets']:
@@ -61,14 +64,9 @@ class OmeZarr:
             zarr_root.attrs['multiscales'] = multi_metadata
         zarr_root.attrs['omero'] = create_channel_metadata(sources[0], ome_version)
 
-    def write_dataset(self, zarr_group, data, source,
+    def write_dataset(self, zarr_group, data, dimension_order, pixel_size_um,
                       npyramid_add=0, pyramid_downsample=2, translation_um=[]):
 
-        pixel_size_um = source.get_pixel_size_micrometer()
-        if len(pixel_size_um) == 0:
-            npyramid_add = 0
-
-        dimension_order = source.get_dimension_order()
         if 'c' in dimension_order and dimension_order.index('c') == len(dimension_order) - 1:
             # ome-zarr doesn't support channel after space dimensions (yet)
             data = np.moveaxis(data, -1, 0)
@@ -84,7 +82,7 @@ class OmeZarr:
                 scale /= pyramid_downsample
 
         write_image(image=data, group=zarr_group, axes=axes, coordinate_transformations=pixel_size_scales,
-                    scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add), overwrite=True)
+                    scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add))
         # Zarr V3 testing
         #write_image(image=data, group=zarr_group, axes=axes, coordinate_transformations=pixel_size_scales,
         #            scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add),

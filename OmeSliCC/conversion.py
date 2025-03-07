@@ -202,8 +202,8 @@ def store_tiles(sources: list[OmeSource], output_filename: str, params: dict,
         translation_um = np.multiply(translation, pixel_size[:2])
         translations.append(translation_um)
 
-    #zarr = OmeZarr(output_filename)
-    zarr = Zarr(output_filename)
+    zarr = OmeZarr(output_filename)
+    #zarr = Zarr(output_filename)
     zarr.write(sources, tile_size=tile_size, compression=compression,
                npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
                translations=translations, image_operations=image_operations)
