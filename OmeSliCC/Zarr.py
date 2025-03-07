@@ -11,18 +11,18 @@ from OmeSliCC.util import *
 
 
 class Zarr:
-    def __init__(self, filename, ome=None, v3=False):
+    def __init__(self, filename, ome=None, zarr_version=2, ome_version='0.4'):
         self.filename = filename
         if ome is not None:
             self.ome = ome
         else:
             self.ome = ('ome' == self.filename.split('.')[1].lower())
-        self.v3 = v3
+        self.zarr_version = zarr_version
+        self.ome_version = ome_version
         self.data = []
 
-    def create(self, source, shapes=[], chunk_shapes=[], level_scales=[],
-               tile_size=None, npyramid_add=0, pyramid_downsample=2, compression=[],
-               ome_version = '0.4'):
+    def create(self, source, shapes=[], level_scales=[],
+               tile_size=None, npyramid_add=0, pyramid_downsample=2, compression=[]):
         # create empty dataset
         dimension_order = source.get_dimension_order()
         self.dimension_order = dimension_order
@@ -32,6 +32,7 @@ class Zarr:
         self.level_scales = level_scales
         file_url = pathlib.Path(self.filename, mode='w').as_uri()
         self.zarr_root = zarr.open_group(store=file_url, mode='w', storage_options={'dimension_separator': '/'})
+        chunk_size = tile_to_chunk_size(tile_size, len(dimension_order))
 
         xyzct = source.get_size_xyzct()
         self.scaler = Scaler(downscale=pyramid_downsample, max_layer=npyramid_add)
@@ -41,34 +42,21 @@ class Zarr:
         translation_um = source.get_position_micrometer()
         scale = 1
         datasets = []
-        if tile_size and len(tile_size) < 5:
-            if isinstance(tile_size, int):
-                tile_size = [tile_size] * 2
-            elif len(tile_size) == 1:
-                tile_size = tile_size * 2
-            tile_size = list(np.flip(tile_size))
-            while len(tile_size) < 5:
-                tile_size = [1] + tile_size
         for level in range(nlevels):
             if len(shapes) > 0:
                 shape = shapes[level]
             else:
                 shape = scale_dimensions_xy(shape0, dimension_order, scale)
-            if len(chunk_shapes) > 0:
-                chunk_shape = chunk_shapes[level]
-            else:
-                chunk_shape = np.min([tile_size, shape], axis=0)
-            if self.v3:
+            if self.zarr_version == 3:
                 import zarrita
                 shape = np.array(shape).tolist()                # convert to basic int
-                chunk_shape = np.array(chunk_shape).tolist()    # convert to basic int
+                chunk_size = np.array(chunk_size).tolist()    # convert to basic int
                 codecs = create_compression_codecs(compression)
-                dataset = self.zarr_root.create_array(str(level), shape=shape, chunk_shape=chunk_shape, dtype=dtype,
+                dataset = self.zarr_root.create_array(str(level), shape=shape, chunk_shape=chunk_size, dtype=dtype,
                                                       codecs=codecs)
             else:
-                chunk_shape = tile_size
                 compressor, compression_filters = create_compression_filter(compression)
-                dataset = self.zarr_root.create_dataset(str(level), shape=shape, chunks=chunk_shape, dtype=dtype,
+                dataset = self.zarr_root.create_dataset(str(level), shape=shape, chunks=chunk_size, dtype=dtype,
                                                         compressor=compressor, filters=compression_filters)
             self.data.append(dataset)
             # used for ome metadata:
@@ -80,16 +68,16 @@ class Zarr:
 
         if self.ome:
             multiscales = {
-                'version': ome_version,
+                'version': self.ome_version,
                 'axes': create_axes_metadata(dimension_order),
                 'name': get_filetitle(source.source_reference),
                 'datasets': datasets,
             }
-            metadata = {'multiscales': [multiscales], 'omero': create_channel_metadata(source, ome_version)}
-            if self.v3:
+            metadata = {'multiscales': [multiscales], 'omero': create_channel_metadata(source, self.ome_version)}
+            if self.zarr_version == 3:
                 self.zarr_root.update_attributes(metadata)
             else:
-                self.zarr_root.attrs = metadata
+                self.zarr_root.attrs.update(metadata)
 
     def write(self, sources, tile_size=[], compression=[],
               npyramid_add=0, pyramid_downsample=2,
@@ -100,10 +88,8 @@ class Zarr:
         pixel_size_um = source0.get_pixel_size_micrometer()
 
         compressor, compression_filters = create_compression_filter(compression)
-        storage_options = {'dimension_separator': '/'}
-        ome_version = '0.4'
-        # Zarr V3 testing
-        #storage_options = {'chunks': tile_size}
+        chunk_size = tile_to_chunk_size(tile_size, len(dimension_order))
+        storage_options = {'dimension_separator': '/', 'chunks': chunk_size}
         if compressor is not None:
             storage_options['compressor'] = compressor
         if compression_filters is not None:
@@ -123,7 +109,7 @@ class Zarr:
                 translation_um = translations[index]
             else:
                 translation_um = source.get_position_micrometer()
-            dataset = zarr_root.create_dataset(root_path, data=np.asarray(data), chunks=data.chunksize,
+            dataset = zarr_root.create_dataset(root_path, data=np.asarray(data), chunks=chunk_size,
                                                compressor=compressor, filters=compression_filters)
             self.data.append(dataset)
             # used for ome metadata:
@@ -132,7 +118,7 @@ class Zarr:
                 'coordinateTransformations': create_transformation_metadata(dimension_order, pixel_size_um, scale, translation_um)
             }]
             multiscale = {
-                'version': ome_version,
+                'version': self.ome_version,
                 'axes': create_axes_metadata(dimension_order),
                 'name': get_filetitle(source.source_reference),
                 'datasets': datasets,
@@ -140,8 +126,8 @@ class Zarr:
             multiscales.append(multiscale)
 
         if self.ome:
-            metadata = {'multiscales': multiscales, 'omero': create_channel_metadata(source0, ome_version)}
-            if self.v3:
+            metadata = {'multiscales': multiscales, 'omero': create_channel_metadata(source0, self.ome_version)}
+            if self.zarr_version == 3:
                 zarr_root.update_attributes(metadata)
             else:
                 zarr_root.attrs.update(metadata)

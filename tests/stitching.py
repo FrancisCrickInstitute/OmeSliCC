@@ -98,16 +98,21 @@ def do_flatfield_correction(image):
     return image
 
 
+def normalise(image):
+    min, max = get_image_quantile(image, 0.05), get_image_quantile(image, 0.95)
+    return normalise_values(image, min, max)
+
+
 if __name__ == '__main__':
     tile_path = 'D:/slides/EM04573_01t/Multichannel tiles/*.tif*'
     tile_filenames = glob.glob(tile_path)
     metadata_filename = 'D:/slides/EM04573_01t/EM04573_01_20x_beads-07_info_ome_tiff.xml'
     composition_metadata = xml2dict(open(metadata_filename, encoding='utf8').read())['ExportDocument']['Image']
 
-    tile_filenames=tile_filenames[:3]
+    #tile_filenames=tile_filenames[331:333]
 
-    params = {'output': {}}
-    output_filename = 'D:/slides/EM04573_01t/tiles.ome.zarr'
+    params = {'output': {'tile_size': [1024, 1024]}}#, 'npyramid_add': 4, 'pyramid_downsample': 2}}
+    output_filename = 'D:/slides/EM04573_01t/tiles_small.ome.zarr'
 
     #flatfield_quantiles = [0.05]
     #flatfield_scale = 1.0

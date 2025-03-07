@@ -10,7 +10,7 @@ from OmeSliCC.Zarr import Zarr
 def create_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsample):
     w, h = source.get_size()
     zarr = Zarr(output_filename)
-    zarr.create(source, tile_size=[1, 1, 1, tile_size, tile_size],
+    zarr.create(source, tile_size=tile_size,
                 npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample)
     #if channel_metadata is not None:
     #    print('Adding channel metadata')
@@ -21,7 +21,7 @@ def create_zarr(source, output_filename, tile_size, npyramid_add, pyramid_downsa
             x0, y0 = xi * tile_size, yi * tile_size
             x1, y1 = min(x0 + tile_size, w), min(y0 + tile_size, h)
             image = source.asarray(x0, y0, x1, y1)
-            zarr.set(x0, y0, x1, y1, image)
+            zarr.set(image, x0=x0, y0=y0, x1=x1, y1=y1)
 
 
 def open_omezarr_source(filename):
@@ -34,7 +34,7 @@ def open_omezarr_source(filename):
 
 def convert_ome_zarr_v2_to_v3(filename):
     source = OmeZarrSource(filename)
-    zarr = Zarr(output_filename, ome=True, v3=True)
+    zarr = Zarr(output_filename, ome=True, zarr_version=3, ome_version='0.5')
     print(source.shapes, source.chunk_shapes, source.level_scales)
     zarr.create(source, shapes=source.shapes, chunk_shapes=source.chunk_shapes, level_scales=source.level_scales,
                 compression=compression)

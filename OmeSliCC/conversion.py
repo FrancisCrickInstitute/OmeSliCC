@@ -248,14 +248,14 @@ def save_image_as_ome_zarr(source: OmeSource, data: np.ndarray, output_filename:
 
 
 def save_image_as_zarr(source: OmeSource, data: np.ndarray, output_filename: str, output_params: dict,
-                       ome: bool = None, v3: bool = False):
+                       ome: bool = None, zarr_version: int = 2):
     # ome-zarr: https://ngff.openmicroscopy.org/latest/
     tile_size = output_params.get('tile_size')
     compression = output_params.get('compression')
     npyramid_add = output_params.get('npyramid_add', 0)
     pyramid_downsample = output_params.get('pyramid_downsample')
 
-    zarr = Zarr(output_filename, ome=ome, v3=v3)
+    zarr = Zarr(output_filename, ome=ome, zarr_version=zarr_version)
     zarr.create(source, tile_size=tile_size, npyramid_add=npyramid_add, pyramid_downsample=pyramid_downsample,
                 compression=compression)
     zarr.set(data)

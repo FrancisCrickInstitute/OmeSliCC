@@ -10,33 +10,34 @@ from OmeSliCC.util import *
 
 
 class OmeZarr:
-    def __init__(self, filename):
+    def __init__(self, filename, zarr_version=2, ome_version='0.4'):
         self.filename = filename
+        self.zarr_version = zarr_version
+        self.ome_version = ome_version
 
     def write(self, sources, tile_size=[], compression=[],
               npyramid_add=0, pyramid_downsample=2,
               translations=[], image_operations=[]):
 
+        chunk_size = tile_to_chunk_size(tile_size, len(sources[0].get_dimension_order()))
         compressor, compression_filters = create_compression_filter(compression)
-        storage_options = {'dimension_separator': '/', 'chunks': tile_size}
-        ome_version = '0.4'
-        # Zarr V3 testing
-        #storage_options = {'chunks': tile_size}
+        storage_options = {'dimension_separator': '/', 'chunks': chunk_size}
         if compressor is not None:
             storage_options['compressor'] = compressor
         if compression_filters is not None:
             storage_options['filters'] = compression_filters
         self.storage_options = storage_options
 
-        zarr_root = zarr.open_group(store=parse_url(self.filename, mode="w").store, mode="w", storage_options=storage_options)
-        # Zarr V3 testing
-        #zarr_root = zarr.open_group(store=parse_url(self.filename, mode="w").store, mode="w", zarr_version=3)
+        zarr_root = zarr.open_group(store=parse_url(self.filename, mode="w").store, mode="w",
+                                    storage_options=storage_options, zarr_version=self.zarr_version)
         root_path = ''
 
         multiple_images = isinstance(sources, list)
         multi_metadata = []
         if not multiple_images:
             sources = [sources]
+
+        omero_metadata = create_channel_metadata(sources[0], self.ome_version)
 
         for index, source in enumerate(sources):
             dimension_order = source.get_dimension_order()
@@ -60,9 +61,10 @@ class OmeZarr:
                 for dataset_meta in meta['datasets']:
                     dataset_meta['path'] = f'{root_path}/{dataset_meta["path"]}'
                 multi_metadata.append(meta)
+                group.attrs['omero'] = omero_metadata
         if multiple_images:
             zarr_root.attrs['multiscales'] = multi_metadata
-        zarr_root.attrs['omero'] = create_channel_metadata(sources[0], ome_version)
+        zarr_root.attrs['omero'] = omero_metadata
 
     def write_dataset(self, zarr_group, data, dimension_order, pixel_size_um,
                       npyramid_add=0, pyramid_downsample=2, translation_um=[]):
@@ -82,8 +84,5 @@ class OmeZarr:
                 scale /= pyramid_downsample
 
         write_image(image=data, group=zarr_group, axes=axes, coordinate_transformations=pixel_size_scales,
-                    scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add))
-        # Zarr V3 testing
-        #write_image(image=data, group=zarr_group, axes=axes, coordinate_transformations=pixel_size_scales,
-        #            scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add),
-        #            storage_options=self.storage_options)
+                    scaler=Scaler(downscale=pyramid_downsample, max_layer=npyramid_add),
+                    storage_options=self.storage_options)

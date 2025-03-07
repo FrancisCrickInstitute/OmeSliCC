@@ -214,3 +214,13 @@ def convert_rational_value(value) -> float:
     if value is not None and isinstance(value, tuple):
         value = value[0] / value[1]
     return value
+
+
+def tile_to_chunk_size(tile_size, ndims):
+    if isinstance(tile_size, int):
+        chunk_size = [tile_size] * 2
+    else:
+        chunk_size = list(reversed(tile_size))
+    while len(chunk_size) < ndims:
+        chunk_size = [1] + chunk_size
+    return chunk_size
