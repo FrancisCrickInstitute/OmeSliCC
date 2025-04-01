@@ -172,7 +172,6 @@ def combine_images(sources: list[OmeSource], params: dict):
     new_source.pixel_types = source0.pixel_types
     new_source.pixel_nbits = source0.pixel_nbits
     new_source.best_level, new_source.best_factor, new_source.full_factor = 0, 1, 1
-    new_source.source_mag = source0.source_mag
     new_source.output_dimension_order = source0.output_dimension_order
 
     if 'zar' in output_format:

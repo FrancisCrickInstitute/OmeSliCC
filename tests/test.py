@@ -175,22 +175,22 @@ def create_ome_tiff(filename):
 if __name__ == '__main__':
     os.chdir('../')
     output_filename = 'D:/slides/metadata_test.ome.tiff'
+    patch_size = (256, 256)
 
     #path = 'E:/Personal/Crick/slides/test_images/19629.svs'
-    path = 'E:/Personal/Crick/slides/test_images/H&E K130_PR003.ome.tiff'
-    #path = 'D:/slides/Pharos_test_images/01-08-23_test2__33.tiff'
-    #path = 'D:/slides/Pharos_test_images/Testing7.tiff'
-    #path = 'D:/slides/Pharos_test_images/image_navcam.tiff'
-    #path = 'C:/temp/sbemimage_test/workspace/OV000.ome.tif'
-    #path = 'C:/temp/sbemimage_test/workspace/old OV000.tif'
+    path = 'E:/Personal/Crick/slides/test_images/volumetric Broken_NE_cropped.tif'
+    #path = 'E:/Personal/Crick/slides/test_images/H&E K130_PR003.ome.tiff'
     #path = 'D:/slides/EM04613/EM04613_04_20x_WF_Reflection-02-Stitching-01.ome.tif'
     #path = 'D:/slides/EM04613/EM04613_04_20x_WF_Reflection-02-Stitching-01.ome.zarr'
-    patch_size = (256, 256)
+    #path = 'D:/slides/12193/data/S000/000_000_0.tiff'
 
     # perform test
     #print(tiff_info(path))
-    create_ome_tiff(output_filename)
-    print(tiff_info(output_filename))
-    #test_extract_metadata(path)
     #test_load(path)
+    #create_ome_tiff(output_filename)
+    #print(tiff_info(output_filename))
+    #test_extract_metadata(path)
+    source = TiffSource(path)
+    print('pixel size:', source.get_pixel_size())
+    print('pixel size [um]:', source.get_pixel_size_micrometer())
     #show_image(render_at_pixel_size(path, target_pixel_size=[(10, 10)]))

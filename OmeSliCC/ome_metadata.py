@@ -38,20 +38,8 @@ def create_ome_metadata(source: OmeSource,
     ome['@Creator'] = f'{software_name} {software_version}'
 
     experimenter = ome.get('Experimenter')
-
-    mag = source.get_mag()
     instrument = ome.get('Instrument')
     objective = ome.get('Instrument', {}).get('Objective')
-    if isinstance(objective, list):
-        objective = objective[0]
-    if mag != 0:
-        if instrument is None:
-            instrument = {'@ID': 'Instrument:0'}
-        if objective is None:
-            objective = {'@ID': 'Objective:0'}
-            instrument['Objective'] = objective
-        objective['@NominalMagnification'] = mag
-        ome['Instrument'] = instrument
 
     # currently only supporting single image
     nimages = 1

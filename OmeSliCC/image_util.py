@@ -451,14 +451,8 @@ def compare_image_dist_simple(image0: np.ndarray, image1: np.ndarray) -> dict:
 def calc_fraction_used(image: np.ndarray, threshold: float = 0.1) -> float:
     low = int(round(threshold * 255))
     high = int(round((1 - threshold) * 255))
-    shape = image.shape
-    total = shape[0] * shape[1]
-    good = 0
-    for y in range(shape[0]):
-        for x in range(shape[1]):
-            pixel = image[y, x]
-            if low <= pixel[0] < high and low <= pixel[1] < high and low <= pixel[2] < high:
-                good += 1
+    good = cv.countNonZero(cv.inRange(image, np.array(low, dtype=image.dtype), np.array(high, dtype=image.dtype)))
+    total = np.prod(image.shape[:2])
     fraction = good / total
     return fraction
 

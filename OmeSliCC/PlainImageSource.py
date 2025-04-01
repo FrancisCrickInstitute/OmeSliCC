@@ -80,7 +80,6 @@ class PlainImageSource(OmeSource):
             self.source_pixel_size.append((1 / float(res0), pixel_size_unit))
         if pixel_size_z is not None:
             self.source_pixel_size.append((pixel_size_z, pixel_size_unit))
-        self.source_mag = self.metadata.get('Mag', 0)
         self.channels = [{'label': ''}]
 
     def load(self):

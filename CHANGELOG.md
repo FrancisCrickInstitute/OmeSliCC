@@ -1,3 +1,11 @@
+#### Version 0.6.16
+- Removed magnification from internal metadata
+- Various fixes related to pixel size / resolution
+- Fixed tile_size conversions
+- Clearer (ome)zarr version use
+- Various ome metadata fixes
+- Updated documentation
+
 #### Version 0.6.15
 - Various fixes to Tiff tag metadata
 
