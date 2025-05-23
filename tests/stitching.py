@@ -94,6 +94,8 @@ def flatfield_correction(image0, dark=0, bright=1, clip=True):
 
 def do_flatfield_correction(image):
     dtype = image.dtype
+    norm_images = get_normalisation_images(composition_metadata, quantiles=[0.05], scale=1.0)
+    dark = norm_images[0]
     image = float2int_image(flatfield_correction(int2float_image(image), dark), dtype)
     return image
 
@@ -113,11 +115,6 @@ if __name__ == '__main__':
 
     params = {'output': {'tile_size': [1024, 1024]}}#, 'npyramid_add': 4, 'pyramid_downsample': 2}}
     output_filename = 'D:/slides/EM04573_01t/tiles_small.ome.zarr'
-
-    #flatfield_quantiles = [0.05]
-    #flatfield_scale = 1.0
-    #norm_images = get_normalisation_images(composition_metadata, flatfield_quantiles, scale=flatfield_scale)
-    #dark = norm_images[0]
 
     sources = [TiffSource(tile_filename) for tile_filename in tqdm(tile_filenames)]
 
