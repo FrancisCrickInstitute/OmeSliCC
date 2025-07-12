@@ -1,4 +1,5 @@
 import ast
+from datetime import datetime
 import json
 import os
 import re
@@ -82,6 +83,56 @@ def desc_to_dict(desc: str) -> dict:
                     pass
             desc_dict[key] = value
     return desc_dict
+
+
+def map_dict(metadata0: dict, mappings: list) -> dict:
+    metadata = {}
+    for mapping in mappings:
+        dest_key = mapping[0]
+        source_key = mapping[1]
+        def_value = mapping[2] if len(mapping) > 2 else None
+        value = get_dict_value(metadata0, source_key, def_value)
+        if len(mapping) > 3:
+            reformat = mapping[3]
+            if 'date' in dest_key.lower() or 'time' in dest_key.lower():
+                try:
+                    value = datetime.fromtimestamp(float(value))
+                except ValueError:
+                    pass
+            if '%' in reformat:
+                reformat.format(value)
+            else:
+                value = eval(f'value.{reformat}')
+        if value is not None:
+            metadata[dest_key] = value
+    return unpack_dict(metadata)
+
+
+def get_dict_value(dct: dict, target_key: str, def_value=None) -> dict:
+    keys = target_key.split('.')
+    key = keys[0]
+    value = dct.get(key, def_value)
+    if value is not None and len(keys) > 1:
+        return get_dict_value(value, '.'.join(keys[1:]), def_value)
+    else:
+        return value
+
+
+def unpack_dict(dct: dict) -> dict:
+    # Convert flat dict with . separator to nested dict
+    new_dct = {}
+    for key, value in dct.items():
+        if '.' in key:
+            keys = key.split('.')
+            sub_dct = new_dct
+            for sub_key in keys[:-1]:
+                if sub_key not in sub_dct:
+                    sub_dct[sub_key] = {}
+                sub_dct = sub_dct[sub_key]
+            sub_dct[keys[-1]] = value
+        else:
+            new_dct[key] = value
+    return new_dct
 
 
 def print_dict(dct: dict, indent: int = 0) -> str:
