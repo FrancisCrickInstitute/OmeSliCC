@@ -10,20 +10,20 @@ from OmeSliCC.util import map_dict, file_to_dict
 def convert_metadata_custom(metadata0: dict)-> dict:
 
     mapping_emd = [
+        #['Instrument.Microscope.@Type', 'Instrument.InstrumentClass'],
+        ['Instrument.Microscope.@SerialNumber', 'Instrument.InstrumentId'],
+        ['Instrument.Microscope.@Model', 'Instrument.InstrumentModel'],
+        ['Instrument.Microscope.@Manufacturer', 'Instrument.Manufacturer'],
+        #['Instrument.LightSourceGroup.Laser.@Type', 'Acquisition.SourceType'],
+        #['Instrument.Detector.@Type', 'DetectorMetadata.DetectorType'],
+        ['Instrument.Detector.@Model', 'DetectorMetadata.DetectorName'],
+        ['Instrument.Detector.@Gain', 'DetectorMetadata.Gain'],
+        ['Instrument.Detector.@Offset', 'DetectorMetadata.Offset'],
         ['Image.AcquisitionDate', 'Acquisition.AcquisitionStartDatetime.DateTime', None, 'isoformat()'],
-        ['Instrument.LightSourceGroup.Laser.@Type', 'Acquisition.SourceType'],
-        ['Instrument.Detector.@Type', 'DetectorMetadata.DetectorType'],
         ['Image.Pixels.@PhysicalSizeX', 'BinaryResult.PixelSize.height'],
         ['Image.Pixels.@PhysicalSizeY', 'BinaryResult.PixelSize.width'],
         ['Image.Pixels.@PhysicalSizeXUnit', 'BinaryResult.PixelUnitX'],
         ['Image.Pixels.@PhysicalSizeYUnit', 'BinaryResult.PixelUnitY'],
-        ['Instrument.Detector.@Model', 'DetectorMetadata.DetectorName'],
-        ['Instrument.Detector.@Gain', 'DetectorMetadata.Gain'],
-        ['Instrument.Detector.@Offset', 'DetectorMetadata.Offset'],
-        ['Instrument.Microscope.@Type', 'Instrument.InstrumentClass'],
-        ['Instrument.Microscope.@SerialNumber', 'Instrument.InstrumentId'],
-        ['Instrument.Microscope.@Model', 'Instrument.InstrumentModel'],
-        ['Instrument.Microscope.@Manufacturer', 'Instrument.Manufacturer'],
         ['Image.Pixels.Plane.@ExposureTime', 'Scan.DwellTime'],
         ['Image.Pixels.Plane.@ExposureTimeUnit', 'Scan.DwellTimeUnit', 's'],
         ['Image.Pixels.Plane.@PositionX', 'Stage.Position.x'],
@@ -46,7 +46,7 @@ def convert_image_custom(output_filename, original_metadata, data):
 
 
 if __name__ == '__main__':
-    output_filename = 'D:/slides/metadata_test.ome.tiff'
+    output_filename = 'D:/slides/EMD/20230512 2210 HAADF.ome.tiff'
 
     data = np.zeros((16, 16, 1), dtype=np.uint8)
     data_dimension_order = 'yxc'

@@ -1,28 +1,18 @@
-import os
+# https://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2016-06/ome.html
+# Test with xmlvalid validator tools provided as part of bftools
+# OME sub-elements are required in particular order
+
+import os.path
 from uuid import uuid4
 
 from OmeSliCC.color_conversion import *
-from OmeSliCC.image_util import *
+from OmeSliCC.ome_util import *
 from OmeSliCC.util import *
-from OmeSliCC.XmlDict import dict2xml, XmlDict, XmlList
+from OmeSliCC.XmlDict import dict2xml
 
-# https://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2016-06/ome.html
 OME_URI = "http://www.openmicroscopy.org/Schemas/OME/2016-06"
 OME_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 OME_SCHEMA_LOC = f"{OME_URI} {OME_URI}/ome.xsd"
-
-
-def dict_to_xmldict(values: dict) -> XmlDict:
-    # convert dictionary to XmlDict, ensuring sub-dictionaries are also XmlDict
-    if isinstance(values, dict):
-        new_values = XmlDict()
-        for key, value in values.items():
-            new_values[key] = dict_to_xmldict(value)
-    elif isinstance(values, list):
-        new_values = XmlList([dict_to_xmldict(item) for item in values])
-    else:
-        new_values = values
-    return new_values
 
 
 def create_ome_metadata(metadata: dict,
@@ -36,7 +26,7 @@ def create_ome_metadata(metadata: dict,
     file_title = get_filetitle(file_name)
     uuid = f'urn:uuid:{uuid4()}'
 
-    ome = dict_to_xmldict(metadata)
+    ome = metadata.copy()
     ome['@xmlns'] = OME_URI
     ome['@xmlns:xsi'] = OME_XSI
     ome['@xsi:schemaLocation'] = OME_SCHEMA_LOC
@@ -44,25 +34,25 @@ def create_ome_metadata(metadata: dict,
 
     instrument = ome.get('Instrument')
     if instrument is not None:
-        instrument['@ID'] = 'Instrument:0'
+        ensure_ome_id(ome, 'Instrument')
+        ensure_ome_id(instrument, 'Detector')
+        ensure_ome_id(instrument, 'LightSourceGroup', 'LightSource')
+        ensure_ome_id(instrument, 'LightSourceGroup.Laser')
     experimenter = ome.get('Experimenter')
-    if experimenter is not None:
-        experimenter['@ID'] = 'Experimenter:0'
+    ensure_ome_id(ome, 'Experimenter')
     roi = ome.get('ROI')
-    if roi is not None:
-        roi['@ID'] = 'ROI:0'
+    ensure_ome_id(ome, 'ROI')
     annotation = ome.get('Annotation')
-    if annotation is not None:
-        annotation['@ID'] = 'Annotation:0'
+    ensure_ome_id(ome, 'Annotation')
 
     # currently only supporting single image
     nimages = 1
 
     for imagei in range(nimages):
-        image = ensure_list(ome.get('Image', XmlDict()))[imagei]  # XmlDict requires re-assignment anyway
+        image = ensure_list(ome.get('Image', {}))[imagei]
         image['@ID'] = f'Image:{imagei}'
         image['@Name'] = file_title
-        pixels = image.get('Pixels', XmlDict())
+        pixels = image.get('Pixels', {})
 
         nchannels = data.shape[-1]
         channels0 = pixels.get('channels', [{}])
@@ -71,8 +61,8 @@ def create_ome_metadata(metadata: dict,
 
         channels = []
         for channeli, channel0 in enumerate(channels0):
-            channel = XmlDict({'@Name': f'{channeli}',
-                               '@SamplesPerPixel': samples_per_pixel})
+            channel = {'@Name': f'{channeli}',
+                       '@SamplesPerPixel': samples_per_pixel}
             color = channel0.get('color')
             if color:
                 channel['@Color'] = rgba_to_int(color)
@@ -111,24 +101,29 @@ def create_ome_metadata(metadata: dict,
         pixels['Channel'] = channels
         pixels['TiffData'] = {'UUID': {'@FileName': file_name, '#text': uuid}}
 
-        image['Pixels'] = pixels
-
         # Set image refs
-        if instrument is not None:
-            image['InstrumentRef'] = {'@ID': instrument['@ID']}
         if experimenter is not None:
             image['ExperimenterRef'] = {'@ID': experimenter['@ID']}
+        if instrument is not None:
+            image['InstrumentRef'] = {'@ID': instrument['@ID']}
+
+        if 'Plane' in pixels:
+            plane = pixels['Plane']
+            if '@TheZ' not in plane:
+                plane['@TheZ'] = 0
+            if '@TheT' not in plane:
+                plane['@TheT'] = 0
+            if '@TheC' not in plane:
+                plane['@TheC'] = 0
+            pixels['Plane'] = pixels.pop('Plane')   # reorder
+        image['Pixels'] = image.pop('Pixels')   # reorder
+
         if roi is not None:
             image['ROIRef'] = {'@ID': roi['@ID']}
         if annotation is not None:
             image['AnnotationRef'] = {'@ID': annotation['@ID']}
 
-        if nimages > 1:
-            if 'Image' not in ome:
-                ome['Image'] = XmlList()
-            ome['Image'].append(image)
-        else:
-            ome['Image'] = image
+    ome['Image'] = ome.pop('Image')  # put Image at the end, before annotations
 
     # filter source pyramid sizes
     map_annotations0 = ensure_list(ome.get('StructuredAnnotations', {}).get('MapAnnotation', []))
