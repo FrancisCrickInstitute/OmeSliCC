@@ -1,10 +1,12 @@
-name: omesliccv2_3_env
+name: omeslicc_env
 channels:
+ - zacsimile
  - ome
  - conda-forge
+ - bioconda
  - defaults
 dependencies:
- - python=3.10
+ - python=3.12
  - pip
  - numpy
  - pandas
@@ -14,8 +16,8 @@ dependencies:
  - numcodecs
  - dask
  - tifffile>=2023.9.26
- - zarr==2.18
- - ome-zarr==0.9
+ - zarr
+ - ome-zarr
  - aiohttp
  - rsa
  - tqdm
@@ -26,6 +28,8 @@ dependencies:
  - validators
  - toml
  - pip:
+   - https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20240202/zeroc_ice-3.6.5-cp312-cp312-manylinux_2_28_x86_64.whl
    - opencv-python
    - xmltodict
-   - zarrita
+   - python-bioformats
+   - omero-py

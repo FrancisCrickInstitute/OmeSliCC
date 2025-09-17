@@ -9,6 +9,18 @@ This includes converting from Omero and extracting metadata as label information
 
 For support and discussion, please use the [Image.sc forum](https://forum.image.sc) and post to the forum with the tag 'OmeSliCC'.
 
+## Installation
+
+There are multiple conda environments.
+- `environment.yml` full environment with all dependencies
+- `environment_minimal.yml` environment without omero and bioformats dependencies
+- `environment_linux.yml` uses a pre-built zeroc-ice package
+
+To install:
+```
+conda env create -f .\environment.yml
+```
+
 ## Main features
 
 - Import WSI files: Omero, Ome.Tiff, Tiff, Zarr, Ome.Zarr/NGFF, common slide formats, common image formats

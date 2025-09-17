@@ -1,4 +1,4 @@
-name: omeslicc_env
+name: omeslicc-env
 channels:
  - zacsimile
  - ome
@@ -6,8 +6,7 @@ channels:
  - bioconda
  - defaults
 dependencies:
- - python=3.9
- - pip
+ - python=3.12
  - numpy
  - pandas
  - scikit-image
@@ -19,7 +18,6 @@ dependencies:
  - zarr
  - ome-zarr
  - aiohttp
- - omero-py
  - rsa
  - tqdm
  - psutil
@@ -28,7 +26,10 @@ dependencies:
  - imageio
  - validators
  - toml
+ - zeroc-ice
+ - pip
  - pip:
+   - omero-py
+   - python-bioformats
    - opencv-python
    - xmltodict
-   - python-bioformats
