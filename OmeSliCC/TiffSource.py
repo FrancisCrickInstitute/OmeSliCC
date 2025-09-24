@@ -2,11 +2,12 @@
 
 
 from concurrent.futures import ThreadPoolExecutor
+import dask
 import dask.array as da
 from enum import Enum
 import numpy as np
 import os
-from tifffile import TiffFile, TiffPage, PHOTOMETRIC
+from tifffile import TiffFile, TiffPage, PHOTOMETRIC, imread
 
 from OmeSliCC import XmlDict
 from OmeSliCC.OmeSource import OmeSource
@@ -38,6 +39,7 @@ class TiffSource(OmeSource):
                  executor: ThreadPoolExecutor = None):
 
         super().__init__()
+        self.filename = filename
         self.compressed = False
         self.decompressed = False
         self.executor = executor
@@ -105,6 +107,7 @@ class TiffSource(OmeSource):
                 self.dimension_order = page.axes
                 photometric = page.photometric
             shape = page.shape
+            self.shape = shape
             nchannels = shape[2] if len(shape) > 2 else 1
             nt = 1
             if isinstance(page, TiffPage):
@@ -210,14 +213,14 @@ class TiffSource(OmeSource):
 
     def _load_as_dask(self):
         if len(self.arrays) == 0:
+            if self.tiff.series:
+                page = self.tiff.series[0]
+            else:
+                page = self.tiff.pages.first
+
             for level in range(len(self.sizes)):
-                if self.tiff.is_mmstack:
-                    page = self.pages[level]
-                    if isinstance(page, list):
-                        page = page[0]
-                    data = da.from_zarr(page.aszarr())
-                else:
-                    data = da.from_zarr(self.tiff.aszarr(level=level))
+                lazy_array = dask.delayed(imread)(self.filename, level=level)
+                data = da.from_delayed(lazy_array, shape=page.shape, dtype=page.dtype)
                 if data.chunksize == data.shape:
                     data = data.rechunk()
                 self.arrays.append(data)

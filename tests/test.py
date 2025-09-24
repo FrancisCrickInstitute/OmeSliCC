@@ -193,4 +193,7 @@ if __name__ == '__main__':
     source = TiffSource(path)
     print('pixel size:', source.get_pixel_size())
     print('pixel size [um]:', source.get_pixel_size_micrometer())
+    datas = source.get_source_dask()
+    for data in datas:
+        print('shape', data.shape)
     #show_image(render_at_pixel_size(path, target_pixel_size=[(10, 10)]))
