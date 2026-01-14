@@ -6,61 +6,52 @@ input:
   # omero - Omero source details - mutually exclusive with source
   omero:
     # host - Omero server address
-    host: ssl://omero.server
+    host: ssl://omero-prod.camp.thecrick.org
     # include - Omero project id(s) / dataset id(s) / image id(s) to include
     include:
-      dummy: dummy
-      project: [0, 1]
-      dataset: [0, 1]
-      image: [0, 1]
-      regex: []
+      # project: 355
+      #image: [13030]
+      #image: [12108]
+      #image: 110159
+      #image: 97376
+      #image: [210053, 210061]
+      image: 216005
     # exclude - Omero project id(s) / dataset id(s) / image id(s) to exclude
-    exclude:
-      dummy: dummy
-      project: [0, 1]
-      dataset: [0, 1]
-      image: [0, 1]
-      regex: []
-  # pixel_size - source magnification (if not in metadata)
-  #pixel_size: 1
+    # labels - required Omero metadata labels (optional)
+    #labels: [label1,label2]
 
 # output parameters
 output:
   # pixel_size - optional output magnification
-  #pixel_size: 1
+  #pixel_size: 10um
   # folder - output folder
-  folder: output/images
+  folder: E:/Personal/Crick/slides/test_images/output/
   # format - output image format
-  format: ome.tiff
+  format: ome.zarr
   # overwrite - overwrite existing files in output folder
   overwrite: True
-  # break_on_error - stop processing when error occurs
-  break_on_error: False
   # combine_rgb - combine rgb channels
   combine_rgb: True
   # tile_size - size for optional tiling
   tile_size: [256, 256]
   # compression - optional compression format/level
-  compression: ['JPEGXR_NDPI', 75]
+  compression: []
   # npyramid_add - number of pyramid size levels to add
   npyramid_add: 4
   # pyramid_downsample - factor each pyramid level is down-sampled
   pyramid_downsample: 2
   # thumbnail_size - can be a factor between 0 and 1 or maximum pixel size (single value)
   thumbnail_size: 1000
-  # label reader output
   csv: resources/csv/labels.csv
-  # extra metadata (e.g. used for combine operation)
-  #extra_metadata: {'channels': [{'label':label1, 'color':[1, 1, 1, 1]}, {'label':label2, 'color':[0, 1, 0, 1]}]}
 
-# actions can be: info, thumbnail, convert, combine
-actions: [convert]
+# actions can be: info, thumbnail, convert
+actions: [info, convert]
 
 # Omero credentials
 credentials:
   # keys for encoding/decoding (in private space) note home (~) does not work inside container:
-  private_key: ~/omero.pri.key
-  public_key: ~/omero.pub.key
+  private_key: omero.pri.key
+  public_key: omero.pub.key
   # encoded credentials (in public space):
   credentials: .omero_credentials
 
