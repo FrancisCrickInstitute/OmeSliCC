@@ -40,9 +40,9 @@ def create_transformation_metadata(dimension_order, pixel_size_um, scale, transl
         if dimension == 'z' and len(translation_um) > 2:
             translation1 = translation_um[2]
         elif dimension == 'y' and len(translation_um) > 1:
-            translation1 = translation_um[1] * scale
+            translation1 = translation_um[1]
         elif dimension == 'x' and len(translation_um) > 0:
-            translation1 = translation_um[0] * scale
+            translation1 = translation_um[0]
         else:
             translation1 = 0
         translation_scale.append(translation1)
