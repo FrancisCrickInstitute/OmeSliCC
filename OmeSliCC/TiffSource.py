@@ -45,6 +45,7 @@ class TiffSource(OmeSource):
         self.executor = executor
         self.data = bytes()
         self.arrays = []
+        self.shapes = []
         photometric = None
         nchannels = 1
 
@@ -95,40 +96,44 @@ class TiffSource(OmeSource):
             self.dimension_order = series0.axes
             photometric = series0.keyframe.photometric
         self.pages = get_tiff_pages(tiff)
-        for page0 in self.pages:
+        for level, page0 in enumerate(self.pages):
             if isinstance(page0, list):
                 page = page0[0]
                 npages = len(page0)
             else:
                 page = page0
                 npages = 1
-            self.npages = npages
             if not self.dimension_order:
                 self.dimension_order = page.axes
                 photometric = page.photometric
             shape = page.shape
-            self.shape = shape
             nchannels = shape[2] if len(shape) > 2 else 1
             nt = 1
+            depth0 = 0
             if isinstance(page, TiffPage):
                 width = page.imagewidth
                 height = page.imagelength
-                self.depth = page.imagedepth
-                depth = self.depth * npages
+                depth0 = page.imagedepth
+                depth = depth0 * npages
                 bitspersample = page.bitspersample
             else:
                 width = shape[1]
                 height = shape[0]
                 depth = npages
                 if len(shape) > 2:
-                    self.depth = shape[2]
-                    depth *= self.depth
+                    depth0 = shape[2]
+                    depth *= depth0
                 bitspersample = page.dtype.itemsize * 8
+            if level == 0:
+                self.depth = depth0
+                self.npages = npages
+                self.shape = shape
             if self.has_ome_metadata:
                 pixels = ensure_list(self.metadata.get('Image', {}))[0].get('Pixels', {})
                 depth = int(pixels.get('SizeZ', depth))
                 nchannels = int(pixels.get('SizeC', nchannels))
                 nt = int(pixels.get('SizeT', nt))
+            self.shapes.append(shape)
             self.sizes.append((width, height))
             self.sizes_xyzct.append((width, height, depth, nchannels, nt))
             self.pixel_types.append(page.dtype)
@@ -220,7 +225,7 @@ class TiffSource(OmeSource):
 
             for level in range(len(self.sizes)):
                 lazy_array = dask.delayed(imread)(self.filename, level=level)
-                data = da.from_delayed(lazy_array, shape=page.shape, dtype=page.dtype)
+                data = da.from_delayed(lazy_array, shape=self.shapes[level], dtype=page.dtype)
                 if data.chunksize == data.shape:
                     data = data.rechunk()
                 self.arrays.append(data)

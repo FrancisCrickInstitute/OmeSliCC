@@ -19,6 +19,11 @@ class OmeZarr:
               npyramid_add=0, pyramid_downsample=2,
               translations=[], image_operations=[]):
 
+        multiple_images = isinstance(sources, list)
+        multi_metadata = []
+        if not multiple_images:
+            sources = [sources]
+
         chunk_size = tile_to_chunk_size(tile_size, len(sources[0].get_dimension_order()))
         compressor, compression_filters = create_compression_filter(compression)
         storage_options = {'dimension_separator': '/', 'chunks': chunk_size}
@@ -29,13 +34,8 @@ class OmeZarr:
         self.storage_options = storage_options
 
         zarr_root = zarr.open_group(store=parse_url(self.filename, mode="w").store, mode="w",
-                                    storage_options=storage_options, zarr_version=self.zarr_version)
+                                    zarr_version=self.zarr_version)
         root_path = ''
-
-        multiple_images = isinstance(sources, list)
-        multi_metadata = []
-        if not multiple_images:
-            sources = [sources]
 
         omero_metadata = create_channel_metadata(sources[0], self.ome_version)
 

@@ -283,10 +283,12 @@ class OmeSource:
             start, end = info.min, info.max
 
         nsizes = len(self.sizes)
-        if nsizes > 1:
+        if self.pixel_types[0] != np.uint8 and nsizes > 1:
             image = self._asarray_level(nsizes - 1)
-            image = np.asarray(image[:, channeli:channeli+1, ...])
-            min, max = get_image_quantile(image, min_quantile), get_image_quantile(image, max_quantile)
+            channel_image = np.take(image, channeli, axis=1)
+            axes = range(channel_image.ndim)
+            min = float(get_image_quantile(channel_image, min_quantile, axis=axes))
+            max = float(get_image_quantile(channel_image, max_quantile, axis=axes))
         else:
             # do not query full size image
             min, max = start, end
