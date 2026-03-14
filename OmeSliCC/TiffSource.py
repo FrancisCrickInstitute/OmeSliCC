@@ -4,7 +4,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import dask
 import dask.array as da
-from enum import Enum
 import numpy as np
 import os
 from tifffile import TiffFile, TiffPage, PHOTOMETRIC, imread
@@ -180,10 +179,7 @@ class TiffSource(OmeSource):
             pixel_size.append((self.metadata['MPP'], self.default_physical_unit))
         # from page TAGS
         if len(pixel_size) < 2:
-            res_unit = self.tags.get('ResolutionUnit', '')
-            if isinstance(res_unit, Enum):
-                res_unit = res_unit.name
-            res_unit = res_unit.lower()
+            res_unit = self.tags.get('ResolutionUnit', '').lower()
             if res_unit == 'none':
                 res_unit = ''
             res0 = convert_rational_value(self.tags.get('XResolution'))

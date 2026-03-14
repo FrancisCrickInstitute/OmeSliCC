@@ -1,5 +1,6 @@
 import cv2 as cv
 import dask.array as da
+from enum import Enum
 import imagecodecs
 from imagecodecs.numcodecs import Lzw, Jpeg2k, Jpegls, Jpegxr, Jpegxl
 from numcodecs import register_codec
@@ -344,7 +345,10 @@ def get_tiff_pages(tiff: TiffFile) -> list:
 def tags_to_dict(tags: tifffile.TiffTags) -> dict:
     tag_dict = {}
     for tag in tags.values():
-        tag_dict[tag.name] = tag.value
+        value = tag.value
+        if isinstance(value, Enum):
+            value = value.name
+        tag_dict[tag.name] = value
     return tag_dict
 
 
