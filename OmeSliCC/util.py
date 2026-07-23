@@ -284,3 +284,14 @@ def tile_to_chunk_size(tile_size, ndims):
     while len(chunk_size) < ndims:
         chunk_size = [1] + chunk_size
     return chunk_size
+
+
+def fix_bad_micro_value(dct):
+    new_dct = {}
+    for key, value in dct.items():
+        if isinstance(value, dict):
+            value = fix_bad_micro_value(value)
+        elif isinstance(value, str) and '\xa6\xcc' in value:
+            value = value.replace('\xa6\xcc', '\xb5')
+        new_dct[key] = value
+    return new_dct

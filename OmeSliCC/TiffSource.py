@@ -83,12 +83,17 @@ class TiffSource(OmeSource):
             self.metadata = tiff.imagej_metadata
         elif self.first_page.description:
             self.metadata = desc_to_dict(self.first_page.description)
+
         self.tags = tags_to_dict(self.first_page.tags)
-        if 'FEI_TITAN' in self.tags:
-            metadata = tifffile.xml2dict(self.tags.pop('FEI_TITAN'))
-            if 'FeiImage' in metadata:
-                metadata = metadata['FeiImage']
-            self.metadata.update(metadata)
+        for key, value in self.tags.items():
+            metadata = {}
+            if isinstance(value, dict):
+                metadata = value
+            elif isinstance(value, str) and value.lower().startswith('<xml>'):
+                metadata = tifffile.xml2dict(value)
+                if 'FeiImage' in metadata:
+                    metadata = metadata['FeiImage']
+            self.metadata.update(fix_bad_micro_value(metadata))
 
         if tiff.series:
             series0 = tiff.series[0]
