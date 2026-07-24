@@ -89,7 +89,7 @@ class TiffSource(OmeSource):
             metadata = {}
             if isinstance(value, dict):
                 metadata = value
-            elif isinstance(value, str) and value.lower().startswith('<xml>'):
+            elif isinstance(value, str) and 'xml' in value.lower():
                 metadata = tifffile.xml2dict(value)
                 if 'FeiImage' in metadata:
                     metadata = metadata['FeiImage']
