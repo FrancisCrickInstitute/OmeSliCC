@@ -91,8 +91,6 @@ class TiffSource(OmeSource):
                 metadata = value
             elif isinstance(value, str) and 'xml' in value.lower():
                 metadata = tifffile.xml2dict(value)
-                if 'FeiImage' in metadata:
-                    metadata = metadata['FeiImage']
             self.metadata.update(fix_bad_micro_value(metadata))
 
         if tiff.series:
