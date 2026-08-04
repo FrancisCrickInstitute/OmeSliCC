@@ -64,12 +64,58 @@ class Omero:
         image_object = self.conn.getObject('Image', image_id)
         return image_object
 
+    # https://github.com/centuri-engineering/omero-utils/blob/c1c87ed91196f1e18d2612da206405467d09107c/omero_utils/roi_utils.py#L102
+    def points_from_polyon_shape(self, shape):
+        """Converts an omero roi `shape` (as returned by the `roi.getShape` method)
+        to a binay image with the pixels inside the shape set to 1.
+
+        Parameters
+        ----------
+        shape : `omero.model.PolygonI` instance
+        imshape : tuple, the shape of the output mask
+
+        Returns
+        -------
+        mask : `np.ndarray` of shape `imshape` and dtype uint8 with ones inside the
+        input shape.
+
+        """
+
+        points = shape.getPoints()
+
+        points = np.array(
+            [[float(v) for v in l.split(",") if v] for l in points.val.split(" ")]
+        )
+        return points
+
+    def get_roi_as_arrays(self, roi):
+        roi_arrays = []
+        for u in range(roi.sizeOfShapes()):
+            shape = roi.getShape(u)
+            if type(shape) == omero.model.EllipseI:
+                roi_arrays.append({'type': 'ellipse', 'name': roi.getName().val, 'x': shape.getX().val, 'y': shape.getY().val, 'radius_x': shape.getRadiusX().val, 'radius_y': shape.getRadiusY().val})
+            elif type(shape) == omero.model.PolygonI: 
+                points = self.points_from_polyon_shape(shape)
+                roi_arrays.append({'type': 'polygon', 'name': roi.getName().val, 'points': points})
+            else:
+                logging.warning(f'Unsupported shape type: {type(shape)}')
+        return roi_arrays
+
+    def get_roi_object(self, image_id: int):
+        roi_service = self.conn.getRoiService()
+        rois = roi_service.findByImage(image_id, None, self.conn.SERVICE_OPTS).rois
+        shapes = []
+        for roi in rois: # each roi is a RoiI
+            roi_array = self.get_roi_as_arrays(roi)
+            shapes.append(roi_array)
+        return shapes
+
     def create_pixels_store(self, image_object: omero.gateway.ImageWrapper) -> omero.gateway.ProxyObjectWrapper:
         pixels_store = self.conn.createRawPixelsStore()
         pixels_store.setPixelsId(image_object.getPixelsId(), False, self.conn.SERVICE_OPTS)
         return pixels_store
 
-    def get_annotation_image_ids(self) -> dict:
+    def get_annotation_image_ids(self) -> dict: # this one is called
         images_final = {}
         input_omero = self.params['input'].get('omero', {})
         include_params = input_omero['include']

@@ -8,6 +8,7 @@ import os
 from PIL import Image
 import psutil
 from tifffile import TiffWriter, TIFF, PHOTOMETRIC
+import pickle
 
 from OmeSliCC.OmeSource import OmeSource, get_resolution_from_pixel_size
 from OmeSliCC.OmeZarr import OmeZarr
@@ -112,6 +113,21 @@ def convert_image(source: OmeSource, params: dict, load_chunked: bool = False):
         else:
             save_image(image, output_filename, output_params)
         check_image(source, image, output_filename)
+
+
+def save_rois(source: OmeSource, rois: list, params: dict):
+    source_ref = source.source_reference
+    output_params = params['output']
+    output_folder = output_params['roi_folder']
+    filetitle = get_filetitle(source_ref).rstrip('.ome')
+    output_file = str(os.path.join(output_folder, filetitle + '_rois.pkl'))
+    overwrite = output_params.get('overwrite', True)
+    if not os.path.exists(os.path.dirname(output_file)):
+        os.makedirs(os.path.dirname(output_file))
+    if overwrite or not os.path.exists(output_file):
+        # save with pickle
+        with open(output_file, 'wb') as f:
+            pickle.dump(rois, f)
 
 
 def combine_images(sources: list[OmeSource], params: dict):
