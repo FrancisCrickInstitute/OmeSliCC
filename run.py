@@ -82,6 +82,10 @@ def run_actions(params: dict):
                         convert_image(source, params, load_chunked=is_omero)
                     elif 'combine' in action:
                         combine_images(sources, params)
+                    elif 'roi' in action:
+                        rois = omero.get_roi_object(source.image_id)
+                        logging.info(f'Image {source.image_id} has {len(rois)} ROIs')
+                        save_rois(source, rois, params)
                     source.close()
                 except Exception as e:
                     logging.exception(str(e) + '\nin ' + str(source_ref))
