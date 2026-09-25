@@ -67,21 +67,27 @@ def desc_to_dict(desc: str) -> dict:
             return metadata
         except:
             pass
+
+    item_seps = ['=', ':']
+    counts = [desc.count(item_sep) for item_sep in item_seps]
+    item_sep = item_seps[np.argmax(counts)]
     for item in re.split(r'[\r\n\t|]', desc):
-        item_sep = '='
-        if ':' in item:
-            item_sep = ':'
-        if item_sep in item:
-            items = item.split(item_sep)
-            key = items[0].strip()
+        items = item.split(item_sep)
+        key = items[0].strip()
+        if len(items) > 1:
             value = items[1].strip()
-            for dtype in (int, float, bool):
-                try:
-                    value = dtype(value)
-                    break
-                except:
-                    pass
-            desc_dict[key] = value
+            if isinstance(value, str) and value.lower() in ['true', 'false']:
+                value = bool(value)
+            else:
+                for dtype in (int, float):
+                    try:
+                        value = dtype(value)
+                        break
+                    except:
+                        pass
+        else:
+            value = None
+        desc_dict[key] = value
     return desc_dict
 
 
